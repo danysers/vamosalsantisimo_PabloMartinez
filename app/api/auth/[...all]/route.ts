@@ -1,0 +1,54 @@
+import { randomUUID } from 'node:crypto'
+import { toNextJsHandler } from 'better-auth/next-js'
+import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'nodejs'
+
+const loggedActions = new Set(['/sign-in/username', '/sign-in/email', '/sign-out', '/sign-up/email', '/sign-up/username'])
+
+function auditAction(request: NextRequest, status: number, correlationId: string) {
+  const path = request.nextUrl.pathname.slice('/api/auth'.length)
+  const action = path.startsWith('/admin/') ? '/admin/*' : path
+  if (request.method === 'POST' && (loggedActions.has(action) || action === '/admin/*')) {
+    // Never log the body, email, username, cookie, token or IP address.
+    console.info(JSON.stringify({ event: 'admin_auth_action', action, status, correlationId }))
+  }
+}
+
+function localAuthReady(request: NextRequest): boolean {
+  const base = process.env.BETTER_AUTH_URL
+  if (!base || !process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32) return false
+  try {
+    const expected = new URL(base)
+    return expected.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(expected.hostname) &&
+      expected.origin === request.nextUrl.origin
+  } catch { return false }
+}
+
+async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Response> {
+  const correlationId = randomUUID()
+  if (!localAuthReady(request)) {
+    auditAction(request, 503, correlationId)
+    return NextResponse.json({ error: 'Administración local no configurada.' }, {
+      status: 503, headers: { 'Cache-Control': 'no-store', 'X-Correlation-ID': correlationId },
+    })
+  }
+  try {
+    const { auth } = await import('../../../../lib/auth')
+    const handler = toNextJsHandler(auth)
+    const response = await handler[method](request)
+    response.headers.set('Cache-Control', 'no-store')
+    response.headers.set('X-Correlation-ID', correlationId)
+    auditAction(request, response.status, correlationId)
+    return response
+  } catch {
+    console.error(JSON.stringify({ event: 'admin_auth_error', kind: 'handler_unavailable', correlationId }))
+    auditAction(request, 503, correlationId)
+    return NextResponse.json({ error: 'Servicio temporalmente no disponible.' }, {
+      status: 503, headers: { 'Cache-Control': 'no-store', 'X-Correlation-ID': correlationId },
+    })
+  }
+}
+
+export async function GET(request: NextRequest) { return handle(request, 'GET') }
+export async function POST(request: NextRequest) { return handle(request, 'POST') }

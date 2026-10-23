@@ -1,0 +1,5 @@
+# Native binaries used by the pinned build/lint tooling; no other dependency
+# lifecycle scripts are approved for this local site.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

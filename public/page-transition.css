@@ -1,0 +1,13 @@
+/* Shared only by the boundary between the dark home and the light workshop. */
+html[data-site-navigation]::after{content:'';position:fixed;inset:0;z-index:2147483647;pointer-events:auto;background:radial-gradient(ellipse at 75% 35%,#9b713734,transparent 60%),#17120d;will-change:opacity;}
+html[data-site-navigation="leaving"]::after{animation:site-veil-in 280ms ease-in both}
+html[data-site-navigation="leaving"] body{animation:site-soften-out 280ms ease-in both;pointer-events:none}
+html[data-site-navigation="entering"]::after{opacity:1;animation:site-veil-rescue 1ms 8s forwards}
+html[data-site-navigation="revealing"]::after{animation:site-veil-out 560ms ease-out both;pointer-events:none}
+html[data-site-navigation="revealing"] body{animation:site-sharpen-in 560ms ease-out both}
+@keyframes site-veil-in{from{opacity:0}to{opacity:1}}
+@keyframes site-veil-out{from{opacity:1}to{opacity:0}}
+@keyframes site-soften-out{to{filter:blur(5px);opacity:.35}}
+@keyframes site-sharpen-in{from{filter:blur(5px);opacity:.35}to{filter:blur(0);opacity:1}}
+@keyframes site-veil-rescue{to{opacity:0;pointer-events:none}}
+@media(prefers-reduced-motion:reduce){html[data-site-navigation]::after{display:none}html[data-site-navigation] body{animation:none;filter:none;opacity:1;pointer-events:auto}}

@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/png" href="/favicon-mark.png">
+  <link rel="canonical" href="https://vamosalsantisimo.com/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="description" content="Somos un grupo de amigos de Formosa, Argentina, que se reúne para adorar a Jesús Sacramentado. Compartimos momentos de oración, silencio y encuentro con Jesús Eucaristía. Nos encontramos en vivo los miércoles a las 22 h y jueves a las 21:30 h; queremos ser menos nosotros y más Cristo.">
+  <title>Vamos al Santísimo | Adoración Eucarística en Formosa</title>
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Vamos al Santísimo">
+  <meta property="og:url" content="https://vamosalsantisimo.com/">
+  <meta property="og:title" content="Vamos al Santísimo | Adoración Eucarística en Formosa">
+  <meta property="og:description" content="Adoración a Jesús Sacramentado desde Formosa, Argentina. Transmisiones en vivo los miércoles a las 22 h y jueves a las 21:30 h.">
+  <meta property="og:image" content="https://vamosalsantisimo.com/logo-vamos.png">
+  <meta property="og:image:width" content="900">
+  <meta property="og:image:height" content="686">
+  <meta property="og:image:alt" content="Logo dorado de Vamos al Santísimo">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Vamos al Santísimo | Adoración Eucarística en Formosa">
+  <meta name="twitter:description" content="Adoración a Jesús Sacramentado desde Formosa, Argentina. Transmisiones en vivo los miércoles a las 22 h y jueves a las 21:30 h.">
+  <meta name="twitter:image" content="https://vamosalsantisimo.com/logo-vamos.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://vamosalsantisimo.com/#organization",
+        "name": "Vamos al Santísimo",
+        "url": "https://vamosalsantisimo.com/",
+        "description": "Somos un grupo de amigos de Formosa, Argentina, que se reúne para adorar a Jesús Sacramentado. Compartimos momentos de oración, silencio y encuentro con Jesús Eucaristía. Nos encontramos en vivo los miércoles a las 22 h y jueves a las 21:30 h; queremos ser menos nosotros y más Cristo.",
+        "email": "vamosalsantisimo@gmail.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://vamosalsantisimo.com/logo-vamos.png",
+          "width": 900,
+          "height": 686
+        },
+        "sameAs": [
+          "https://www.facebook.com/vamosalsantisimof",
+          "https://www.instagram.com/vamosalsantisimof/",
+          "https://www.tiktok.com/@vamosalsantisimo"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://vamosalsantisimo.com/#website",
+        "url": "https://vamosalsantisimo.com/",
+        "name": "Vamos al Santísimo",
+        "inLanguage": "es-AR",
+        "publisher": { "@id": "https://vamosalsantisimo.com/#organization" }
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --black: #000000;
+      --gold: #F5B900;
+      --gold-light: #FFD45A;
+      --gold-deep: #B87912;
+      --gold-cream: #FFF0A6;
+      --ivory: #F5F1E8;
+      --muted: #BEB8AE;
+      --content: min(92vw, 1160px);
+      --construction-spacing: .145em;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; background: var(--black); }
+    body {
+      min-height: 100svh;
+      overflow: hidden;
+      color: var(--ivory);
+      font-family: Georgia, 'Times New Roman', serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .page {
+      isolation: isolate;
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 100svh;
+      padding: max(22px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+      overflow: hidden;
+    }
+    .background-video, .video-shade {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .background-video { z-index: -3; object-fit: cover; transform: translateY(-2.5vh) scale(1.045); }
+    .video-shade {
+      z-index: -2;
+      background: linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.12) 28%, rgba(0,0,0,.68) 42%, #000 64%);
+    }
+    .watermark-cover {
+      position: fixed;
+      z-index: -1;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: clamp(180px, 26vh, 300px);
+      background: #000;
+      pointer-events: none;
+    }
+    .beams { display: none; }
+    .beam { fill: none; stroke-linecap: round; transform-box: fill-box; }
+    .beam-left { transform-origin: left center; animation: drift-left 12s ease-in-out infinite alternate; }
+    .beam-right { transform-origin: right center; animation: drift-right 13s ease-in-out infinite alternate; }
+    .beam-fine { stroke: rgba(245,185,0,.34); stroke-width: .75; }
+    .beam-soft { stroke: rgba(245,185,0,.19); stroke-width: 1.25; }
+    .beam-core { stroke: rgba(255,212,90,.72); stroke-width: 1.4; }
+    .ray-glints { fill: none; stroke: url(#ray-glint); stroke-linecap: round; stroke-width: 1.35; opacity: .72; filter: url(#ray-glow); }
+    .ray-glint { stroke-dasharray: 18 238; animation: glint-travel 12s linear infinite; }
+    .ray-glint:nth-child(2) { animation-delay: -3.4s; opacity: .56; }
+    .ray-glint:nth-child(3) { animation-delay: -7.1s; opacity: .43; }
+    .ray-glints-right .ray-glint { animation-duration: 13s; }
+    @keyframes glint-travel { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -512; } }
+    .composition {
+      width: var(--content);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: absolute;
+      right: max(22px, env(safe-area-inset-right));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: max(22px, env(safe-area-inset-left));
+      margin-inline: auto;
+    }
+    .logo-frame {
+      --logo-w: clamp(132px, 11vw, 174px);
+      position: fixed;
+      z-index: 3;
+      top: max(18px, env(safe-area-inset-top));
+      left: max(22px, env(safe-area-inset-left));
+      width: var(--logo-w);
+      height: calc(var(--logo-w) * .77);
+      overflow: hidden;
+      flex: none;
+      opacity: 0;
+      transform: translateY(8px) scale(.98);
+      animation: arrive .8s cubic-bezier(.2,.7,.2,1) .05s forwards;
+    }
+    .logo-art {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .title { margin-top: 0; line-height: .98; }
+    .title-small, .title-large, .construction { display: block; opacity: 0; transform: translateY(10px); }
+    .title-small {
+      color: var(--ivory);
+      font-size: clamp(27px, 3vw, 46px);
+      font-weight: 400;
+      letter-spacing: .105em;
+      animation: arrive .72s cubic-bezier(.2,.7,.2,1) .25s forwards;
+    }
+    .title-large {
+      margin-top: .11em;
+      color: var(--gold);
+      background: linear-gradient(105deg, var(--gold-deep) 0%, var(--gold) 34%, var(--gold-cream) 52%, var(--gold) 70%, var(--gold-deep) 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: clamp(48px, 5.2vw, 82px);
+      line-height: .98;
+      font-weight: 400;
+      letter-spacing: .035em;
+      white-space: nowrap;
+      animation: arrive .78s cubic-bezier(.2,.7,.2,1) .38s forwards;
+    }
+    .schedule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: clamp(16px, 2.6vh, 28px);
+    }
+    .live-note {
+      max-width: min(850px, 92vw);
+      margin: clamp(8px, 1.4vh, 14px) 0 0;
+      color: var(--ivory);
+      font-size: clamp(14px, 1.25vw, 18px);
+      line-height: 1.45;
+      letter-spacing: .025em;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: arrive .72s cubic-bezier(.2,.7,.2,1) .92s forwards;
+    }
+    .day {
+      min-width: clamp(180px, 19vw, 280px);
+      opacity: 0;
+    }
+    .day:first-child { transform: translateX(-16px); animation: from-left .7s ease-out .68s forwards; }
+    .day:last-child { transform: translateX(16px); animation: from-right .7s ease-out .68s forwards; }
+    .weekday { display: block; color: var(--ivory); font-size: clamp(16px, 1.5vw, 23px); letter-spacing: .13em; line-height: 1.2; }
+    .hour { display: block; margin-top: 2px; color: var(--gold); font-size: clamp(25px, 2.4vw, 36px); letter-spacing: .035em; line-height: 1.2; }
+    .schedule-rule { width: 1px; height: clamp(44px, 6vh, 64px); background: linear-gradient(transparent, rgba(245,185,0,.88), transparent); transform: scaleY(0); animation: rule-in .55s ease-out .85s forwards; }
+    .separator {
+      position: relative;
+      width: min(61vw, 760px);
+      height: 1px;
+      margin-top: clamp(14px, 2.4vh, 25px);
+      background: linear-gradient(90deg, transparent, rgba(245,185,0,.36) 9%, rgba(245,185,0,.48) 50%, rgba(245,185,0,.36) 91%, transparent);
+      opacity: 0;
+      animation: fade-in .8s ease-out 1.15s forwards;
+    }
+    .star {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 14px; height: 14px;
+      background: var(--gold-cream);
+      clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 0 4px rgba(255,212,90,.42));
+      animation: breathe 4s ease-in-out 1.5s infinite;
+    }
+    .construction {
+      margin-top: clamp(14px, 2vh, 22px);
+      color: var(--gold);
+      font-size: clamp(24px, 2.9vw, 44px);
+      line-height: 1.12;
+      font-weight: 400;
+      letter-spacing: .14em;
+      white-space: nowrap;
+      animation: construction-in 1s cubic-bezier(.2,.7,.2,1) 1.08s forwards;
+    }
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(14px, 2vw, 28px);
+      margin-top: clamp(18px, 2.6vh, 28px);
+      opacity: 0;
+      animation: fade-in .75s ease-out 1.38s forwards;
+    }
+    .footer-actions { display: flex; align-items: center; gap: 12px; }
+    .socials { display: flex; align-items: center; gap: clamp(18px, 2vw, 29px); }
+    .social-link {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 44px;
+      color: #E8D9B4;
+      transition: color .2s ease, filter .2s ease, transform .2s ease;
+    }
+    .social-link:hover, .social-link:focus-visible { color: var(--gold-light); filter: drop-shadow(0 0 5px rgba(255,212,90,.35)); transform: translateY(-2px); }
+    .social-link svg { width: 25px; height: 25px; display: block; fill: currentColor; }
+    .social-link.instagram svg { fill: none; stroke: currentColor; stroke-width: 2.4; }
+    .footer-rule { width: 1px; height: 44px; background: var(--gold); opacity: .78; }
+    .contact {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 222px;
+      min-height: 54px;
+      padding: 0 30px;
+      border: 1px solid var(--gold);
+      border-radius: 999px;
+      color: var(--ivory);
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 16px;
+      letter-spacing: .22em;
+      transition: color .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .contact:hover, .contact:focus-visible { color: var(--gold-light); border-color: var(--gold-light); box-shadow: 0 0 13px rgba(245,185,0,.13); outline: none; }
+    @media (min-width: 701px) { .footer { transform: translateX(-14px); } }
+    a:focus-visible { outline: 1px solid var(--gold-light); outline-offset: 4px; }
+    @keyframes arrive { to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes from-left { to { opacity: 1; transform: translateX(0); } }
+    @keyframes from-right { to { opacity: 1; transform: translateX(0); } }
+    @keyframes rule-in { to { transform: scaleY(1); } }
+    @keyframes fade-in { to { opacity: 1; } }
+    @keyframes construction-in { to { opacity: 1; transform: translateY(0); letter-spacing: var(--construction-spacing); } }
+    @keyframes breathe { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+    @keyframes drift-left { from { transform: translateX(-8px); } to { transform: translateX(10px); } }
+    @keyframes drift-right { from { transform: translateX(8px); } to { transform: translateX(-10px); } }
+    @media (max-height: 760px) and (min-width: 701px) {
+      .composition { bottom: max(14px, env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 700px) {
+      :root { --content: min(92vw, 520px); }
+      .page { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+      .composition { bottom: max(14px, env(safe-area-inset-bottom)); }
+      .logo-frame { --logo-w: clamp(100px, 28vw, 138px); top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); height: calc(var(--logo-w) * .77); }
+      .watermark-cover { height: clamp(190px, 30vh, 270px); }
+      .video-shade { background: linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.12) 24%, rgba(0,0,0,.76) 38%, #000 56%); }
+      .title { margin-top: 0; }
+      .title-small { font-size: clamp(25px, 7.5vw, 37px); }
+      .title-large { margin-top: .18em; font-size: clamp(42px, 12.2vw, 64px); letter-spacing: .015em; }
+      .schedule { flex-direction: row; gap: 0; margin-top: 16px; }
+      .live-note { max-width: 470px; margin-top: 7px; font-size: 14px; line-height: 1.4; }
+      .day { min-width: 0; flex: 1; }
+      .weekday { font-size: 13px; }
+      .hour { font-size: 23px; }
+      .schedule-rule { display: block; height: 42px; }
+      .separator { width: 72vw; margin-top: 14px; }
+      .construction { max-width: 100%; margin-top: 14px; font-size: clamp(22px, 6.2vw, 30px); line-height: 1.25; --construction-spacing: .12em; white-space: normal; }
+      .construction::first-line { }
+      .footer { flex-direction: column; gap: 8px; margin-top: 16px; }
+      .footer-actions { width: min(100%, 260px); flex-direction: column; gap: 8px; }
+      .socials { gap: 20px; }
+      .social-link { width: 44px; height: 44px; }
+      .social-link svg { width: 23px; height: 23px; }
+      .footer-rule { display: none; }
+      .contact { width: 100%; min-width: 0; min-height: 48px; padding: 0 18px; font-size: 14px; }
+      .beam { opacity: .55; }
+      .ray-glints { opacity: .38; }
+    }
+    @media (max-width: 700px) and (max-height: 760px) {
+      .composition { bottom: max(10px, env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 370px) {
+      .composition { bottom: max(8px, env(safe-area-inset-bottom)); }
+      .title-large { font-size: 40px; }
+      .construction { font-size: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+      .logo-frame, .title-small, .title-large, .day, .schedule-rule, .separator, .construction, .footer, .live-note { opacity: 1; transform: none; }
+      .construction { letter-spacing: var(--construction-spacing); }
+      .background-video { display: none; }
+    }
+  </style>
+</head>
+<body>
+  
+  <main class="page">
+    <video class="background-video" autoplay muted loop playsinline preload="metadata" poster="video-frame.jpg" aria-hidden="true">
+      <source src="altar-loop.webm" type="video/webm">
+      <source src="altar-loop.mp4" type="video/mp4">
+    </video>
+    <div class="video-shade" aria-hidden="true"></div>
+        <svg class="beams" viewBox="0 0 1536 1024" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="ray-glint" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+          <stop offset="0" stop-color="#FFF0A6" stop-opacity=".18"/>
+          <stop offset=".42" stop-color="#FFD45A" stop-opacity=".55"/>
+          <stop offset=".54" stop-color="#FFF0A6" stop-opacity=".9"/>
+          <stop offset=".68" stop-color="#F5B900" stop-opacity=".48"/>
+          <stop offset="1" stop-color="#F5B900" stop-opacity=".12"/>
+        </linearGradient>
+        <filter id="ray-glow" x="-20%" y="-80%" width="140%" height="260%" color-interpolation-filters="sRGB">
+          <feGaussianBlur stdDeviation="1.35" result="soft"/>
+          <feMerge><feMergeNode in="soft"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g class="beam beam-left">
+        <path class="beam-fine" d="M-20 118 C150 260 260 386 510 514"/><path class="beam-soft" d="M-30 176 C142 290 280 406 520 530"/>
+        <path class="beam-core" d="M-25 222 C146 324 298 435 534 546"/><path class="beam-fine" d="M-20 273 C176 365 314 460 548 559"/>
+        <path class="beam-fine" d="M-10 325 C160 398 325 482 564 572"/><path class="beam-soft" d="M-28 142 C126 264 268 380 502 504"/>
+        <path class="beam-fine" d="M-20 364 C170 420 330 492 566 580"/>
+      </g>
+      <g class="beam beam-right">
+        <path class="beam-fine" d="M1556 118 C1386 260 1276 386 1026 514"/><path class="beam-soft" d="M1566 176 C1394 290 1256 406 1016 530"/>
+        <path class="beam-core" d="M1561 222 C1390 324 1238 435 1002 546"/><path class="beam-fine" d="M1556 273 C1360 365 1222 460 988 559"/>
+        <path class="beam-fine" d="M1546 325 C1376 398 1211 482 972 572"/><path class="beam-soft" d="M1564 142 C1410 264 1268 380 1034 504"/>
+        <path class="beam-fine" d="M1556 364 C1366 420 1206 492 970 580"/>
+      </g>
+          <g class="ray-glints ray-glints-left" aria-hidden="true">
+        <path class="ray-glint" d="M-20 118 C150 260 260 386 510 514"/>
+        <path class="ray-glint" d="M-25 222 C146 324 298 435 534 546"/>
+        <path class="ray-glint" d="M-10 325 C160 398 325 482 564 572"/>
+      </g>
+      <g class="ray-glints ray-glints-right" aria-hidden="true">
+        <path class="ray-glint" d="M1556 118 C1386 260 1276 386 1026 514"/>
+        <path class="ray-glint" d="M1561 222 C1390 324 1238 435 1002 546"/>
+        <path class="ray-glint" d="M1546 325 C1376 398 1211 482 972 572"/>
+      </g>    </svg>
+    <div class="watermark-cover" aria-hidden="true"></div>
+
+<section class="composition" aria-label="Vamos al Santísimo">
+      <div class="logo-frame">
+        <img class="logo-art" alt="Vamos al Santísimo" src="logo-vamos.png">
+      </div>
+      <h1 class="title">
+        <span class="title-small">VAMOS AL</span>
+        <span class="title-large">SANTÍSIMO</span>
+      </h1>
+      <div class="schedule" aria-label="Horarios">
+        <div class="day"><span class="weekday">MIÉRCOLES</span><span class="hour">22HS</span></div>
+        <span class="schedule-rule" aria-hidden="true"></span>
+        <div class="day"><span class="weekday">JUEVES</span><span class="hour">21:30HS</span></div>
+      </div>
+      <p class="live-note">Transmisión en vivo por nuestras redes</p>
+      <div class="separator" aria-hidden="true"><span class="star"></span></div>
+      <p class="construction">PÁGINA EN CONSTRUCCIÓN</p>
+      <footer class="footer">
+        <nav class="socials" aria-label="Redes sociales">
+          <!-- Perfiles oficiales de Vamos al Santísimo. -->
+          <a class="social-link instagram" href="https://www.instagram.com/vamosalsantisimof/" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.7" cy="6.5" r=".8" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a class="social-link" href="https://www.facebook.com/vamosalsantisimof" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.7 21v-8.2h2.8l.42-3.2H13.7V7.56c0-.93.26-1.56 1.6-1.56h1.72V3.14c-.3-.04-1.35-.14-2.57-.14-2.55 0-4.3 1.55-4.3 4.4v2.2H7.27v3.2h2.88V21z"/></svg>
+          </a>
+          <a class="social-link" href="https://www.tiktok.com/@vamosalsantisimo?_r=1&_t=ZS-9AELfvqCjih" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 8.4a7 7 0 0 1-4.3-1.5v7.2a5.7 5.7 0 1 1-5-5.65v3.7a2.1 2.1 0 1 0 1.5 2V2h3.5c.16 2.3 1.9 4.2 4.3 4.5z"/></svg>
+          </a>
+        </nav>
+        <span class="footer-rule" aria-hidden="true"></span>
+        <div class="footer-actions">
+          <a class="contact" href="mailto:contactos@vamosalsantisimo.com" aria-label="Escribir a contactos@vamosalsantisimo.com">CONTACTO</a>
+          <a class="contact" href="/" aria-label="Ver eventos anteriores: adoración y taller con Daniel Poli">EVENTOS ANTERIORES</a>
+        </div>
+      </footer>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reducedMotion) document.documentElement.classList.add('reduced-motion');
+    })();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

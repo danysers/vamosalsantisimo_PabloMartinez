@@ -1,0 +1,47 @@
+.footer{background:#050505;color:#eee9df;font-family:Arial,Helvetica,sans-serif}
+.photoSection{position:relative;isolation:isolate;min-height:clamp(340px,34vw,500px);display:flex;align-items:center;overflow:clip}
+.photo{z-index:-3;object-fit:cover;object-position:center 22%}
+.shade{position:absolute;inset:0;z-index:-2;background:linear-gradient(180deg,#050505 0%,#05050535 25%,#0505051a 50%,#050505 100%),linear-gradient(90deg,#050505e8 0%,#050505c7 28%,#05050552 63%,#0505055c 100%)}
+.intro{width:min(1200px,86%);margin:0 auto;padding:90px 0 76px}
+.overline{display:block;font-size:10px;letter-spacing:.23em;text-transform:uppercase;color:#baa576;margin-bottom:20px}
+.intro h2{font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:clamp(30px,3.3vw,49px);line-height:1.15;letter-spacing:-.025em;margin:0 0 17px;color:#f3eee5}
+.intro>p{font-size:15px;line-height:1.75;color:#c8c4bc;margin:0 0 27px}
+.faqButton{display:inline-flex;align-items:center;gap:26px;padding:12px 20px;min-height:44px;border:1px solid #a48d586e;border-radius:5px;color:#e4d4ae;font-size:12px;text-decoration:none;background:#0808086b;transition:background .2s,border-color .2s}
+.faqButton:hover{background:#16130e;border-color:#c8ab68}
+.questions{width:min(1050px,86%);margin:0 auto;padding:5px 0 42px;scroll-margin-top:24px}
+.question{border-bottom:1px solid #ffffff13}
+.question summary{display:flex;justify-content:space-between;align-items:center;gap:24px;cursor:pointer;list-style:none;font-size:14px;line-height:1.5;padding:20px 0;color:#d9d6cf}
+.question summary::-webkit-details-marker{display:none}
+.plus{font-size:20px;line-height:1;font-weight:normal;color:#bca16a;transition:transform .2s}
+.question[open] .plus{transform:rotate(45deg)}
+.question p{font-size:14px;line-height:1.8;color:#aaa69e;max-width:700px;margin:0;padding:0 36px 22px 0}
+.bottom{width:min(1200px,86%);margin:auto}
+.navigationRow{border-top:1px solid #b1965f33;display:flex;align-items:center;justify-content:space-between;gap:32px;padding:26px 0}
+.brand{display:block;flex-shrink:0}
+.brand img{display:block;width:112px;height:auto;opacity:.88}
+.links{display:flex;align-items:center;justify-content:center;gap:clamp(18px,2.5vw,38px);flex-wrap:wrap}
+.links a{font-size:12px;text-decoration:none;color:#c4c0b8;line-height:1.5;padding:10px 0;transition:color .2s}
+.links a:hover{color:#ebd7a6}
+.contact{display:inline-flex;align-items:center;gap:9px;color:#d2bd8b;text-decoration:none;font-size:12px;min-height:44px;flex-shrink:0}
+.contact:hover{color:#f4e3ba}
+.legal{border-top:1px solid #ffffff0d;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:22px 0 25px;color:#817e77;font-size:11px;line-height:1.5}
+.legal small{font-size:inherit}
+.footer a:focus-visible,.question summary:focus-visible{outline:2px solid #d7bc7b;outline-offset:6px}
+@media(max-width:700px){
+ .photoSection{min-height:420px;align-items:flex-end}
+ .photo{object-position:62% 25%}
+ .shade{background:linear-gradient(180deg,#050505 0%,#05050533 25%,#05050588 55%,#050505 100%),linear-gradient(90deg,#05050566,#05050522)}
+ .intro{padding:170px 0 30px;width:86%}
+ .overline{margin-bottom:12px;font-size:9px}
+ .intro h2{font-size:32px}
+ .intro>p{font-size:14px;max-width:290px;margin-bottom:22px}
+ .questions{padding-top:10px;padding-bottom:32px}
+ .question summary{font-size:13px;padding:19px 0}
+ .question p{font-size:13px}
+ .navigationRow{flex-wrap:wrap;gap:24px;padding:26px 0}
+ .brand img{width:105px}
+ .links{order:3;flex-basis:100%;justify-content:space-between;gap:12px}
+ .links a{font-size:11px}
+ .legal{align-items:flex-start;flex-direction:column;gap:5px;padding:20px 0 24px}
+}
+@media(prefers-reduced-motion:reduce){.footer *{transition:none!important}}

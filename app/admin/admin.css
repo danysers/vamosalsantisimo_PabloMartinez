@@ -1,0 +1,14 @@
+.admin-shell{max-width:620px;min-height:100vh;margin:auto;padding:clamp(36px,8vw,100px) 20px;background:#18090d;color:#f8eddb}
+.admin-shell h1{font-size:clamp(32px,5vw,52px);color:#f4cb75}
+.admin-shell p{max-width:55ch}
+.admin-form{display:flex;flex-direction:column;gap:10px;max-width:400px;margin-top:30px;font:16px Arial,sans-serif}
+.admin-form label{font-weight:700}
+.admin-form input{min-height:45px;border-radius:8px;border:2px solid #b68952;background:#fff9ed;color:#2d1218;padding:8px 12px;font:inherit}
+.admin-form .button{align-self:flex-start;cursor:pointer;border:0}
+.admin-form .button:disabled{opacity:.65;cursor:wait}
+.admin-form [role="alert"]:empty{display:none}
+.admin-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin:28px 0}
+.admin-counts>div{padding:20px;border:1px solid #f4cb755b;border-radius:10px}
+.admin-counts dt{font:14px Arial,sans-serif}
+.admin-counts dd{font-size:38px;margin:8px 0 0;color:#f4cb75}
+@media(max-width:420px){.admin-counts{grid-template-columns:1fr}}

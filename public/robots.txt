@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# Preview only. Confirm domain, content and publication before enabling indexing.
