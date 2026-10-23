@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
     formats: ['image/avif', 'image/webp'],
