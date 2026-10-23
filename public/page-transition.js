@@ -11,7 +11,7 @@
     if (root.dataset.siteNavigation !== 'entering') return;
     const hero = new Image();
     hero.src = location.pathname.startsWith('/formacion')
-      ? '/formacion/assets/pablo-martinez.png' : '/2026/immersive/pablo.webp';
+      ? '/formacion/assets/pablo-martinez.png' : '/2026/adoracion/santisimo-portada.png';
     // Wait for real resources, with a bounded wait on a slow connection.
     await Promise.race([
       Promise.allSettled([document.fonts.ready, hero.decode()]),

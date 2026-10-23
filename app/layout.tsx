@@ -5,7 +5,7 @@ import '../public/page-transition.css'
 
 export const metadata: Metadata = {
   title: 'Vamos al Santísimo · Pablo Martínez · 19 de diciembre de 2026',
-  description: 'Adoración gratuita con Pablo Martínez el 19 de diciembre a las 20 h en María Auxiliadora. Taller de músicos a las 17 h; inscripciones aún no disponibles.',
+  description: 'Adoración gratuita con Pablo Martínez el 19 de diciembre a las 20 h, lugar a confirmar. Taller de músicos a las 17 h; inscripciones aún no disponibles.',
   robots: { index: false, follow: false }, // Remove only after the organization confirms publication.
   openGraph: {
     title: 'Vamos al Santísimo · Pablo Martínez',

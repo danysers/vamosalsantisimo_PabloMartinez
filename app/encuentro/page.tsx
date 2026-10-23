@@ -30,7 +30,7 @@ export default function Home() {
               <h1 id="hero-title">Vamos al <em>Santísimo</em></h1>
               <p className="hero-subtitle">Adoración con Pablo Martínez</p>
               <p className="hero-date"><time dateTime="2026-12-19">Sábado 19 de diciembre de 2026</time></p>
-              <p className="hero-location">20:00 h · María Auxiliadora · Entrada gratuita</p>
+              <p className="hero-location">20:00 h · Lugar a confirmar · Entrada gratuita</p>
               <a href="#evento" className="button button-gold">Conocé el encuentro <span aria-hidden="true">→</span></a>
             </div>
             <Image className="hero-art" src={`${assets}/custodia.webp`} alt="Ilustración de custodia y altar" width={780} height={845} priority sizes="(max-width: 700px) 75vw, 45vw" />
@@ -45,7 +45,7 @@ export default function Home() {
               <span className="card-symbol" aria-hidden="true">✧</span>
               <h3>Adoración</h3>
               <p>Un encuentro para compartir la fe y la música junto a Pablo Martínez.</p>
-              <p className="card-details"><time dateTime="2026-12-19T20:00:00-03:00">19 de diciembre · 20:00 h</time><br />María Auxiliadora</p>
+              <p className="card-details"><time dateTime="2026-12-19T20:00:00-03:00">19 de diciembre · 20:00 h</time><br />Lugar a confirmar</p>
               <strong className="entry-label">Entrada gratuita</strong>
             </article>
             <article className="event-card workshop">
@@ -68,7 +68,7 @@ export default function Home() {
               <div><span aria-hidden="true">♡</span><h3>Fe</h3><p>Un espacio abierto para acercarse y compartir.</p></div>
             </div>
             <div className="info-grid">
-              <div><h3>Cómo llegar</h3><p>Adoración en María Auxiliadora. La dirección exacta se comunicará cuando esté confirmada.</p></div>
+              <div><h3>Cómo llegar</h3><p>El lugar de la adoración está por confirmar. Compartiremos la dirección exacta cuando esté confirmada.</p></div>
               <div><h3>Preguntas frecuentes</h3><p>El taller comienza a las 17:00 h y la adoración a las 20:00 h. Los detalles de acceso y el programa se publicarán aquí.</p></div>
             </div>
           </div>

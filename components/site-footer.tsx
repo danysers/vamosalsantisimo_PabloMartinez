@@ -6,7 +6,7 @@ import styles from './site-footer.module.css'
 
 const questions = [
   { title: '¿La adoración tiene costo?', answer: 'La entrada a la adoración es gratuita. No necesitás pagar el taller para participar.' },
-  { title: '¿Cuándo es el encuentro?', answer: 'El sábado 19 de diciembre de 2026, a las 20:00 h, en María Auxiliadora. Compartiremos la dirección exacta más adelante.' },
+  { title: '¿Cuándo es el encuentro?', answer: 'El sábado 19 de diciembre de 2026, a las 20:00 h. El lugar está por confirmar; compartiremos la dirección exacta más adelante.' },
   { title: '¿Cómo me inscribo al taller?', answer: 'Las inscripciones todavía no están habilitadas. Publicaremos los detalles en la sección del taller.' },
 ]
 

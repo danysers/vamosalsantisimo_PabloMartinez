@@ -40,7 +40,7 @@
 .pablo{position:absolute;z-index:1;right:-32%;bottom:0;width:91%;height:90%;object-fit:contain;object-position:center bottom;opacity:.94;filter:drop-shadow(0 9px 24px #e5a84422)}
 .bottomMark{position:absolute;left:8.2%;bottom:24px;display:flex;align-items:center;gap:12px;color:#b8a887;font:10px Arial,sans-serif;letter-spacing:.13em;text-transform:uppercase;opacity:.72}
 .bottomMark b{color:var(--accent);font-size:9px;font-weight:400}
-.galleryFooter{height:62px;box-sizing:border-box;display:flex;align-items:center;gap:20px;padding:0 28px;background:#121210;color:#d9c59f;font:12px Arial,sans-serif}
+.galleryFooter{height:62px;box-sizing:border-box;display:flex;align-items:center;gap:20px;padding:0 28px 0 68px;background:#121210;color:#d9c59f;font:12px Arial,sans-serif}
 .galleryFooter>span:first-child{color:#fff5df;font-size:13px}
 .galleryFooter>span:nth-child(2){flex:1;color:#a99e89}
 .galleryFooter div{display:flex;gap:8px}
@@ -61,6 +61,7 @@
 .marfil .copy h2 em{background:linear-gradient(105deg,#754626,#a77b38 50%,#542938);background-clip:text;-webkit-text-fill-color:transparent}
 .marfil .subtitle{color:#4e4030}
 .marfil .date,.marfil .facts{color:#685744}
+.marfil .facts{justify-content:flex-end}
 .marfil .actions{justify-content:flex-end}
 .marfil .secondary{background:#f8f1e4aa}
 .marfil .art{left:7%;right:auto;width:min(35vw,480px);height:86%}
@@ -191,7 +192,7 @@
  .juntos .pablo{display:none}
  .encuentro .copy{left:7%;width:86%;top:33%}
  .encuentro .art{right:0;width:50vw;height:54%}
- .galleryFooter{padding:0 16px;gap:10px}
+ .galleryFooter{padding:0 16px 0 60px;gap:10px}
 }
 @media(max-width:540px){
  .navLinks a:last-child{display:none}
