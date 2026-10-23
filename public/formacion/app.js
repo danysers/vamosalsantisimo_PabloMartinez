@@ -13,6 +13,14 @@ menu?.addEventListener('click', () => {
 document.addEventListener('keydown', event => {
   if(event.key === 'Escape' && menu?.getAttribute('aria-expanded') === 'true') { closeMenu(); menu.focus(); }
 });
+document.addEventListener('change', event => {
+  if(event.target.name !== 'tieneInconveniente') return;
+  const details = document.querySelector('#payment-details-field');
+  const textarea = document.querySelector('#inconveniente');
+  const showDetails = event.target.value === 'si';
+  details.hidden = !showDetails;
+  if(!showDetails) textarea.value = '';
+});
 document.addEventListener('submit', event => {
   if(event.target.id !== 'registration') return;
   event.preventDefault();

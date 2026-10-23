@@ -1,5 +1,5 @@
 .gallery{min-height:100svh;background:#11110f;color:#f9ebcd;font-family:Georgia,'Times New Roman',serif}
-:global(nextjs-portal){display:none!important}
+:global(body:has([class*="export"]) nextjs-portal){display:none!important}
 .selectorBar{height:84px;box-sizing:border-box;display:flex;align-items:center;gap:26px;padding:12px 28px;background:#121210;border-bottom:1px solid #c5a56b30;font-family:Arial,sans-serif}
 .selectorIntro{min-width:230px}
 .selectorIntro p{margin:0 0 3px;color:#cfaa69;font-size:9px;letter-spacing:.2em}

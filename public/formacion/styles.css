@@ -57,6 +57,18 @@ footer{view-transition-name:page-footer}
 @keyframes stable-out{to{opacity:0}}
 @keyframes stable-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+
+/* Campos adicionales del formulario histórico de inscripción. */
+select{width:100%;border:1px solid #ddd1cc;background:#fff9;border-radius:6px;padding:11px 15px;min-height:47px;font-family:inherit;font-size:clamp(14px,1.5vw,19px);color:var(--ink);font-weight:400;min-width:0}
+select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
+.registration .payment-field{border:0;border-top:1px solid #e6bb6e80;padding:18px 0 0;margin:0 0 21px;min-width:0}
+.payment-field legend{padding:0;margin-bottom:13px;font-size:clamp(14px,1.5vw,19px);font-weight:500}
+.payment-field legend span{color:var(--wine)}
+.payment-options{display:flex;align-items:center;gap:24px}
+.payment-options label{display:flex!important;flex-direction:row!important;align-items:center;gap:9px;margin:0!important;font-size:16px!important;font-weight:400!important;cursor:pointer}
+.payment-options input[type=radio]{width:18px;height:18px;min-height:18px;padding:0;accent-color:var(--wine)}
+.payment-details{margin-top:14px}
+.payment-field [hidden]{display:none}
 .transition-scrolled main,.transition-scrolled footer{view-transition-name:none}
 .transition-scrolled::view-transition-old(root){display:block;animation:stable-out 160ms ease-out both;mix-blend-mode:normal}
 .transition-scrolled::view-transition-new(root){animation:stable-in 220ms ease-in both;mix-blend-mode:normal}
