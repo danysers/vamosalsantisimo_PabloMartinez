@@ -93,7 +93,6 @@ export default function GoldenHero({ children }: { children?: ReactNode }) {
           </g>
         </svg>
       </div>
-      <div className={styles.devotionalOutline} aria-hidden="true" />
       <div className={styles.portrait}>
         <Image src="/2026/adoracion/santisimo-portada.png" alt="Santísimo Sacramento en una custodia dorada" width={874} height={1799} preload sizes="(max-width: 700px) 70vw, 40vw" />
       </div>

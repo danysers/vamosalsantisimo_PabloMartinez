@@ -1,10 +1,9 @@
 .experience{position:relative;isolation:isolate;background:#050505}
-.stage{position:relative;isolation:isolate;min-height:max(780px,100svh);overflow:clip;background:#050505;color:#f9e7c3;font-family:Georgia,'Times New Roman',serif;display:flex;align-items:center}
+.stage{position:relative;isolation:isolate;min-height:clamp(640px,82svh,820px);overflow:clip;background:#050505;color:#f9e7c3;font-family:Georgia,'Times New Roman',serif;display:flex;align-items:center}
 .header{position:absolute;top:20px;left:6.8%;right:6.8%;display:flex;align-items:center;justify-content:space-between;gap:25px;z-index:4;font-family:Arial,Helvetica,sans-serif}
 .brand{display:block;flex-shrink:0}.brand img{display:block;width:90px;height:auto}
 .header nav{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:clamp(16px,2vw,32px)}
 .header nav a{color:#e1d4b9;font-size:12px;text-decoration:none;padding:10px 0}.header nav a:hover{color:#ffe2a6}
-.devotionalOutline{position:absolute;inset:5% -10% -8% 43%;border:1px solid #bda26d44;border-radius:50%;z-index:0;pointer-events:none}
 .stage::after{content:'';position:absolute;bottom:0;left:0;right:0;height:90px;z-index:2;pointer-events:none;background:linear-gradient(transparent,#050505)}
 .atmosphere{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 82% 28%,#4d341c61,transparent 55%)}
 .halo{position:absolute;inset:-20% -15% -20% 38%;background:radial-gradient(ellipse at 65% 30%,#d2974845,transparent 58%);animation:gold-breathe 9s ease-in-out infinite alternate}
@@ -18,7 +17,7 @@
 .portrait{position:absolute;right:6%;bottom:-8%;height:87%;width:min(40vw,650px);z-index:1;pointer-events:none;mask-image:linear-gradient(to bottom,#000 90%,transparent 100%)}
 .portrait img{height:100%;width:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(8px -3px 12px #e8ac3b24)}
 .dust{position:fixed;inset:0;width:100%;height:100svh;z-index:5;pointer-events:none}
-.copy{position:relative;z-index:3;margin:0 0 0 6.8%;width:58%;padding:150px 0 95px;animation:copy-arrive 1.1s ease-out both}
+.copy{position:relative;z-index:3;margin:0 0 0 6.8%;width:58%;padding:120px 0 65px;animation:copy-arrive 1.1s ease-out both}
 .overline{font:clamp(9px,.9vw,13px) Arial,Helvetica,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#d2b473;margin:0 0 24px}
 .date{font-size:clamp(16px,1.5vw,23px);color:#efe2c8;margin:23px 0 13px;line-height:1.5}
 .details{font:clamp(10px,.85vw,13px)/1.8 Arial,Helvetica,sans-serif;color:#dac49a;display:flex;flex-wrap:wrap;gap:10px;margin:0}
@@ -48,7 +47,7 @@
 @media(min-width:1800px){.copy{margin-left:max(7%,calc((100vw - 1600px)/2))}.portrait{right:6%}}
 @media(max-width:1000px) and (min-width:701px){.portrait{width:42vw;right:1%}.copy{margin-left:5%;width:65%}.actions{gap:12px}.primary,.secondary{padding:12px 20px}}
 @media(max-width:700px){
- .stage{min-height:max(1020px,100svh);align-items:flex-start}
+ .stage{min-height:940px;align-items:flex-start}
  .header{top:16px;left:22px;right:22px;gap:16px}.brand img{width:65px}.header nav{gap:15px}.header nav a{font-size:10px}
  .copy{width:100%;margin:0;padding:135px 24px 0;text-align:center}
  .overline{font-size:9px;letter-spacing:.16em;margin-bottom:20px}
@@ -60,8 +59,7 @@
  .actions{justify-content:center;gap:10px;margin-top:25px}
  .primary,.secondary{font-size:14px;padding:10px 17px;gap:12px;min-height:46px}
  .primary span{width:24px;height:24px}
- .portrait{height:480px;width:100%;right:0;bottom:-28px;mask-image:linear-gradient(#000 88%,transparent 100%)}
- .devotionalOutline{inset:48% -22% -10% 20%}
+ .portrait{height:420px;width:100%;right:0;bottom:-28px;mask-image:linear-gradient(#000 88%,transparent 100%)}
  .ribbons{top:30%;height:70%;width:180%;left:-60%}
  .halo{inset:-30% -50% -10% -50%}
  .beams{top:5%;right:-40%;width:150%;height:110%}
