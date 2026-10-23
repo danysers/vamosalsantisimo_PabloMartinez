@@ -11,7 +11,8 @@
     if (root.dataset.siteNavigation !== 'entering') return;
     const hero = new Image();
     hero.src = location.pathname.startsWith('/formacion')
-      ? '/formacion/assets/pablo-martinez.png' : '/2026/adoracion/santisimo-portada.png';
+      ? '/formacion/assets/pablo-martinez.png'
+      : location.pathname === '/' ? '/2026/adoracion/santisimo-portada.png' : '/2026/logo.webp';
     // Wait for real resources, with a bounded wait on a slow connection.
     await Promise.race([
       Promise.allSettled([document.fonts.ready, hero.decode()]),
@@ -31,9 +32,10 @@
     const link = event.target instanceof Element ? event.target.closest('a') : null;
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
     const url = new URL(link.href);
-    const inWorkshop = location.pathname.startsWith('/formacion');
-    const toWorkshop = /^\/formacion(?:\/|$)/.test(url.pathname);
-    if (url.origin !== location.origin || inWorkshop === toWorkshop || (!toWorkshop && url.pathname !== '/') || reduced()) return;
+    const area = path => path === '/' ? 'inicio' : /^(?:\/)(formacion|voluntarios|donaciones)(?:\/|$)/.exec(path)?.[1];
+    const from = area(location.pathname);
+    const to = area(url.pathname);
+    if (url.origin !== location.origin || !from || !to || from === to || reduced()) return;
     // If storage is unavailable, keep ordinary link navigation working.
     try { sessionStorage.setItem(key, JSON.stringify({path:url.pathname,at:Date.now()})); }
     catch { return; }
@@ -43,5 +45,5 @@
     root.dataset.siteNavigation = 'leaving';
     setTimeout(() => location.assign(url.href), 290);
     setTimeout(reset, 8000);
-  });
+  }, true);
 })();

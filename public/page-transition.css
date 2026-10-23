@@ -1,4 +1,4 @@
-/* Shared only by the boundary between the dark home and the light workshop. */
+/* Shared by the home, workshop, volunteer and donation pages. */
 html[data-site-navigation]::after{content:'';position:fixed;inset:0;z-index:2147483647;pointer-events:auto;background:radial-gradient(ellipse at 75% 35%,#9b713734,transparent 60%),#17120d;will-change:opacity;}
 html[data-site-navigation="leaving"]::after{animation:site-veil-in 280ms ease-in both}
 html[data-site-navigation="leaving"] body{animation:site-soften-out 280ms ease-in both;pointer-events:none}
