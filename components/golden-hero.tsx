@@ -104,7 +104,7 @@ export default function GoldenHero({ children }: { children?: ReactNode }) {
         <p className={styles.details}>20:00 h <span>·</span> Lugar a confirmar <span>·</span> Entrada gratuita</p>
         <div className={styles.actions}>
           <a className={styles.primary} href="#adoracion">Ver el encuentro <span aria-hidden="true">↗</span></a>
-          <a className={styles.secondary} href="/formacion">Taller de músicos</a>
+          <a className={styles.secondary} href="#formacion">Taller de músicos</a>
         </div>
       </section>
     </main>

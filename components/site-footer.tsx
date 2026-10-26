@@ -16,7 +16,7 @@ export default function SiteFooter() {
   return (
     <footer className={styles.footer} id="contacto">
       <section className={styles.photoSection} aria-labelledby="footer-faq-title">
-        <Image className={styles.photo} src="/2026/footer/escenario-original-alta.jpg" alt="Pablo Martínez junto a los músicos y el público durante un encuentro en vivo" fill sizes="100vw" quality={90} />
+        <Image className={styles.photo} src="/2026/formacion/bosque-pablo-original.jpg" alt="Pablo Martínez con su guitarra, entre los árboles del bosque" fill sizes="100vw" quality={90} />
         <div className={styles.shade} aria-hidden="true" />
         <div className={styles.intro}>
           <span className={styles.overline}>Nos encontramos en la fe</span>

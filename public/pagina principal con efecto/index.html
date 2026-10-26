@@ -17,6 +17,9 @@
   <meta property="og:image:alt" content="Invitación a Vamos al Santísimo 2026 con Pablo Martínez">
   <link rel="icon" href="/favicon-mark.png">
   <link rel="preload" as="image" href="/2026/adoracion/santisimo-portada.png">
+  <link rel="stylesheet" href="/page-transition.css">
+  <script>try{const k='vas-page-transition',v=JSON.parse(sessionStorage.getItem(k)||'null');sessionStorage.removeItem(k);if(v&&Date.now()-v.at<10000&&v.path.replace(/\/$/,'')===location.pathname.replace(/\/$/,'')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.dataset.siteNavigation='entering';if(v.mode==='workshop')document.documentElement.dataset.siteTransition='workshop'}}catch{}</script>
+  <script src="/page-transition.js" defer></script>
   <style>
     :root{--bg:#080705;--ink:#f6eedf;--gold:#d8b577;--gold-light:#f8e5b7;--muted:#bcaf97;--line:#d8b57730;--wine:#731d37;--serif:Georgia,'Times New Roman',serif;--sans:Arial,Helvetica,sans-serif;--ease:cubic-bezier(.22,1,.36,1)}
     html{scrollbar-gutter:stable}*{scrollbar-width:thin;scrollbar-color:var(--gold) var(--bg)}::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--gold);border:2px solid var(--bg);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:var(--gold-light)}::-webkit-scrollbar-corner{background:var(--bg)}@media(forced-colors:active){*{scrollbar-color:auto}}
@@ -31,7 +34,7 @@
     .hero-bottom{position:absolute;z-index:4;bottom:36px;left:7%;right:7%;display:flex;align-items:center;justify-content:space-between;gap:24px;border-top:1px solid var(--line);padding-top:22px}.hero-meta{display:flex;gap:44px}.hero-meta div{display:flex;flex-direction:column;gap:8px}.hero-meta small{font:9px var(--sans);text-transform:uppercase;letter-spacing:.2em;color:#a68c63}.hero-meta span{font:13px var(--sans);color:#e7dbc6}.scroll-link{display:flex;align-items:center;gap:12px;font:9px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}.scroll-link span{display:grid;place-items:center;width:34px;height:44px;border:1px solid var(--line);border-radius:99px;font-size:19px;color:var(--gold)}
     .gold-dust{position:fixed;inset:0;width:100%;height:100svh;z-index:20;pointer-events:none}.motion-on .halo,.motion-on .beams,.motion-on .ribbon-glint,.motion-on .glass{animation-play-state:running}.is-background *{animation-play-state:paused!important}.progress{position:fixed;left:0;top:0;width:100%;height:2px;z-index:40;background:var(--gold);transform:scaleX(0);transform-origin:left;pointer-events:none}
     .encounter{position:relative;min-height:760px;height:95svh;max-height:1050px;isolation:isolate;display:flex;align-items:center;overflow:clip}.encounter::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 75% 60%,#b07a3024,transparent 53%);pointer-events:none}.encounter .wrap{position:relative;z-index:3}.encounter-copy{width:52%;padding:90px 0}.encounter .pill{margin-bottom:28px}.encounter .heading{margin-bottom:26px}.encounter .heading em{display:block}.lead{font-size:clamp(18px,1.8vw,25px);line-height:1.5;max-width:29ch;color:#d6cbb8}.event-date{font-size:clamp(20px,2.3vw,32px);margin:27px 0 8px}.event-location{font:12px/1.8 var(--sans);color:var(--muted);margin-bottom:27px}.pablo-portrait{position:absolute;right:4%;bottom:-5%;width:44%;height:88%;z-index:1;mask-image:linear-gradient(#000 77%,transparent 98%);-webkit-mask-image:linear-gradient(#000 77%,transparent 98%)}.pablo-portrait img{height:100%;width:100%;object-fit:contain;object-position:bottom}.section-line{position:absolute;left:7%;top:0;width:86%;height:1px;background:linear-gradient(90deg,transparent,#d8b57755,transparent)}.pin-progress{height:1px;width:180px;background:#d8b5772a;margin-top:38px}.pin-progress i{display:block;background:var(--gold);height:100%;transform:scaleX(0);transform-origin:left}
-    .formation{position:relative;min-height:820px;display:flex;align-items:center;overflow:hidden;isolation:isolate}.forest{position:absolute;inset:-8% 0;width:100%;height:116%;object-fit:cover;object-position:65% center;z-index:-3;filter:saturate(.8)}.forest-shade{position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,#080705de,#08070580 45%,#08070515 74%),linear-gradient(var(--bg),transparent 16%,transparent 75%,var(--bg))}.formation .wrap{padding:110px 0}.formation-card{width:min(570px,52%);padding:45px;border-radius:26px;border:1px solid #ebd0a039;background:linear-gradient(135deg,#231c11c9,#100e0973);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 80px #0004}.formation-card .eyebrow{margin-bottom:25px}.formation-card .heading{font-size:clamp(46px,5.1vw,74px)}.formation-card .heading em{display:block}.formation-card .lead{font-size:20px;margin-bottom:26px}.formation-card .event-date{font-size:22px}.formation-card .notice{font:11px/1.7 var(--sans);color:#c8bca4;margin-top:19px}
+    .formation{position:relative;min-height:820px;display:flex;align-items:center;overflow:hidden;isolation:isolate}.forest{position:absolute;inset:-8% 0;width:100%;height:116%;object-fit:cover;object-position:65% center;z-index:-3;filter:saturate(.8)}.forest-shade{position:absolute;inset:0;z-index:-2;background:linear-gradient(180deg,var(--bg) 0%,#080705f0 16%,#0807059c 34%,transparent 52%,transparent 75%,var(--bg) 100%),linear-gradient(90deg,#080705de,#08070580 45%,#08070515 74%)}.formation .wrap{padding:110px 0}.formation-card{width:min(570px,52%);padding:45px;border-radius:26px;border:1px solid #ebd0a039;background:linear-gradient(135deg,#231c11c9,#100e0973);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 80px #0004}.formation-card .eyebrow{margin-bottom:25px}.formation-card .heading{font-size:clamp(46px,5.1vw,74px)}.formation-card .heading em{display:block}.formation-card .lead{font-size:20px;margin-bottom:26px}.formation-card .event-date{font-size:22px}.formation-card .notice{font:11px/1.7 var(--sans);color:#c8bca4;margin-top:19px}
     .invitation{position:relative;padding:110px 0 90px;background:radial-gradient(ellipse at 50% 5%,#32221240,transparent 55%)}.panel-track{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:390px;overflow:hidden}.panel{position:relative;flex:0 0 18%;min-width:0;padding:34px;overflow:hidden;border-right:1px solid var(--line);transition:flex-grow .85s var(--ease),background .65s;background:transparent}.panel:last-child{border-right:0}.panel.active{flex-grow:1;background:linear-gradient(145deg,#b68a4710,transparent)}.panel-trigger{position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:24px;background:none;border:0;color:inherit;text-align:left;padding:5px;min-height:44px;width:100%;cursor:pointer}.panel-number{font-size:clamp(95px,13.5vw,195px);line-height:.9;letter-spacing:-.08em;color:#a8773e;transition:color .6s}.panel:nth-child(2) .panel-number{color:#b89b6d}.panel:nth-child(3) .panel-number{color:#eedbb1}.panel-title{font-size:24px;line-height:1.2}.panel.active .panel-number{color:var(--gold-light)}.panel-detail{margin:20px 5px 0;max-width:26ch;color:#cdbfa5;font-size:19px;line-height:1.5;opacity:0;transform:translateX(-18px);filter:blur(4px);visibility:hidden;transition:opacity .3s,transform .4s,filter .4s,visibility .3s}.panel.active .panel-detail{opacity:1;transform:none;filter:none;visibility:visible;transition:opacity .6s .2s,transform .7s .15s,filter .6s .2s}.panel-caption{display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:#a28f70;font:10px/1.6 var(--sans);letter-spacing:.1em}.panel-caption .indicator{display:flex;gap:8px}.indicator i{height:2px;width:24px;background:#6e5837;transition:background .3s,width .3s}.indicator i.active{background:var(--gold);width:45px}
     .invite-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:80px}.info-card{position:relative;isolation:isolate;min-height:290px;padding:36px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(125deg,#251d1280,#0b090600);overflow:hidden}.info-card h3{font-size:30px;margin:15px 0}.info-card p{font:14px/1.8 var(--sans);color:var(--muted);max-width:43ch}.info-card .small-icon{color:var(--gold);width:24px;height:24px}.map-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.17;z-index:-1;mask-image:linear-gradient(90deg,transparent,#000)}.info-card .actions{margin-top:24px}.info-card .btn{font-size:14px;min-height:44px;padding:11px 17px}.copy-link{background:none;border:0;border-bottom:1px solid #d8b57760;padding:10px 0 5px;color:var(--gold-light);font:12px var(--sans)}.info-card .status{min-height:24px;font:11px/1.6 var(--sans);margin-top:14px;color:var(--gold-light)}
     .community{padding:90px 0 110px;position:relative}.community-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px}.support-card{position:relative;padding:40px;border:1px solid var(--line);border-radius:24px;background:radial-gradient(ellipse at 0 0,#b58e4b13,transparent 70%);transition:transform .4s,border-color .4s}.support-card:hover{transform:translateY(-6px);border-color:#d8b57770}.support-card .card-top{display:flex;align-items:center;justify-content:space-between;color:var(--gold);margin-bottom:40px}.card-top svg{width:28px;height:28px}.card-top span{font:10px var(--sans);letter-spacing:.18em;color:#a48a62}.support-card h3{font-size:33px;margin-bottom:20px}.support-card p{font:14px/1.9 var(--sans);color:var(--muted);max-width:43ch;min-height:80px;margin-bottom:28px}
@@ -44,7 +47,7 @@
     @media(max-width:1000px){.nav-links{gap:20px}.hero-copy>*{max-width:66%}.hero-meta{gap:26px}.hero{min-height:790px}.custodia{right:0;width:45%;height:68%;bottom:12%}.hero h1{font-size:7.7vw}.hero-subtitle{font-size:24px}.formation-card{padding:32px;width:55%}.formation-card .lead{font-size:18px}.sponsors-grid{grid-template-columns:repeat(3,1fr)}.sponsor.featured{grid-column:1/-1;height:130px}.sponsor.featured img{max-width:450px}.panel{padding:26px;flex-basis:21%}.panel-title{font-size:22px}.panel-detail{font-size:17px}.panel-track{min-height:360px}}
     @media(max-width:760px){
       .wrap{width:88%}.nav{top:16px;width:92%;padding:7px 10px 7px 16px;min-height:66px;gap:12px}.brand img{width:64px;height:48px}.nav .nav-cta{display:none}.nav-links{gap:18px;font-size:10px}.hero{height:auto;min-height:1030px;max-height:none;align-items:flex-start}.hero-copy{width:88%;padding:140px 0 0;text-align:center}.hero-copy>*{max-width:100%}.hero-copy .eyebrow{font-size:9px;letter-spacing:.17em;margin-bottom:22px}.hero h1{font-size:clamp(48px,10.7vw,78px)}.hero h1 .gold-title{font-size:1.33em}.hero-subtitle{font-size:clamp(20px,5vw,27px)}.wine-rule{margin:20px auto;width:150px}.hero-copy .hero-date{font-size:11px;margin-top:16px}.hero-copy .actions{justify-content:center;gap:10px;margin-top:22px}.hero-copy .btn{font-size:14px;padding:12px 17px;gap:14px;min-height:47px}.custodia{bottom:135px;right:0;width:100%;height:435px}.hero-scene .ribbons{inset:25% -55% 0;width:170%;height:70%}.hero-bottom{left:6%;right:6%;bottom:25px;padding-top:20px}.hero-meta{justify-content:space-between;gap:20px;width:100%}.hero-meta div{gap:8px}.hero-meta small{font-size:8px}.hero-meta span{font-size:11px}.scroll-link{display:none}.hero-bottom .meta-place{max-width:90px}.glass:nth-child(odd){display:none}.glass{width:35px}.hero-scene .halo{width:150%;right:-30%}.hero-scene .beams{inset:10% -30% 0}.hero .glass-field{top:40%}
-      .encounter{height:auto;min-height:1060px;max-height:none;align-items:flex-start}.encounter-copy{width:100%;padding:80px 0 520px}.encounter .heading{font-size:clamp(48px,12vw,76px)}.encounter .pill{font-size:9px;max-width:100%}.encounter .lead{font-size:20px;max-width:30ch}.event-date{font-size:23px}.pablo-portrait{height:510px;bottom:-8px;right:0;width:100%}.pin-progress{display:none}.formation{min-height:990px;align-items:flex-end}.forest{object-position:77% top;inset:0;height:75%}.forest-shade{background:linear-gradient(var(--bg),transparent 15%,transparent 28%,#08070555 47%,var(--bg) 73%)}.formation .wrap{padding:450px 0 65px}.formation-card{width:100%;padding:30px;border-radius:22px;background:linear-gradient(145deg,#211c12d9,#0c0a07bf)}.formation-card .heading{font-size:clamp(43px,11vw,68px)}.formation-card .lead{font-size:19px}.formation-card .event-date{font-size:20px}.formation-card .eyebrow{font-size:9px}
+      .encounter{height:auto;min-height:1060px;max-height:none;align-items:flex-start}.encounter-copy{width:100%;padding:80px 0 520px}.encounter .heading{font-size:clamp(48px,12vw,76px)}.encounter .pill{font-size:9px;max-width:100%}.encounter .lead{font-size:20px;max-width:30ch}.event-date{font-size:23px}.pablo-portrait{height:510px;bottom:-8px;right:0;width:100%}.pin-progress{display:none}.formation{min-height:990px;align-items:flex-end}.forest{object-position:77% top;inset:0;height:75%}.forest-shade{background:linear-gradient(180deg,var(--bg) 0%,#080705d9 18%,#08070580 34%,transparent 50%,#08070555 65%,var(--bg) 83%)}.formation .wrap{padding:450px 0 65px}.formation-card{width:100%;padding:30px;border-radius:22px;background:linear-gradient(145deg,#211c12d9,#0c0a07bf)}.formation-card .heading{font-size:clamp(43px,11vw,68px)}.formation-card .lead{font-size:19px}.formation-card .event-date{font-size:20px}.formation-card .eyebrow{font-size:9px}
       .invitation{padding:75px 0 45px}.section-heading{margin-bottom:40px}.section-heading .heading{font-size:clamp(37px,9vw,58px)}.section-heading .eyebrow{font-size:9px}.panel-track{flex-direction:column;min-height:0}.panel,.panel.active{flex:none;padding:28px 10px;background:none;border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr}.panel:last-child{border-bottom:0}.panel-trigger{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:20px;pointer-events:none;cursor:default}.panel-number{font-size:80px}.panel-title{font-size:27px}.panel-detail,.panel.active .panel-detail{opacity:1;visibility:visible;filter:none;transform:none;margin:15px 5px 0 105px;max-width:30ch;font-size:17px;transition:none}.panel-caption{display:none}.invite-grid,.community-grid{grid-template-columns:1fr;gap:20px}.invite-grid{margin-top:45px}.info-card{padding:30px;min-height:0}.info-card h3{font-size:28px}.info-card .actions{gap:16px}.community{padding:50px 0 70px}.support-card{padding:30px}.support-card .card-top{margin-bottom:25px}.support-card h3{font-size:29px}.support-card p{min-height:0}.sponsors{padding:65px 0}.sponsors .heading{font-size:36px}.sponsors-grid{gap:10px}.sponsor{height:95px;border-radius:12px;padding:13px}.sponsor.featured{height:120px;padding:30px}.thanks{font-size:15px;max-width:30ch;margin:25px auto 0}.footer{padding-top:30px}.footer-row{flex-direction:column;gap:30px}.footer-links{justify-content:center;gap:23px;font-size:12px}.legal{justify-content:center;text-align:center;gap:12px}
     }
     @media(max-width:700px){.closing{min-height:420px;align-items:flex-end}.closing-photo{object-position:62% 25%}.closing-shade{background:linear-gradient(180deg,var(--bg) 0%,#08070533 25%,#08070588 55%,var(--bg) 100%),linear-gradient(90deg,#08070566,#08070522)}.closing-intro{padding:170px 0 30px;width:86%}.closing-overline{margin-bottom:12px;font-size:9px}.closing-intro h2{font-size:32px}.closing-intro>p{font-size:14px;max-width:290px;margin-bottom:22px}.faq{padding-top:10px;padding-bottom:32px}.question summary{font-size:13px;padding:19px 0}.question p{font-size:13px}}
@@ -89,6 +92,18 @@
     #app .invitation-dialog .invite-phone-tip,
     #app .invitation-dialog .invite-utilities a,
     #app .invitation-dialog .invite-utilities button{color:#fff}
+    .nav .footer-brand{width:86px;height:86px}
+    .nav .footer-brand img{width:65px;height:52px}
+    .footer-ring{opacity:0}
+    .footer-ring .ring-glint{stroke:var(--gold-light);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:.16 .84;opacity:0;filter:drop-shadow(0 0 5px var(--gold-light))}
+    .footer-ring.is-spinning{animation:brand-ring-orbit 1.9s cubic-bezier(.2,.7,.2,1) both,brand-ring-visibility 5.4s linear both}
+    .footer-ring.is-spinning .ring-track{animation:brand-ring-draw 1.9s ease-out both}
+    .footer-ring.is-spinning .ring-glint{animation:brand-ring-glint 1.9s ease-in-out both}
+    @keyframes brand-ring-orbit{from{transform:rotate(-90deg)}to{transform:rotate(630deg)}}
+    @keyframes brand-ring-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+    @keyframes brand-ring-glint{0%,100%{opacity:0}15%,80%{opacity:1}}
+    @keyframes brand-ring-visibility{0%{opacity:0}4%,91%{opacity:1}100%{opacity:0}}
+    @media(max-width:760px){.nav .footer-brand{width:68px;height:68px}.nav .footer-brand img{width:52px;height:42px}}
   </style>
   <link rel="stylesheet" href="/pagina%20principal%20con%20efecto/invitation.css">
   <link rel="stylesheet" href="/pagina%20principal%20con%20efecto/footer-socials.css">
@@ -103,7 +118,7 @@
   <main id="contenido" tabindex="-1">
     <section class="hero" id="inicio" aria-labelledby="hero-title">
       <header class="nav">
-        <a class="brand" href="/" aria-label="Vamos al Santísimo, página principal"><img src="/2026/logo.webp" alt="Vamos al Santísimo" width="76" height="56"></a>
+        <a class="brand footer-brand" href="/" aria-label="Vamos al Santísimo, página principal"><svg class="footer-ring" viewBox="0 0 110 110" aria-hidden="true"><circle class="ring-track" cx="55" cy="55" r="52" pathLength="1"/><circle class="ring-glint" cx="55" cy="55" r="52" pathLength="1"/></svg><img src="/2026/logo.webp" alt="Vamos al Santísimo" width="76" height="56"></a>
         <nav class="nav-links" aria-label="Navegación principal"><a href="#adoracion">El encuentro</a><a href="#formacion">Taller</a><a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a></nav>
       </header>
       <div class="hero-scene" aria-hidden="true">
@@ -117,7 +132,7 @@
         <div class="wine-rule" aria-hidden="true"></div>
         <p class="hero-subtitle">Adoración con Pablo Martínez</p>
         <p class="hero-date"><time datetime="2026-12-19">Sábado 19 de diciembre de 2026</time></p>
-        <div class="actions"><a class="btn" href="#adoracion">Ver el encuentro <span class="arrow" aria-hidden="true">↗</span></a><a class="btn btn-outline" href="/formacion">Taller de músicos</a></div>
+        <div class="actions"><a class="btn" href="#adoracion">Ver el encuentro <span class="arrow" aria-hidden="true">↗</span></a><a class="btn btn-outline" href="#formacion">Taller de músicos</a></div>
       </div>
       <div class="hero-bottom"><div class="hero-meta"><div><small>Adoración</small><span>21:00 h · Entrada gratuita</span></div><div><small>Taller de músicos</small><span>17:00 h</span></div><div class="meta-place"><small>Nos encontramos</small><span data-event-venue-label>Anfiteatro de la Juventud</span></div></div><a class="scroll-link" href="#adoracion">Descubrí el encuentro <span aria-hidden="true">↓</span></a></div>
     </section>
@@ -137,14 +152,14 @@
     </section>
 
     <section class="formation" id="formacion" aria-labelledby="formation-title">
-      <img class="forest" src="/2026/formacion/bosque-pablo-original.jpg" alt="Pablo Martínez con su guitarra, entre los árboles del bosque" width="1920" height="1080" loading="lazy" decoding="async">
+      <img class="forest" src="/2026/footer/escenario-original-alta.jpg" alt="Pablo Martínez cantando en el escenario junto a los músicos y el público" width="4032" height="2268" loading="lazy" decoding="async">
       <div class="forest-shade" aria-hidden="true"></div>
       <div class="wrap"><div class="formation-card">
         <p class="eyebrow reveal">19 de diciembre · Taller de músicos</p>
         <h2 class="heading split" id="formation-title">Formación <em>católica</em></h2>
         <p class="event-date reveal"><time datetime="2026-12-19T17:00:00-03:00">19 de diciembre · 17:00 h</time></p>
         <p class="lead reveal">Una tarde de formación católica para profundizar en la fe, la vida y la música como camino de encuentro con Dios.</p>
-        <a class="btn reveal" href="/formacion">Más información <span class="arrow" aria-hidden="true">↗</span></a>
+        <a class="btn reveal" href="/formacion">Ir al taller <span class="arrow" aria-hidden="true">↗</span></a>
         <p class="notice reveal">El taller tiene un pequeño costo. Te recomendamos inscribirte antes; también podés anotarte en el lugar el mismo día. Publicaremos el formulario previo cuando esté habilitado.</p>
       </div></div>
     </section>
@@ -200,7 +215,7 @@
     </div></section>
 
     <section class="closing" id="contacto" aria-labelledby="footer-faq-title">
-      <img class="closing-photo" src="/2026/footer/escenario-original-alta.jpg" alt="Pablo Martínez junto a los músicos y el público durante un encuentro en vivo" width="1920" height="1080" loading="lazy"><div class="closing-shade" aria-hidden="true"></div>
+      <img class="closing-photo" src="/2026/formacion/bosque-pablo-original.jpg" alt="Pablo Martínez con su guitarra, entre los árboles del bosque" width="2651" height="1768" loading="lazy"><div class="closing-shade" aria-hidden="true"></div>
       <div class="closing-intro"><span class="closing-overline">Nos encontramos en la fe</span><h2 id="footer-faq-title">Preguntas frecuentes</h2><p>Algunas respuestas para acompañarte<br>antes del encuentro.</p><a class="faq-button" href="#preguntas-frecuentes">Ver preguntas frecuentes <span aria-hidden="true">↓</span></a></div>
     </section>
     <section class="faq" id="preguntas-frecuentes" aria-labelledby="footer-faq-title">
@@ -226,7 +241,7 @@
     </div>
   </nav>
   <footer class="footer"><div class="wrap"><div class="footer-row">
-    <a class="footer-brand" href="/" aria-label="Vamos al Santísimo, página principal"><svg class="footer-ring" viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="52" pathLength="1"/></svg><img src="/2026/logo.webp" alt="Vamos al Santísimo" width="80" height="65" loading="lazy"></a>
+    <a class="footer-brand" href="/" aria-label="Vamos al Santísimo, página principal"><svg class="footer-ring" viewBox="0 0 110 110" aria-hidden="true"><circle class="ring-track" cx="55" cy="55" r="52" pathLength="1"/><circle class="ring-glint" cx="55" cy="55" r="52" pathLength="1"/></svg><img src="/2026/logo.webp" alt="Vamos al Santísimo" width="80" height="65" loading="lazy"></a>
     <nav class="footer-links" aria-label="Navegación del pie de página"><a href="#inicio">Inicio</a><a href="#adoracion">Encuentro</a><a href="#formacion">Taller</a><a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a></nav>
     <a class="footer-contact" href="https://wa.me/5493704258770?text=Hola%2C%20quiero%20consultar%20por%20Vamos%20al%20Sant%C3%ADsimo%20con%20Pablo%20Mart%C3%ADnez." target="_blank" rel="noopener noreferrer">Contacto <span aria-hidden="true">↗</span></a>
   </div><div class="legal"><span>© 2026 Vamos al Santísimo - Todos los derechos reservados</span><span>Fe, música y comunidad.</span></div></div></footer>
@@ -282,6 +297,29 @@
   let introTimeline = null, resumeIntro = false;
   let clearSectionFocus = () => {};
   let restartDust = () => {}, stopDust = () => {};
+  let lastRingEdge = null, ringFrame = 0;
+
+  // Replay the same drawn circle whenever a visitor returns to either end.
+  function checkEdgeRings() {
+    ringFrame = 0;
+    const atTop = scrollY <= 24;
+    const atBottom = scrollY + innerHeight >= document.documentElement.scrollHeight - 24;
+    const edge = atTop ? 'top' : atBottom ? 'bottom' : null;
+    if (edge === 'top' && introTimeline && introTimeline.isActive()) return;
+    if (edge === lastRingEdge) return;
+    lastRingEdge = edge;
+    if (!edge || reduce.matches || document.hidden) return;
+    const ring = $(edge === 'top' ? '.nav .footer-ring' : '.footer .footer-ring');
+    if (!ring) return;
+    ring.classList.remove('is-spinning');
+    void ring.offsetWidth;
+    ring.classList.add('is-spinning');
+  }
+  function scheduleEdgeRings() {
+    if (!ringFrame) ringFrame = requestAnimationFrame(checkEdgeRings);
+  }
+  addEventListener('scroll',scheduleEdgeRings,{passive:true});
+  addEventListener('resize',scheduleEdgeRings);
 
 
   // The accordion also works without the animation libraries, by click and keyboard.
@@ -463,6 +501,7 @@
           .from('#hero-title .char', {opacity:0,y:24,filter:'blur(8px)',stagger:.12,duration:1.35,clearProps:'transform,filter,opacity'}, .55)
           .from('.custodia', {opacity:0,y:35,duration:1.3,clearProps:'transform,opacity'}, .35)
           .from('.hero-copy .eyebrow,.hero-subtitle,.hero-date,.hero-copy .actions,.hero-bottom', {opacity:0,y:12,stagger:.07,duration:.8,clearProps:'transform,opacity'}, .8);
+        timeline.eventCallback('onComplete',scheduleEdgeRings);
       }
       // Only hide elements that have not already reached the viewport; resuming never hides visible content.
       $$('.reveal').filter(el => el.getBoundingClientRect().top > innerHeight * .85).forEach(el => {
@@ -475,7 +514,6 @@
         const el = $(selector);
         if (el.getBoundingClientRect().top > innerHeight * .85) gsap.from(el,{y:55,opacity:0,scale:.96,duration:1.1,ease:'power3.out',clearProps:'transform,opacity',scrollTrigger:{trigger:el,start:'top 92%',once:true}});
       }
-      gsap.from('.footer-ring circle',{strokeDasharray:1,strokeDashoffset:1,duration:1.6,ease:'power2.inOut',scrollTrigger:{trigger:'.footer',start:'top 94%',once:true}});
       gsap.to('.progress',{scaleX:1,ease:'none',scrollTrigger:{trigger:'#app',start:'top top',end:'bottom bottom',scrub:.3}});
     });
     media = gsap.matchMedia();
@@ -512,6 +550,8 @@
       try { setupMotion(firstRun); setupSectionFocus(); } catch (error) { destroyMotion(); console.warn('La página continúa sin animaciones:',error); }
     }
     restartDust();
+    lastRingEdge = null;
+    scheduleEdgeRings();
     firstRun = false;
   }
   reduce.addEventListener('change',applyPreference);

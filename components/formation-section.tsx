@@ -5,7 +5,7 @@ export default function FormationSection() {
   return (
     <section className={styles.section} id="formacion" aria-labelledby="formation-title">
       <div className={styles.scene}>
-        <Image className={styles.forest} src="/2026/formacion/bosque-pablo-original.jpg" alt="Pablo Martínez con su guitarra, entre los árboles del bosque" fill sizes="100vw" quality={90} />
+        <Image className={styles.forest} src="/2026/footer/escenario-original-alta.jpg" alt="Pablo Martínez cantando en el escenario junto a los músicos y el público" fill sizes="100vw" quality={90} />
         <div className={styles.shade} aria-hidden="true" />
       </div>
       <div className={styles.atmosphere} aria-hidden="true">
@@ -27,7 +27,7 @@ export default function FormationSection() {
         <div className={styles.rule} aria-hidden="true" />
         <p className={styles.date}><time dateTime="2026-12-19T17:00:00-03:00">19 de diciembre · 17:00 h</time></p>
         <p className={styles.description}>Una tarde de formación católica para profundizar en la fe, la vida y la música como camino de encuentro con Dios.</p>
-        <a className={styles.button} href="/formacion">Más información <span aria-hidden="true">↗</span></a>
+        <a className={styles.button} href="/formacion">Ir al taller <span aria-hidden="true">↗</span></a>
       </div>
     </section>
   )
