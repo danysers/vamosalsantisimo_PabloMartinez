@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import styles from './adoration-section.module.css'
 
 export default function AdorationSection() {
@@ -21,7 +20,6 @@ export default function AdorationSection() {
         <p className={styles.date}><time dateTime="2026-12-19T20:00:00-03:00">19 de diciembre · 20:00 h</time></p>
         <p className={styles.location}>Lugar a confirmar · Entrada gratuita</p>
         <p className={styles.description}>Una noche de oración, música y adoración a Jesús en el Santísimo Sacramento, junto a Pablo Martínez.</p>
-        <Link className={styles.button} href="/encuentro#evento">Más información <span aria-hidden="true">↗</span></Link>
       </div>
     </section>
   )

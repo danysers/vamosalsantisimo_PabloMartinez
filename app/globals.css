@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+body {
+  background: #17070a;
+  color: #fff7e7;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

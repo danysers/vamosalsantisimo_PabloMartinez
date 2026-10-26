@@ -12,8 +12,13 @@ async function setup({ ua = 'Android', platform = 'Linux', touch = 0, status = '
     return nodes.get(id)
   }
   const labels = [{}, {}, {}, {}], listeners = {}, timers = []
-  const document = { hidden: false, documentElement: { dataset: {} }, getElementById: get,
-    querySelectorAll: () => labels, addEventListener: (name, fn) => { listeners[name] = fn } }
+  const documentElement = { dataset: {}, textContent: null }
+  const document = { hidden: false, documentElement, getElementById: get,
+    querySelectorAll: selector => {
+      if (selector === '[data-event-venue-label]') return labels
+      if (selector === '[data-event-venue]') return documentElement.dataset.eventVenue ? [documentElement, ...labels] : labels
+      return []
+    }, addEventListener: (name, fn) => { listeners[name] = fn } }
   let requests = 0
   vm.runInNewContext(source, { document, navigator: { userAgent: ua, platform, maxTouchPoints: touch }, URL, URLSearchParams, AbortSignal, Date,
     setTimeout: (fn, delay) => { timers.push({ fn, delay }); return timers.length }, clearTimeout() {},
@@ -51,6 +56,13 @@ test('rain updates every visible location and both platform-specific routes', as
   }
 })
 
+test('repeated venue refreshes never replace the document with the venue name', async () => {
+  const app = await setup()
+  await app.timers.at(-1).fn()
+  assert.equal(app.document.documentElement.textContent, null)
+  assert.equal(app.document.documentElement.dataset.eventVenue, 'outdoor')
+  assert.ok(app.labels.every(node => node.textContent === 'Anfiteatro de la Juventud'))
+})
 test('offline weather preserves a usable map and explicit alternative without claiming a dry venue', async () => {
   const app = await setup({ failure: true })
   assert.match(app.get('directions-status').textContent, /No pudimos consultar/)

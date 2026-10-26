@@ -72,7 +72,7 @@ export default function GoldenHero({ children }: { children?: ReactNode }) {
         <nav aria-label="Navegación principal">
           <a href="#adoracion">El encuentro</a>
           <a href="#formacion">Taller</a>
-          <Link href="/encuentro#pablo">Pablo Martínez</Link>
+          <a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a>
         </nav>
       </header>
       <div className={styles.atmosphere} aria-hidden="true">

@@ -13,12 +13,9 @@
 .date{font-size:clamp(22px,2.3vw,36px);line-height:1.4;margin:0 0 15px}
 .location{font:clamp(12px,1vw,15px)/1.7 Arial,Helvetica,sans-serif;color:#c7b184;margin:0 0 25px}
 .description{font-size:clamp(19px,1.8vw,27px);line-height:1.4;max-width:30ch;margin:0 0 30px;text-wrap:pretty}
-.button{display:inline-flex;align-items:center;justify-content:center;gap:28px;padding:13px 25px 13px 30px;min-height:56px;border-radius:99px;border:1px solid #813345;background:#5c1e2a;color:#faeddb;font-size:clamp(18px,1.6vw,25px);text-decoration:none;transition:background .2s,transform .2s}
-.button span{display:grid;place-items:center;width:31px;height:31px;border:1px solid #efc9b4;border-radius:50%;font:23px Arial,sans-serif}
-.button:hover{background:#72283b;transform:translateY(-2px)}.button:focus-visible{outline:2px solid #ffdf9e;outline-offset:6px}
 @keyframes adoration-breathe{from{opacity:.4}to{opacity:1}}
 @keyframes adoration-drift{from{transform:translateY(-10px)}to{transform:translateY(10px)}}
 @keyframes adoration-travel{from{stroke-dashoffset:1000}to{stroke-dashoffset:0}}
 @media(max-width:1000px) and (min-width:701px){.portrait{right:-5%;width:50%;height:80%}.description{max-width:27ch}.content h2{font-size:6.8vw}}
-@media(max-width:700px){.section{min-height:1060px;align-items:flex-start}.content{padding:70px 0 530px}.overline{font-size:9px;max-width:30ch;line-height:1.8}.content h2{font-size:clamp(48px,12vw,75px);width:100%}.date{font-size:23px}.description{font-size:20px;max-width:29ch}.location{font-size:12px}.portrait{height:520px;width:100%;right:0;bottom:-45px}.button{font-size:19px}.halo{background:radial-gradient(ellipse at 65% 70%,#b5833733,transparent 62%)}}
+@media(max-width:700px){.section{min-height:1060px;align-items:flex-start}.content{padding:70px 0 530px}.overline{font-size:9px;max-width:30ch;line-height:1.8}.content h2{font-size:clamp(48px,12vw,75px);width:100%}.date{font-size:23px}.description{font-size:20px;max-width:29ch}.location{font-size:12px}.portrait{height:520px;width:100%;right:0;bottom:-45px}.halo{background:radial-gradient(ellipse at 65% 70%,#b5833733,transparent 62%)}}
 @media(prefers-reduced-motion:reduce){.section *{animation:none!important;transition:none!important}}

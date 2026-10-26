@@ -82,9 +82,9 @@ export default function ProposalGallery({ initialDesign, exportMode }: GalleryPr
             <Image src="/2026/logo.webp" alt="" width={166} height={78} unoptimized />
           </Link>
           <div className={styles.navLinks}>
-            <Link href="/encuentro#evento">El encuentro</Link>
-            <Link href="/encuentro#taller">Taller</Link>
-            <Link href="/encuentro#pablo">Pablo Martínez</Link>
+            <Link href="/#adoracion">El encuentro</Link>
+            <Link href="/#formacion">Taller</Link>
+            <a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a>
           </div>
         </nav>
 
@@ -128,8 +128,8 @@ export default function ProposalGallery({ initialDesign, exportMode }: GalleryPr
           </div>
 
           <div className={styles.actions}>
-            <Link className={styles.primary} href="/encuentro#evento">Ver el encuentro <span aria-hidden="true">↗</span></Link>
-            <Link className={styles.secondary} href="/encuentro#taller">Taller de músicos</Link>
+            <Link className={styles.primary} href="/#adoracion">Ver el encuentro <span aria-hidden="true">↗</span></Link>
+            <Link className={styles.secondary} href="/#formacion">Taller de músicos</Link>
           </div>
 
         </div>

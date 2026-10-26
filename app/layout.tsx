@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import './event.css'
 import '../public/page-transition.css'
 
 export const metadata: Metadata = {

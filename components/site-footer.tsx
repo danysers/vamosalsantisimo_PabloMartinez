@@ -40,9 +40,9 @@ export default function SiteFooter() {
           </Link>
           <nav className={styles.links} aria-label="Navegación del pie de página">
             <Link href="/">Inicio</Link>
-            <Link href="/encuentro#evento">Encuentro</Link>
-            <Link href="/encuentro#taller">Taller</Link>
-            <Link href="/encuentro#pablo">Pablo Martínez</Link>
+            <Link href="/#adoracion">Encuentro</Link>
+            <Link href="/#formacion">Taller</Link>
+            <a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a>
           </nav>
           <a className={styles.contact} href={whatsapp} target="_blank" rel="noopener noreferrer">
             <MessageCircle size={18} strokeWidth={1.4} aria-hidden="true" /> Contacto <ArrowUpRight size={14} aria-hidden="true" />

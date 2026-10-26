@@ -38,7 +38,7 @@
     destination = indoor ? rainDestination : '-26.1936919,-58.1701572';
     place.textContent = name;
     address.textContent = indoor ? 'Av. 9 de Julio 1015, Formosa.' : 'Av. Napoleón Uriburu y Av. 9 de Julio, Formosa.';
-    document.querySelectorAll('[data-event-venue]').forEach(node => { node.textContent = name; });
+    document.querySelectorAll('[data-event-venue-label]').forEach(node => { node.textContent = name; });
     document.documentElement.dataset.eventVenue = indoor ? 'indoor' : 'outdoor';
     syncLinks();
     source.hidden = !['dry','rain','unavailable'].includes(data.status);

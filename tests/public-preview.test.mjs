@@ -22,6 +22,7 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.ok(ready, 'production server did not start')
     const home = await fetch(base)
     assert.equal(home.status, 200)
+    assert.equal((await fetch(`${base}/encuentro`)).status, 404, 'retired encounter page must not be served')
     const html = await home.text()
     for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '17:00 h', 'Entrada gratuita', 'Cada gesto de', 'directions-main']) {
       assert.ok(html.includes(text), `missing public text: ${text}`)
