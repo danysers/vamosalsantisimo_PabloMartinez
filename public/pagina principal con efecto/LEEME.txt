@@ -1,0 +1,75 @@
+PÁGINA PRINCIPAL CON EFECTO — PORTADA PRINCIPAL APROBADA
+
+Vista local:
+http://localhost:3000/
+
+El 26/10/2026 el usuario eligió esta versión animada como portada principal y autorizó el commit y push a main de danysers/vamosalsantisimo_PabloMartinez. next.config.mjs sirve este HTML en / mediante un rewrite antes de las páginas. La carpeta original y su URL siguen disponibles; los recursos usan rutas absolutas para funcionar desde ambos accesos. Las notas anteriores sobre comparación local quedan como historial. La implementación reside en:
+D:\CODSS\PabloMartinez-VamosAlSantisimo\site\public\pagina principal con efecto
+
+Archivos:
+- index.html: página, estilos e interacción.
+- PROMPT-ADAPTADO.txt: interpretación completa del prompt de Petalyx para Vamos al Santísimo.
+- vendor/: copias de las tres librerías solicitadas por la referencia. Sus avisos de licencia se conservan en las cabeceras.
+
+Fuentes de las librerías:
+GSAP 3.12.5: https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js
+ScrollTrigger 3.12.5: https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js
+Lenis 1.1.13: https://unpkg.com/lenis@1.1.13/dist/lenis.min.js
+Documentación: https://gsap.com/docs/v3/ y https://github.com/darkroomengineering/lenis
+
+Las imágenes generales se referencian desde /2026/ en el mismo servidor. El afiche de invitación está en assets/invitacion-vamos-al-santisimo-2026-prueba.png. No requiere instalar paquetes ni cambiar la configuración del proyecto.
+Con Next.js abrir la URL completa con /index.html. Para usar otra ruta amigable se puede integrar posteriormente con una página o rewrite.
+
+El control inferior pausa y reanuda los efectos. La preferencia de movimiento reducido también se respeta. Los destinos de taller, encuentro, voluntariado y donaciones son los de la página oficial. Compartir y copiar utilizan https://vamosalsantisimo.com/ incluso en localhost, para no enviar enlaces locales a otras personas.
+Se recuperó el efecto de puntos dorados de la página principal: ascienden, brillan y se desvanecen a lo largo de todas las secciones, incluida Formación. Reutiliza el diseño de partículas GoldDust del sitio original y se controla con «Pausar efectos».
+Preguntas frecuentes recupera la composición de la portada original: foto panorámica, título y descripción a la izquierda, botón rectangular y fundido oscuro. Se retiró la tarjeta central de vidrio y se conservó GoldDust.
+El acordeón se reutiliza para voluntariado, donaciones y marcas, debajo de Cómo llegar e Invitá a un amigo. La nueva página /sumar-marca explica formas de acompañar y reúne los contactos 3704258770 y contactos@vamosalsantisimo.com, con enlaces de llamada, correo y WhatsApp. La marca Mila Club aparece destacada arriba de las otras tres marcas. La presentación de la página de donaciones se conserva.
+Los efectos se ajustaron a las referencias originales: puntos más pequeños y tenues, líneas finas de fondo y capas decorativas detrás de la custodia, el retrato, los textos y las tarjetas. La página /sumar-marca usa también partículas de fondo, con menor intensidad.
+Se simplificó el diseño: encabezado sin cápsula, formación integrada al bosque sin recuadro, bloques y marcas sin marcos añadidos y eliminación total de los cuadrados decorativos. El título principal aparece letra por letra en unos 3,7 segundos. Se mantiene el círculo animado del logo inferior. La animación se aprecia al cargar la portada desde su URL sin ancla o con #inicio.
+Al recorrer la página, la sección que sale pierde nitidez y presencia mientras la siguiente se enfoca gradualmente. La transición responde al scroll en ambos sentidos y adapta su intensidad al móvil. «Pausar efectos» y la preferencia de movimiento reducido dejan todo nítido; los controles con foco de teclado también se mantienen legibles.
+
+El 26/10/2026 el usuario confirmó los datos del afiche para esta invitación: encuentro el 19/12/2026 en el Anfiteatro de la Juventud, convocatoria 19:00 h, misa 20:00 h y adoración 21:00 h. La página local se sincronizó con esos datos. El taller conserva su información anterior. Esta variante es un archivo independiente de la portada oficial.
+
+INVITACIÓN PARA REDES
+
+invitation.css e invitation.js implementan la vista previa, descarga y elección de Instagram, WhatsApp o Facebook. El botón principal inicia la descarga y abre el sitio elegido; no adjunta automáticamente la imagen a una publicación. En navegadores con Web Share de archivos aparece además «Compartir imagen con una app»; el sistema elige el destino y el usuario termina la publicación. La imagen se prepara antes de tocar ese botón para conservar la activación del usuario. No se descarga ni redirige si se cancela el selector nativo.
+
+El afiche actual se copió sin modificar del archivo codex-clipboard-1d0243eb-caf8-41a9-b82c-e7d22d9d93ca.png entregado por el usuario, quien pidió usarlo tal cual para probar en lugar del diseño generado. Contiene el QR y los auspiciantes originales. Resolución: 900 × 1600. La propuesta generada anterior queda archivada fuera de public/ y no se utiliza.
+
+La descarga directa también funciona sin JavaScript. En iPhone puede ser necesario abrir el archivo descargado y elegir Guardar imagen para incorporarlo a Fotos. La interfaz incluye esa indicación. Los errores de portapapeles ofrecen el texto para copiarlo manualmente.
+
+La miniatura del afiche en la página conserva únicamente su balanceo ambiental continuo. La vista previa grande dentro del cuadro «Compartir invitación» vuelve a inclinarse, elevarse e iluminarse al mover el mouse sobre ella. Las tarjetas de las cuatro marcas tienen inclinación 3D y luz dorada que siguen el puntero, relieve, reflejo, respuesta al tocar y soporte de foco de teclado. La preferencia de movimiento reducido desactiva los movimientos y transiciones.
+
+Se vincularon las cuentas que se pudieron confirmar: @paseoalmaverde y @cabildocasualbar. Para Mila Club y Las Kalas Rental Suites, Instagram no devolvió un perfil confirmable; sus tarjetas llevan a la búsqueda del nombre dentro de Instagram, evitando asignar una cuenta posiblemente incorrecta. Las Kalas sí tiene una página de Facebook publicada por AFONA, pero no se usó porque se solicitó Instagram.
+
+Verificación: node --test tests/invitation-sharing.test.mjs (8 casos), revisión visual a 320 y 390 píxeles y en escritorio, cierre con Escape y restitución del foco. Se comprobó la descarga real y la apertura de Instagram. La entrega a apps de iOS/Android se cubrió con simulaciones de capacidad, cancelación y error; falta la comprobación en un dispositivo físico.
+
+Trabajo local; no se realizó publicación, despliegue ni modificación de la portada oficial.
+
+AJUSTE DE FUNDIDO Y CÓMO LLEGAR
+El desenfoque máximo se redujo a 4,5 px en escritorio y 2,5 px en móvil. El fundido recorre más distancia y usa transiciones de .85 s en opacidad y 1.05 s en filtro para una aparición más lenta y sutil.
+Cómo llegar incluye botones de Google Maps y Mapas de Apple (iPhone), con indicaciones hacia el Anfiteatro de la Juventud. Se usó el punto del enlace publicado por Turismo de Formosa (-26.1936919,-58.1701572), junto a Av. Napoleón Uriburu y Av. 9 de Julio. Funcionan como enlaces nativos sin JavaScript; no se solicita ubicación desde esta página.
+Fuente del lugar: https://www.formosahermosa.gob.ar/turismo-deportivo/ y su enlace https://maps.app.goo.gl/yz4CUptXnTxWaGD39
+Formato de indicaciones: https://developers.google.com/maps/documentation/urls/get-started y https://developer.apple.com/documentation/mapkit/unified-map-urls
+
+SEDE POR LLUVIA Y MAPAS AUTOMÁTICOS
+La versión actual reemplaza los dos botones de mapas por uno: «Cómo llegar». directions.js elige Mapas de Apple en iPhone/iPad/Mac y Google Maps en Android y otros equipos. No solicita la ubicación del visitante. La sede alternativa permanece disponible en «Sede por lluvia», con su enlace nativo también adaptado al dispositivo. Sin JavaScript quedan enlaces funcionales de Google Maps para ambos lugares.
+María Auxiliadora: Av. 9 de Julio 1015, Formosa, según Turismo de la Municipalidad: https://turismo.formosatuciudad.gob.ar/vivi/circuitos-turisticos/6-recorrido-religioso
+
+La variante consulta GET /api/evento/sede en este mismo proyecto Next.js. La hora del servidor determina el comienzo: 19/12/2026 a las 18:00 de Argentina, una hora antes de la convocatoria de las 19:00. Antes de ese momento no se hacen peticiones meteorológicas. El cliente vuelve a consultar mientras la página está visible y al regresar a la pestaña; las condiciones se revisan cada cinco minutos hasta las 00:00. No usa una automatización de Codex ni requiere dejar abierto este chat. El servidor consulta al recibir visitas; si la primera visita es después de las 18:00, también revisa los intervalos ya transcurridos desde esa hora.
+
+Se usa Open-Meteo sin clave, con caché compartida de cinco minutos y deduplicación por proceso. Solo se envían las coordenadas públicas del Anfiteatro. La precipitación mayor a cero en un intervalo transcurrido desde las 18:00 activa María Auxiliadora; no se cambia por una probabilidad, por lluvia de hoy ni por intervalos futuros. La API entrega estimaciones de modelos: en Formosa, los intervalos de 15 minutos se interpolan desde datos horarios, sin precisión de sensor local. La interfaz lo identifica como estimación y muestra la atribución cuando se usan sus datos. El servicio gratuito está sujeto a sus condiciones de uso no comercial y disponibilidad: https://open-meteo.com/en/terms y https://open-meteo.com/en/docs
+
+La selección por lluvia se conserva en el proceso aunque deje de llover; una nueva instancia reconstruye la decisión a partir de los intervalos de ese día. No hay almacenamiento permanente ni tarea cron. En un fallo se conserva el último destino conocido y se muestra un aviso para verificar la sede, junto al acceso alternativo. El equipo puede forzar la sede en el servidor con EVENT_VENUE_OVERRIDE=indoor o outdoor; omitir la variable permite el modo automático. El override requiere la configuración/reinicio normal del alojamiento y no se cambia desde la URL pública.
+
+El nombre del lugar se sincroniza en la portada de esta variante, Adoración, Cómo llegar, el texto inferior de la invitación, las preguntas y los textos preparados para WhatsApp/portapapeles. El afiche original es una imagen fija con la alternativa por lluvia; no se edita automáticamente. Esta lógica necesita ejecutar el servidor Next.js y publicar también la ruta API cuando se publique la variante: el archivo HTML aislado no puede realizar la consulta por sí solo. El trabajo sigue únicamente en localhost.
+
+BARRA DE DESPLAZAMIENTO
+Se revisaron los estilos públicos de https://www.infolavelada.com/ y se adaptó su tratamiento nativo: barra fina con pulgar dorado y fondo oscuro. Aquí se usan los colores existentes #d8b577 y #080705. Conserva arrastre, rueda y teclado; no añade un segundo controlador de scroll. Los navegadores móviles pueden mostrar la barra del sistema.
+
+AJUSTES FINALES APROBADOS
+Alma Verde tiene fondo blanco puro #fff, sin velos dorados superpuestos que vuelvan a marcar el rectángulo de la imagen. Conserva la inclinación de la tarjeta. El foco de teclado de los botones redondeados se dibuja dentro del contorno, sin una segunda cápsula por fuera. Se sincronizó Lenis con el foco de teclado y la carga de anclas iniciales para regresar correctamente a /#colabora y abrir /#marcas.
+La promoción habilita el indexado de la nueva portada y declara su dirección canónica. Las rutas de administración, API y pruebas siguen excluidas en robots.txt. Las páginas de colaboración regresan a la nueva raíz con navegación nativa.
+
+REDES EN EL PIE
+Después de las preguntas frecuentes se agregó una franja con Instagram y Facebook @vamosalsantisimof, y TikTok @vamosalsantisimo. footer-socials.css mantiene blancos los tres logos y aplica una iluminación tenue del color de cada red al pasar el mouse o enfocar el enlace con teclado, adaptada a la composición oscura y dorada de esta página. La referencia visual fue la fila de redes al final de https://www.infolavelada.com/. El pie incluye «© 2026 Vamos al Santísimo - Todos los derechos reservados».

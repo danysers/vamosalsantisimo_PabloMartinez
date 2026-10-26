@@ -7,10 +7,13 @@ const nextConfig = {
     qualities: [75, 90],
   },
   async rewrites() {
-    return ['', 'el-taller', 'pablo-martinez', 'inscripcion', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
-      source: page ? `/formacion/${page}` : '/formacion',
-      destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',
-    }))
+    return {
+      beforeFiles: [{ source: '/', destination: '/pagina%20principal%20con%20efecto/index.html' }],
+      afterFiles: ['', 'el-taller', 'pablo-martinez', 'inscripcion', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
+        source: page ? `/formacion/${page}` : '/formacion',
+        destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',
+      })),
+    }
   },
   async headers() {
     return [

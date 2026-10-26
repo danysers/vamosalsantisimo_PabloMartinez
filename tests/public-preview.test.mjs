@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 
 // Run after npm run build. The real HTTP surface must not use a database.
-test('2026 preview advertises only confirmed facts and keeps legacy APIs closed', async () => {
+test('animated homepage is served at the root and keeps legacy APIs closed', async () => {
   const port = 31581
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
     cwd: process.cwd(),
@@ -23,18 +23,31 @@ test('2026 preview advertises only confirmed facts and keeps legacy APIs closed'
     const home = await fetch(base)
     assert.equal(home.status, 200)
     const html = await home.text()
-    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00 h', '17:00 h', '10.000', '15.000', '20.000', 'Entrada gratuita', 'no tiene límite de cupos', 'habilitará manualmente cada lote']) {
+    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '17:00 h', 'Entrada gratuita', 'Cada gesto de', 'directions-main']) {
       assert.ok(html.includes(text), `missing public text: ${text}`)
     }
     assert.ok(!html.includes('Daniel Poli'), 'archived performer leaked into new homepage')
     assert.match(html, /https:\/\/wa\.me\/5493704258770\?text=/)
-    assert.match(html, /abrir el chat no inscribe, reserva ni confirma un pago/)
+    assert.match(html, /<meta name="robots" content="index, follow">/)
+    assert.match(html, /href="https:\/\/vamosalsantisimo\.com\/"/)
+    assert.ok(!html.includes('src="./'), 'homepage assets must resolve from the root URL')
     assert.ok(!html.includes('accessToken='), 'private status token leaked into the public WhatsApp link')
     assert.match(home.headers.get('content-type') ?? '', /text\/html/)
     const asset = await fetch(`${base}/2026/logo.webp`)
     assert.equal(asset.status, 200)
     assert.match(asset.headers.get('content-type') ?? '', /image\/webp/)
     assert.equal(asset.headers.get('cache-control'), 'public, max-age=86400, stale-while-revalidate=604800')
+    for (const file of ['directions.js', 'invitation.js', 'invitation.css', 'vendor/gsap.min.js', 'assets/invitacion-vamos-al-santisimo-2026-prueba.png']) {
+      const resource = await fetch(`${base}/pagina%20principal%20con%20efecto/${file}`)
+      assert.equal(resource.status, 200, `homepage asset unavailable: ${file}`)
+    }
+    const venue = await fetch(`${base}/api/evento/sede`)
+    assert.equal(venue.status, 200)
+    assert.equal(venue.headers.get('cache-control'), 'no-store')
+    assert.ok(['outdoor', 'indoor'].includes((await venue.json()).venue.id))
+    const brands = await fetch(`${base}/sumar-marca`)
+    assert.equal(brands.status, 200)
+    assert.match(await brands.text(), /href="\/#colabora"/)
     const form = await fetch(`${base}/inscripcion`)
     assert.equal(form.status, 200)
     assert.match(await form.text(), /Inscripciones aún no disponibles/)

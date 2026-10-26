@@ -1,0 +1,108 @@
+VAMOS AL SANTÍSIMO — PÁGINA PRINCIPAL CON EFECTO
+Adaptación del prompt de Petalyx a la portada oficial existente en http://localhost:3000/.
+
+OBJETIVO
+Usar la versión animada aprobada como página principal de Vamos al Santísimo. Conservar la identidad religiosa, el contenido, las imágenes y los destinos de navegación actuales. La referencia aporta transiciones, profundidad, parallax, paneles expansibles y ritmo al recorrer la página, dentro de una composición minimalista.
+
+ENTREGA Y ALCANCE
+Conservar la subcarpeta public/pagina principal con efecto del proyecto que realmente sirve localhost:3000. Entregar index.html con CSS y JavaScript de la página integrados y módulos locales para invitaciones y mapas. Servir GSAP 3.12.5, ScrollTrigger 3.12.5 y Lenis 1.1.13 desde vendor/ dentro de esa subcarpeta. El usuario aprobó esta versión como portada principal el 26/10/2026: servirla en / mediante un rewrite anterior a la página antigua y usar recursos con rutas absolutas. Para /sumar-marca, reutilizar el marco de las páginas de colaboración. Después de verificar build, pruebas y presentación, subir los cambios a main del repositorio danysers/vamosalsantisimo_PabloMartinez. La automatización de despliegue ya existente se mantiene.
+Abrir / como página principal. La URL /pagina%20principal%20con%20efecto/index.html sigue disponible como acceso a la misma implementación.
+
+REGLAS DE ADAPTACIÓN
+1. No crear, generar, descargar ni añadir imágenes o videos nuevos. No usar ninguno de los recursos CloudFront de Petalyx. Reutilizar exclusivamente los recursos que ya utiliza la portada oficial.
+2. No incorporar flores de cerezo, árboles, nubes ilustradas, estética anime, paleta verde lima, logos comerciales ficticios ni textos SaaS. Los elementos decorativos se construyen con CSS y SVG: luz cálida, líneas doradas y partículas discretas, siempre detrás del contenido. Eliminar los cuadrados de vidrio y sus marcos.
+3. Mantener el logo de Vamos al Santísimo completo; no sustituirlo por el símbolo de Petalyx ni deformarlo. Un trazo circular puede revelarlo en el pie.
+4. No inventar métricas, asistentes, porcentajes de éxito, testimonios, fechas, sede ni cupos. La sección de estadísticas se adapta al encuentro real y su información. Los horarios y fechas nunca cuentan desde cero ni cambian con el scroll.
+5. Mantener el sábado 19 de diciembre de 2026: taller a las 17:00 h, adoración a las 20:00 h, lugar a confirmar y entrada gratuita a la adoración. Las inscripciones al taller todavía no están habilitadas.
+
+IDENTIDAD VISUAL
+Fondo negro cálido #080705; texto marfil #f6eedf; dorados #d8b577 y #f8e5b7; texto secundario #bcaf97; bordes dorados transparentes. Botones principales bordó #731d37, coherentes con la página actual. Mantener Georgia / Times New Roman para títulos y Arial / Helvetica para navegación y datos; no imponer Inter Tight ni cargar fuentes nuevas.
+Títulos amplios, elegantes, serif, con interlineado próximo a 1.04 y espaciado ligeramente negativo. Usar cursivas doradas en palabras destacadas. Dar aire al contenido, mantener buen contraste y reservar los efectos para acompañar la lectura.
+Botones redondeados con bordes finos y desplazamiento sutil al pasar el cursor. Preferir composiciones abiertas y separadores discretos; retirar los marcos de navegación, formación, información y auspiciantes. No usar tarjetas de vidrio ni cuadrados decorativos. Conservar el círculo fino del logo inferior y su animación de trazo.
+
+INVENTARIO DE IMÁGENES EXISTENTES
+/2026/logo.webp — logo oficial.
+/2026/adoracion/santisimo-portada.png — custodia de la portada.
+/2026/immersive/pablo.webp — retrato de Pablo Martínez.
+/2026/formacion/bosque-pablo-original.jpg — Pablo con guitarra en el bosque.
+/2026/invitacion/mapa-dorado.png — fondo decorativo de Cómo llegar; no representa una sede confirmada.
+/2026/sponsors/alma-verde.png — Alma Verde Paseo.
+/2026/sponsors/cabildo.png — Cabildo Casual Bar.
+/2026/sponsors/las-kalas.png — Las Kalas Rental Suites.
+/2026/sponsors/mila-blanco-sobre-negro.png — Mila Club.
+/2026/footer/escenario-original-alta.jpg — fotografía del encuentro en vivo.
+/favicon-mark.png — icono del sitio.
+Referenciar estos archivos desde la raíz del servidor; no duplicarlos en la variante ni recortarlos mediante edición de imagen. Ajustar encuadre únicamente mediante CSS.
+
+ESTRUCTURA Y COMPORTAMIENTO
+
+1. PORTADA
+Fondo oscuro con luz cálida, líneas curvas doradas y partículas suaves. Encabezado simple, sin borde, cápsula, fondo translúcido ni sombra; logo real a la izquierda y enlaces El encuentro, Taller y Pablo Martínez a la derecha.
+Mantener el título «Vamos al Santísimo», el subtítulo «Adoración con Pablo Martínez» y la fecha completa. Custodia a la derecha en escritorio; en móvil, debajo del texto y de los botones. Mantener Ver el encuentro → #adoracion y Taller de músicos → /formacion.
+Pie de portada con datos reales: 20:00 h · Entrada gratuita; taller 17:00 h; Lugar a confirmar. Indicación discreta para continuar hacia abajo.
+Entrada inicial: página de escala .94 y esquinas redondeadas a tamaño normal, sobre una atmósfera cálida. Menú entra suavemente; el título «Vamos al Santísimo» se revela letra por letra desde desenfoque, con una duración de 1,35 s por carácter y un intervalo de .12 s entre letras. La secuencia completa dura aproximadamente 3,7 s para que pueda apreciarse. Conservar las palabras completas para los saltos de línea y el nombre accesible del encabezado. La custodia aparece con elevación corta. No bloquear la navegación mientras sucede. Al pausar o con movimiento reducido, el título completo queda visible.
+Parallax de baja amplitud en custodia y texto en pantallas grandes. Cristales translúcidos periféricos que flotan lentamente.
+
+2. ADORACIÓN EUCARÍSTICA
+Mantener título, retrato de Pablo, descripción, fecha, hora, entrada gratuita y lugar a confirmar. «Más información» lleva a /encuentro#evento.
+Texto: «Una noche de oración, música y adoración a Jesús en el Santísimo Sacramento, junto a Pablo Martínez».
+Adaptar el efecto de árbol ascendente y sección fijada de Petalyx al retrato real: en escritorio, fijación breve de la sección mientras la foto asciende suavemente y una línea dorada avanza. Sin cifras animadas ni logos de empresas ajenas. En móvil, retrato y texto en flujo normal, sin fijación.
+
+3. FORMACIÓN CATÓLICA
+Conservar la foto original del bosque como fondo y su protagonista visible. Texto integrado a la escena, sin marco, tarjeta de vidrio ni borde redondeado: «Formación católica», «19 de diciembre · 17:00 h», el texto actual y el botón a /formacion. Usar el fundido oscuro de la foto para mantener la lectura.
+Texto: «Una tarde de formación católica para profundizar en la fe, la vida y la música como camino de encuentro con Dios».
+Mantener el aviso de inscripciones aún no habilitadas. Foto con parallax discreto solo en escritorio; bloque de texto con entrada suave. En móvil, foto arriba y texto abajo, con un fundido que mantenga la legibilidad.
+
+4. LA INVITACIÓN
+Retirar «Una experiencia para compartir» y los contenidos Música, Encuentro y Fe. Esta sección comienza directamente con las tarjetas Cómo llegar e Invitá a un amigo. Conservar sus textos y los controles Compartir invitación y Copiar enlace. En Cómo llegar, mostrar la dirección del Anfiteatro de la Juventud y dos botones nativos: Google Maps y Mapas de Apple (iPhone), ambos con indicaciones hacia -26.1936919,-58.1701572. La dirección y el punto corresponden al enlace publicado por Turismo de Formosa: Av. Napoleón Uriburu y Av. 9 de Julio. No solicitar geolocalización desde esta página; la app de mapas gestiona el origen. La función de compartir conserva el enlace de la portada oficial, no comparte la variante experimental. Mostrar confirmación real después de copiar y mensajes honestos ante errores. La aplicación no envía automáticamente mensajes.
+
+5. COLABORACIÓN
+Debajo de Cómo llegar e Invitá a un amigo, reutilizar el acordeón de tres paneles con el título «Cada gesto de amor suma»:
+01 Sumate como voluntario — descripción actual y «Quiero ser voluntario» → /voluntarios.
+02 Colaborá con tu donación — descripción actual y «Quiero colaborar» → /donaciones.
+03 Sumá tu marca al encuentro — invitación a acompañar con un aporte económico, productos o servicios; «Quiero sumar mi marca» → /sumar-marca.
+En escritorio, el panel activo se expande con transición suave; los demás conservan su número y título visibles. Funciona con hover, clic, foco, flechas izquierda/derecha y Home/End. Usar botones con aria-expanded y aria-controls. Los enlaces de paneles cerrados no reciben foco. En móvil, mostrar los tres textos y botones completos en filas estáticas, sin interacción obligatoria.
+Crear /sumar-marca con el mismo estilo de las páginas de colaboración. Explicar gastos como sonido, iluminación, equipos, traslados, logística, señalización, limpieza e insumos, sin inventar presupuestos o acuerdos. Presentar aportes económicos, productos y servicios como opciones a coordinar con el equipo. Explicar cómo contactar, conversar y acordar el reconocimiento de la marca. Teléfono 3704258770 (enlace tel:+543704258770), correo contactos@vamosalsantisimo.com (mailto) y botón de WhatsApp al 5493704258770. Volver al encuentro retorna a la variante con efectos, #colabora. No añadir pagos ni formularios nuevos.
+
+ACTUALIZACIÓN DE CÓMO LLEGAR
+Reemplazar los botones separados de Google/Apple indicados en el apartado 4 por un único «Cómo llegar», eligiendo la app según el dispositivo. Conservar además la alternativa «Sede por lluvia» con acceso a Parroquia María Auxiliadora, Av. 9 de Julio 1015, Formosa. El 19/12/2026 desde las 18:00 de Argentina, el servidor consulta Open-Meteo cada cinco minutos al recibir visitas. Si la estimación indica precipitación en un intervalo transcurrido desde esa hora, actualizar el lugar mostrado y los destinos a María Auxiliadora. Consultar solo el clima del lugar del encuentro, sin geolocalizar al visitante. Sincronizar nombres y textos de invitación; conservar la imagen original del afiche. No confundir ausencia de datos con ausencia de lluvia: ante un fallo mostrar aviso y acceso a la sede alternativa. Identificar Open-Meteo como fuente y los datos como estimaciones. Respetar su uso gratuito no comercial y evitar peticiones antes de la fecha necesaria. La hora del servidor controla la regla y existe un override de configuración para el equipo. La variante requiere su API de Next.js para este comportamiento.
+
+6. MARCAS
+Conservar los cuatro auspiciantes reales, sus nombres y logos sin deformación. Mantener «Marcas que nos acompañan en este encuentro» y «Agradecemos a cada uno de ellos y que Dios siga multiplicando el 100x1».
+Distribuir Mila Club en una tarjeta destacada centrada arriba; debajo, Alma Verde, Cabildo y Las Kalas en una fila de tres tarjetas. La segunda imagen del usuario se refiere únicamente a esta distribución; conservar la página de donaciones.
+La tarjeta de Alma Verde debe usar fondo blanco puro #fff, integrado al blanco de la imagen del logo. No superponer velos dorados sobre esa tarjeta.
+Entrada escalonada y fondo luminoso sutil. No convertir el agradecimiento 100x1 en un contador estadístico. Logos legibles, con fondo adecuado al original.
+
+7. CIERRE Y PREGUNTAS FRECUENTES
+Conservar el diseño original de la portada oficial, según la captura aprobada por el usuario: fotografía panorámica del escenario con fundido oscuro, texto alineado a la izquierda, título serif de tamaño moderado en una sola línea cuando haya espacio, descripción sans-serif y botón rectangular de borde dorado fino. Mantener el encuadre original (center 22% en escritorio, 62% 25% en móvil). El cantante y el escenario permanecen despejados. Sin tarjeta central, efecto de vidrio, parallax de la foto, títulos gigantes ni salto de línea forzado. Mantener GoldDust sobre toda la sección.
+Textos: «Nos encontramos en la fe», «Preguntas frecuentes», «Algunas respuestas para acompañarte antes del encuentro». Botón a #preguntas-frecuentes.
+Conservar las tres preguntas y respuestas actuales y recuperar su tipografía sans-serif discreta y separadores finos: adoración gratuita, sábado 19/12/2026 a las 20 h con sede pendiente, e inscripciones al taller aún no habilitadas. Usar details/summary para que funcionen sin JavaScript.
+
+8. PIE
+Logo real, navegación Inicio / Encuentro / Taller / Pablo Martínez, contacto de WhatsApp ya configurado, copyright 2026 y «Fe, música y comunidad». Animar únicamente un aro fino alrededor del logo; conservar su identidad.
+
+IMPLEMENTACIÓN DE MOVIMIENTO
+Usar una barra de desplazamiento nativa fina y dorada, inspirada en el estilo de infolavelada.com, con los colores propios #d8b577 y #080705. Conservar los controles nativos de scroll y el comportamiento del sistema en móvil.
+Los botones redondeados usan un contorno de foco interior, sin una cápsula externa que parezca un segundo botón. Mantener la indicación de foco y la navegación por teclado. Sincronizar las anclas iniciales y el foco nativo con Lenis para que el regreso a una sección no salte al principio.
+Añadir transiciones de foco entre las secciones principales. La sección que entra pasa gradualmente de desenfoque y baja opacidad a nitidez completa; al salir pierde presencia para dar protagonismo a la siguiente. Calcular el efecto según la posición real en el viewport, también al volver hacia arriba y teniendo en cuenta la sección de adoración fijada. Usar hasta 4,5 px de blur en escritorio y 2,5 px en móvil, con transiciones suaves de .85 s para la opacidad y 1.05 s para el filtro. Extender la entrada y la salida a lo largo de un mayor recorrido de scroll para apreciar el fundido. Adaptar los umbrales a los bloques cortos para que lleguen a ser nítidos. Mantener el flujo normal, los enlaces y el desplazamiento nativo; no agregar más fijaciones o saltos. Excluir la lista de preguntas y el pie del difuminado. Con foco de teclado o un menú abierto, el contenido interactivo queda nítido. Pausar, movimiento reducido o ausencia de JavaScript muestran todo con normalidad. Limpiar clases, estilos, eventos y observadores al desactivar el efecto.
+Conservar el efecto GoldDust de la portada original: 85 puntos de luz dorada, de distintos tamaños y halos suaves, concentrados en los bordes. Ascienden lentamente con oscilación lateral y se encienden y desvanecen de forma independiente. Usar un canvas fijo dentro de #app, con z-index 0, por debajo de main y del pie (z-index 1). La opacidad máxima de las partículas es .34 y su radio máximo 2.4 px. Deben acompañar el recorrido como fondo, quedando ocultas detrás de fotografías y tarjetas opacas. No bloquear clics ni cubrir la lectura. Pausar y reanudar con el mismo control de efectos; detener el bucle al ocultar la pestaña y mostrar una escena estática con movimiento reducido.
+Las líneas curvas y los destellos deben ser finos y discretos, como en las referencias originales: trayectorias de .5 a .9 px, transparencias bajas y un destello sin resplandor intenso. Recuperar líneas de fondo en Adoración, Cómo llegar/Invitá a un amigo, Colaboración y Marcas. Las capas decorativas van en z-index 0, con retratos, texto y tarjetas por encima. En la portada, la custodia está por encima de las líneas. Conservar la distribución y los contenidos ya aprobados. Aplicar también un fondo discreto y composiciones sin marcos a la nueva página /sumar-marca.
+GSAP para revelación de títulos y elementos; ScrollTrigger para entradas al viewport, fijación breve, parallax y progreso de lectura. Lenis para desplazamiento suave en escritorio con puntero fino; desplazamiento nativo en móviles.
+Separar palabras respetando em, spans, saltos de línea y nombre accesible de cada encabezado. Nunca ocultar contenido de forma permanente en CSS esperando JavaScript.
+Control visible «Pausar efectos / Reanudar efectos»: detener animaciones CSS, destruir Lenis y revertir animaciones y fijaciones GSAP. El contenido debe quedar visible y el desplazamiento seguir funcionando. Guardar la preferencia en sessionStorage, sin recopilar datos personales.
+Respetar prefers-reduced-motion desde la primera carga y ante cambios del sistema; desactivar parallax, fijación, partículas, zoom y desplazamiento suavizado. Pausar actividad decorativa con la pestaña oculta. Limpiar listeners/animaciones según corresponda y evitar acumulación al reanudar o redimensionar.
+Mantener enlaces nativos si las librerías fallan. Sin JavaScript, información, navegación y preguntas frecuentes siguen accesibles.
+
+ADAPTACIÓN RESPONSIVE Y VALIDACIÓN
+Probar escritorio y móvil, especialmente 390 y 320 px. No introducir desplazamiento horizontal. Mantener botones utilizables por teclado y pantallas táctiles. Los paneles se apilan; no fijar secciones en móvil. No debe quedar ningún cuadrado decorativo. Las fotos no deben tapar textos ni botones.
+Verificar enlaces internos, destinos oficiales, imágenes reales, ausencia de errores JS, acordeón, FAQ, pausa/reanudación y que las fechas y horarios sigan intactos. Mantener la portada oficial sin cambios.
+
+EQUIVALENCIAS CON LA REFERENCIA
+Valle de cerezo y video → atmósfera dorada CSS y custodia existente.
+Nubes flotantes → luces y líneas discretas de fondo.
+Árbol que emerge en sección fijada → retrato de Pablo con elevación durante el scroll.
+Métricas SaaS → información real del encuentro, sin contadores.
+Tres pasos de soporte → Voluntariado, donaciones y marcas, debajo de Cómo llegar e Invitá a un amigo.
+Valle nocturno y pétalos → sección original de preguntas frecuentes sobre el escenario real, texto a la izquierda y partículas doradas.
+Slack/Zapier/Dropbox/etc. → auspiciantes ya presentes.
+Marca animada Petalyx → aro dibujado alrededor del logo oficial intacto.

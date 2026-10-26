@@ -1,4 +1,6 @@
 User-agent: *
-Disallow: /
-
-# Preview only. Confirm domain, content and publication before enabling indexing.
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /propuestas-inicio
+Disallow: /pagina%20principal%20con%20efecto/

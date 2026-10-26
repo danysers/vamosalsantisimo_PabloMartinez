@@ -1,0 +1,42 @@
+VERIFICACIÓN LOCAL — 26/10/2026
+
+Promoción a portada principal: HTTP 200 en / con el HTML animado, sin recursos relativos rotos. pnpm build correcto, incluido TypeScript. pnpm test: 32 casos, 28 aprobados, 4 omitidos por requerir PostgreSQL descartable y ninguno fallido. Se probó el servidor de producción desde las pruebas HTTP: raíz, recursos, API de sede, /sumar-marca y endpoints heredados cerrados. La suite cubre inicio a las 18:00 de Argentina, lluvia, tiempo seco, datos ausentes, caché, concurrencia, fallos, override y selección de Maps según el dispositivo; 21 casos de mapas/clima/invitaciones aprobados. Se realizó una llamada real a Open-Meteo con fecha actual solo para comprobar el formato y las unidades; no se usa ese clima para el encuentro futuro. La API local hoy responde scheduled. No se simuló la apertura de las apps en teléfonos físicos.
+
+Ajustes visuales finales: barra nativa fina con colores efectivos rgb(216,181,119) y rgb(8,7,5). Alma Verde tiene fondo rgb(255,255,255) sin overlays de color. Compartir invitación conserva foco de teclado de 2 px con offset -2 px, integrado al borde. A 320/390 px no se observó desbordamiento. Se corrigió la carga de /#marcas y el foco de teclado con Lenis: la sección llegó a 46 px del borde superior y el tabulador no regresó a la portada. Capturas locales actualizadas de la portada, mapas, botón y marcas en .runtime-audit/pagina-principal-con-efecto del espacio del chat. El usuario autorizó commit y push a main y pidió apagar la PC después de confirmar la subida; no se modifica la automatización de despliegue.
+
+Ajuste posterior — fundido sutil y mapas: máximo de blur reducido a 4,5 px en escritorio y 2,5 px en móvil; transiciones efectivas comprobadas en navegador de .85 s para opacidad y 1.05 s para filtro. Entrada y salida distribuidas en más recorrido. Se observó la portada saliente atenuada y Adoración apareciendo con opacidad .855 y blur .85 px. Los botones Google Maps y Mapas de Apple (iPhone) se revisaron por teclado y a 320/390 px, sin desbordamiento horizontal. Google Maps abrió las indicaciones y reconoció «Anfiteatro de la Juventud»; Apple redirigió a /directions con el mismo destino y mostró «Anfiteatro». Ambos usan el punto enlazado por Turismo de Formosa: -26.1936919,-58.1701572. No se enviaron indicaciones a teléfonos ni se pidió ubicación. La apertura de la app nativa de iPhone no se comprobó en un dispositivo físico. Consola local sin advertencias ni errores. Captura: como-llegar-mapas.jpg en .runtime-audit/pagina-principal-con-efecto del espacio del chat.
+
+Última actualización — transiciones entre secciones: se añadieron siete capas de foco que ajustan opacidad y desenfoque al entrar y salir del viewport, con transiciones de .48/.58 s y umbrales adaptados a secciones cortas. En escritorio se observó la portada saliente con opacidad .577 y blur 3.08 px mientras Adoración estaba nítida con opacidad 1; en móvil de 390 px, portada .4431 y blur 2.32 px frente a Adoración nítida. Al volver arriba la portada recuperó opacidad 1 y blur 0. Pausar eliminó las siete capas y dejó las secciones con opacidad 1 y filtro none; al reanudar se restablecieron siete capas. Sin desbordamiento horizontal ni errores o advertencias de consola. La lista de preguntas y el pie no reciben el difuminado. Se mantiene la alternativa de movimiento reducido en el código, sin emular el ajuste del sistema durante esta revisión.
+
+Última actualización — composición minimalista y título: retirados el marco del menú, los recuadros de Formación, información y marcas, y los cuadrados decorativos. El título principal conserva su nombre accesible y se divide en 16 letras, que aparecen progresivamente en una secuencia aproximada de 3,7 s. Se verificó que las 16 letras terminan visibles y la escala inicial se limpia. Se ajustó la pausa de la introducción al ocultar la pestaña para no reactivar animaciones ya finalizadas. En móvil de 320 px, las palabras quedan dentro del ancho y no hay desbordamiento. El círculo inferior permanece visible con strokeDashoffset 0 después de su animación. La consola no mostró errores en la revisión; JavaScript inline válido y typecheck correcto tras los cambios de capas.
+
+Actualización de sutileza y profundidad: el canvas ahora queda dentro de #app en z-index 0, debajo de main y del pie (z-index 1). Las partículas tienen menor tamaño y opacidad máxima .34; se recuperaron cuatro capas de líneas finas de fondo. La escena de portada queda debajo de la custodia y los cristales se redujeron a opacidad .28. Se comprobaron los z-index efectivos y la apariencia de la portada: las líneas pasan detrás de la custodia. La página /sumar-marca usa un ajuste específico para colocar las partículas detrás de su contenido. JavaScript inline válido y una única instancia del canvas.
+
+Ruta probada: http://localhost:3000/pagina%20principal%20con%20efecto/index.html
+
+Actualización: recuperado GoldDust de la portada original en un canvas fijo que recorre todas las secciones. Se verificó su presencia y brillo, un único canvas, ausencia de errores en consola y pointer-events:none. Dos capturas completas con los efectos pausados resultaron idénticas; se reactivó el movimiento al finalizar. No se modificó la portada original.
+
+Actualización de Preguntas frecuentes: se restauraron la composición y el encuadre de components/site-footer.module.css según la captura del usuario. Texto a la izquierda, foto panorámica sin tarjeta central ni parallax, título moderado, botón rectangular y lista de preguntas en sans-serif. Verificado en escritorio y a 390 px, sin desbordamiento; el botón y la apertura/cierre de respuestas funcionan. GoldDust sigue activo. Consola sin advertencias ni errores y JavaScript válido.
+
+Actualización de colaboración y marcas: Cómo llegar e Invitá a un amigo aparecen antes del acordeón. Se retiró «Una experiencia para compartir» y el acordeón ahora reúne voluntariado, donaciones y marcas. Los enlaces de paneles cerrados tienen tabindex=-1; se verificó clic, flecha derecha y navegación a /sumar-marca, además del regreso a la variante. La nueva página detalla gastos y formas de colaborar y muestra teléfono, mailto, llamada y WhatsApp. Se comprobó la estructura en escritorio y a 390 px, sin desbordamiento horizontal. Mila Club aparece arriba de las otras tres marcas, siguiendo la aclaración del usuario. /sumar-marca, /voluntarios y /donaciones respondieron HTTP 200. pnpm exec tsc --noEmit pasó. JavaScript inline válido; sin IDs duplicados ni controles con destinos inexistentes. No se realizaron llamadas ni se enviaron mensajes.
+
+Comprobado en el navegador:
+- Escritorio de 1440 x 900: portada, custodia, retrato, tarjeta sobre bosque, acordeón, navegación y parallax.
+- Móvil de 390 x 844 y 320 x 740: sin desbordamiento horizontal; los tres paneles muestran todo su contenido; se desactiva la fijación de escritorio.
+- A 320 px se aumentó el alto de portada para que los botones apilados no se superpongan con la custodia.
+- Acordeón por clic y flecha derecha: selección y aria-expanded actualizados.
+- Pausar efectos: cero elementos ocultos de revelación, cero contenedores de fijación y scroll nativo disponible. Reanudar: vuelve una sola fijación en escritorio.
+- Copiar enlace: muestra la confirmación de copia, manteniendo el destino de la portada oficial.
+- Pregunta «¿Cuándo es el encuentro?»: abre y muestra la respuesta actual.
+- Las 11 instancias de imágenes cargaron correctamente; todas proceden de los recursos existentes.
+- Consola sin advertencias ni errores durante la revisión.
+- Nombres accesibles de encabezados conservan espacios al dividir palabras y saltos de línea.
+
+Comprobado por archivo y HTTP:
+- JavaScript inline con sintaxis válida.
+- Sin IDs duplicados ni anclas internas inexistentes.
+- Todos los recursos locales referenciados existen.
+- HTTP 200 de la variante, las tres librerías y las rutas /encuentro, /formacion, /voluntarios y /donaciones.
+- La portada app/page.tsx y sus componentes no fueron modificados por esta adaptación.
+
+Movimiento reducido y modo sin JavaScript cuentan con sus alternativas en el código; no se emuló el ajuste del sistema ni se deshabilitó JavaScript durante esta revisión. No se enviaron invitaciones, formularios, pagos ni mensajes de WhatsApp. No se ejecutó un build completo de Next.js: la entrega es estática y no cambia sus componentes o dependencias.
