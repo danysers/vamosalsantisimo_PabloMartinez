@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 
-// Run after npm run build. The real HTTP surface must not use a database.
+// Run after pnpm build. The real HTTP surface must not use a database.
 test('animated homepage is served at the root and keeps legacy APIs closed', async () => {
   const port = 31581
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
@@ -50,7 +50,10 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.match(await brands.text(), /href="\/#colabora"/)
     const form = await fetch(`${base}/inscripcion`)
     assert.equal(form.status, 200)
-    assert.match(await form.text(), /Inscripciones aún no disponibles/)
+    const registration = await form.text()
+    assert.match(registration, /Inscripción al taller/)
+    assert.match(registration, /un pequeño costo/)
+    assert.match(registration, /anotarte en el lugar el mismo día del taller/)
     for (const route of ['/api/inscripciones', '/api/test-db']) {
       const response = await fetch(`${base}${route}`)
       assert.equal(response.status, 404)

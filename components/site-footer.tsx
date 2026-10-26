@@ -5,9 +5,10 @@ import { organizationWhatsApp } from '../lib/whatsapp-link'
 import styles from './site-footer.module.css'
 
 const questions = [
-  { title: '¿La adoración tiene costo?', answer: 'La entrada a la adoración es gratuita. No necesitás pagar el taller para participar.' },
+  { title: '¿La adoración tiene costo?', answer: 'La adoración es gratuita. El taller de músicos tiene un pequeño costo; te recomendamos inscribirte antes, aunque también vas a poder anotarte en el lugar el mismo día. No hace falta participar del taller para asistir a la adoración.' },
   { title: '¿Cuándo es el encuentro?', answer: 'El sábado 19 de diciembre de 2026, a las 20:00 h. El lugar está por confirmar; compartiremos la dirección exacta más adelante.' },
-  { title: '¿Cómo me inscribo al taller?', answer: 'Las inscripciones todavía no están habilitadas. Publicaremos los detalles en la sección del taller.' },
+  { title: '¿Cómo me inscribo al taller?', answer: 'Te recomendamos hacer la inscripción previa cuando se habilite el formulario. Si no llegás a inscribirte antes, también vas a poder anotarte en el lugar el mismo día del taller.' },
+  { title: '¿Puedo llevar algo para estar más cómodo y alabar?', answer: 'Sí. Podés llevar una silleta, agua, un anotador, una pandereta u otros instrumentos para alabar al Señor; lo que te ayude a estar más cómodo.' },
 ]
 
 export default function SiteFooter() {

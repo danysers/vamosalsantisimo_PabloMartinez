@@ -14,7 +14,9 @@ test('legacy endpoints reject reads and registrations without revealing database
       await new Promise(resolve => setTimeout(resolve, 100))
     }
     assert.ok(ready, 'server unavailable')
-    assert.match(await (await fetch(`${base}/inscripcion`)).text(), /Inscripciones aún no disponibles/)
+    const registration = await (await fetch(`${base}/inscripcion`)).text()
+    assert.match(registration, /un pequeño costo/)
+    assert.match(registration, /anotarte en el lugar el mismo día del taller/)
     for (const route of ['/api/inscripciones', '/api/test-db']) {
       const response = await fetch(`${base}${route}`)
       assert.equal(response.status, 404)

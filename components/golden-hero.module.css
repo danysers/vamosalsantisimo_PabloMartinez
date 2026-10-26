@@ -35,10 +35,7 @@
 .primary:hover,.secondary:hover{transform:translateY(-3px);box-shadow:0 0 22px #d99b402b}
 .secondary:hover{background:#3927147a}
 .workshopPreview{font-size:clamp(14px,1.05vw,17px);gap:12px;border-color:#bda26d80;background:#19130b99}
-.motionControl{position:absolute;bottom:20px;right:24px;z-index:4;display:flex;align-items:center;gap:8px;border:1px solid #a9874c55;background:#090806aa;border-radius:30px;color:#d4bd94;padding:9px 13px;font:12px Arial,sans-serif;cursor:pointer}
-.motionControl:hover{color:#ffdf9e;border-color:#d6aa61}
 .stage a:focus-visible,.stage button:focus-visible{outline:2px solid #ffdf9e;outline-offset:5px}
-.paused *{animation-play-state:paused!important}
 @keyframes gold-breathe{from{opacity:.5;transform:scale(.96)}to{opacity:1;transform:scale(1.06)}}
 @keyframes gold-sway{from{transform:rotate(-5deg);opacity:.65}to{transform:rotate(5deg);opacity:1}}
 @keyframes ribbon-drift{from{transform:translateY(-12px) rotate(-1deg)}to{transform:translateY(16px) rotate(1deg)}}
@@ -63,9 +60,8 @@
  .ribbons{top:30%;height:70%;width:180%;left:-60%}
  .halo{inset:-30% -50% -10% -50%}
  .beams{top:5%;right:-40%;width:150%;height:110%}
- .motionControl{bottom:14px;right:14px;font-size:11px}
 }
 @media(max-width:360px){.copy{padding-left:14px;padding-right:14px}.primary,.secondary{font-size:13px;padding:9px 13px}}
-@media(prefers-reduced-motion:reduce){.stage *{animation:none!important;transition:none!important}.motionControl{display:none}}
+@media(prefers-reduced-motion:reduce){.stage *{animation:none!important;transition:none!important}}
 
 

@@ -79,7 +79,7 @@ export default function Home() {
             <div>
               <p className="eyebrow dark">Formación · 17:00 h</p>
               <h2 id="workshop-title">Taller para <em>músicos</em></h2>
-              <p>Un espacio para quienes desean profundizar en el servicio musical. El programa, el lugar y los materiales están pendientes de confirmación.</p>
+              <p>Un espacio para quienes desean profundizar en el servicio musical. El taller tiene un pequeño costo. Te recomendamos inscribirte antes; también vas a poder anotarte en el lugar el mismo día del taller.</p>
               <div className="price-list" aria-label="Aranceles previstos por lote">
                 <div><span>Primer lote</span><strong>$ 10.000</strong></div>
                 <div><span>Segundo lote</span><strong>$ 15.000</strong></div>
@@ -89,7 +89,7 @@ export default function Home() {
             </div>
             <aside className="registration-card" aria-labelledby="registration-title">
               <h3 id="registration-title">Inscripción al taller</h3>
-              <p>Las inscripciones y los pagos todavía no están habilitados. No ingreses datos personales ni realices pagos por enlaces no publicados oficialmente.</p>
+              <p>La inscripción y el pago previos todavía no están habilitados. Cuando se publique el formulario, te recomendamos anotarte con anticipación. Si no llegás, también vas a poder inscribirte en el lugar el mismo día del taller. No ingreses datos personales ni realices pagos por enlaces no publicados oficialmente.</p>
               <Link href="/inscripcion" className="button button-burgundy">Ver estado de inscripciones</Link>
               <p className="small-note">¿Tenés preguntas? <a href={buildWhatsAppLink(organizationWhatsApp)} target="_blank" rel="noopener noreferrer">Consultá por WhatsApp</a> al <strong>3704258770</strong>. Revisás el mensaje antes de enviarlo; abrir el chat no inscribe, reserva ni confirma un pago.</p>
               <p className="small-note">La adoración es gratuita y no requiere pagar el taller.</p>

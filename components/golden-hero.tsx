@@ -1,11 +1,11 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import styles from './golden-hero.module.css'
 
-export function GoldDust({ paused }: { paused: boolean }) {
+export function GoldDust() {
   const canvas = useRef<HTMLCanvasElement>(null)
   const elapsed = useRef(0)
   useEffect(() => {
@@ -21,7 +21,7 @@ export function GoldDust({ paused }: { paused: boolean }) {
     }))
     function paint(time: number) {
       if (!ctx || !element) return
-      const moving = !paused && !reduce.matches && !document.hidden
+      const moving = !reduce.matches && !document.hidden
       if (moving && last) elapsed.current += Math.min(time - last, 50) / 1000
       last = time
       ctx.clearRect(0, 0, width, height)
@@ -57,16 +57,15 @@ export function GoldDust({ paused }: { paused: boolean }) {
       reduce.removeEventListener('change', restart)
       document.removeEventListener('visibilitychange', restart)
     }
-  }, [paused])
+  }, [])
   return <canvas ref={canvas} className={styles.dust} aria-hidden="true" />
 }
 
 export default function GoldenHero({ children }: { children?: ReactNode }) {
-  const [paused, setPaused] = useState(false)
   const paths = ['M 420 590 C 700 530 890 150 1480 130', 'M 430 600 C 740 540 1010 130 1480 142', 'M 570 590 C 900 260 1150 355 1480 630']
   return (
-    <div className={`${styles.experience} ${paused ? styles.paused : ''}`}>
-      <GoldDust paused={paused} />
+    <div className={styles.experience}>
+      <GoldDust />
     <main className={styles.stage}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Vamos al Santísimo, inicio"><Image src="/2026/logo.webp" alt="Vamos al Santísimo" width={105} height={78} sizes="90px" /></Link>
@@ -108,9 +107,6 @@ export default function GoldenHero({ children }: { children?: ReactNode }) {
           <a className={styles.secondary} href="/formacion">Taller de músicos</a>
         </div>
       </section>
-      <button className={styles.motionControl} onClick={() => setPaused(!paused)} aria-pressed={paused} aria-label={paused ? 'Reanudar animaciones' : 'Pausar animaciones'}>
-        <span aria-hidden="true">{paused ? '▷' : 'Ⅱ'}</span><span>{paused ? 'Reanudar' : 'Pausar'} animación</span>
-      </button>
     </main>
     {children}
     </div>

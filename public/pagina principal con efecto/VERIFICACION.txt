@@ -25,7 +25,7 @@ Comprobado en el navegador:
 - Móvil de 390 x 844 y 320 x 740: sin desbordamiento horizontal; los tres paneles muestran todo su contenido; se desactiva la fijación de escritorio.
 - A 320 px se aumentó el alto de portada para que los botones apilados no se superpongan con la custodia.
 - Acordeón por clic y flecha derecha: selección y aria-expanded actualizados.
-- Pausar efectos: cero elementos ocultos de revelación, cero contenedores de fijación y scroll nativo disponible. Reanudar: vuelve una sola fijación en escritorio.
+- La sección de adoración se desplaza en el flujo normal, sin fijación de ScrollTrigger; el parallax y el progreso siguen el scroll sin insertar un espacio al llegar.
 - Copiar enlace: muestra la confirmación de copia, manteniendo el destino de la portada oficial.
 - Pregunta «¿Cuándo es el encuentro?»: abre y muestra la respuesta actual.
 - Las 11 instancias de imágenes cargaron correctamente; todas proceden de los recursos existentes.
