@@ -2,6 +2,8 @@
 
 **Corte de revisión:** 27 de octubre de 2026. Este documento describe el código y la base **locales**; no confirma un despliegue en producción. No habilitar inscripciones ni cobros reales solo porque una función figure como implementada.
 
+**Entorno de prueba en curso:** Dokploy tiene `prueba-rama-oficina` con PostgreSQL aislado y saludable. El primer build web se canceló después de una sobrecarga de la VM compartida; se preparó un Dockerfile/Compose de menor concurrencia, pero la web, el dominio HTTPS y el autodespliegue aún deben verificarse. Los servicios del entorno `production` no se editaron.
+
 ## Pendientes prioritarios
 
 - [ ] Probar el lector QR con la cámara de un dispositivo real y el panel bajo HTTPS. El lector está implementado y probado localmente, pero permanece cerrado por defecto (`ADMISSION_SCAN_ENABLED=0`).

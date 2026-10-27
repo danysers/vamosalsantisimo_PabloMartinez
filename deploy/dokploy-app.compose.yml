@@ -22,7 +22,6 @@ services:
     restart: "no"
 
   app:
-    build: *app-build
     image: vas-workshop-app:${DEPLOY_TAG:-latest}
     restart: unless-stopped
     depends_on:
@@ -45,7 +44,6 @@ services:
 
   panel:
     profiles: ["panel"]
-    build: *app-build
     image: vas-workshop-app:${DEPLOY_TAG:-latest}
     restart: unless-stopped
     depends_on:
@@ -78,7 +76,6 @@ services:
 
   email-worker:
     profiles: ["mail"]
-    build: *app-build
     image: vas-workshop-app:${DEPLOY_TAG:-latest}
     command: ["node", "--experimental-strip-types", "scripts/email-worker.mjs"]
     restart: unless-stopped

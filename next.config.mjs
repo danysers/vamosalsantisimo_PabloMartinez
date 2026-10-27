@@ -3,6 +3,8 @@ const nextConfig = {
   // Build validation can use an isolated output without replacing the open local preview.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
+  // Only Docker builds set this; local development keeps Next.js defaults.
+  ...(process.env.NEXT_BUILD_CPUS ? { experimental: { cpus: Number(process.env.NEXT_BUILD_CPUS) } } : {}),
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
     formats: ['image/avif', 'image/webp'],

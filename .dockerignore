@@ -3,6 +3,7 @@ node_modules
 .next-test
 .next-qr-check
 .next-group-check
+.next-build-limit-check
 .git
 .env*
 *.log

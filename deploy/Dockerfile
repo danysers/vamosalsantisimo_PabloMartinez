@@ -4,15 +4,20 @@ RUN corepack enable
 
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# Keep dependency resolution bounded on the shared, 2-vCPU Dokploy host.
+# Cache the pnpm store so an interrupted build does not download everything again.
+RUN --mount=type=cache,id=vas-pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --network-concurrency=4 --child-concurrency=1 --store-dir=/pnpm/store
 
 FROM dependencies AS builder
 COPY . .
+ENV NEXT_BUILD_CPUS=1 NODE_OPTIONS=--max-old-space-size=3072
 RUN pnpm build
 
-FROM base AS production-dependencies
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+FROM dependencies AS production-dependencies
+# Reuse the single dependency install instead of running a second registry-heavy install.
+RUN --mount=type=cache,id=vas-pnpm-store,target=/pnpm/store \
+    CI=true npm_config_store_dir=/pnpm/store npm_config_offline=true pnpm prune --prod
 
 FROM node:22-alpine AS runtime
 WORKDIR /app

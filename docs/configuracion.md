@@ -18,6 +18,8 @@ No guardar secretos en Git ni enviarlos por chat. `.env` local está ignorado. *
 | `ACCREDITATION_TOKEN_KEY_ID`, `ACCREDITATION_TOKEN_KEY` | Identificador y clave de 32 bytes codificada en base64url para cifrar el QR. Respaldar la clave; no rotarla sin plan. |
 | `TRUST_REVERSE_PROXY`, `RATE_LIMIT_HMAC_KEY` | Activar IP confiable solo tras configurar y verificar el proxy; si no, límite global. |
 | `POSTGRES_PASSWORD` | Contraseña del stack PostgreSQL de Dokploy; nunca usar la de desarrollo. |
+| `WORKSHOP_PRIVATE_NETWORK` | Red Docker privada compartida por los stacks DB y app. En el entorno de prueba: `vas_workshop_prueba_private`; el valor predeterminado de producción no cambia. |
+| `WORKSHOP_PRIVATE_NETWORK_EXTERNAL` | Solo stack DB: `false` para que el stack de prueba cree su red; la app siempre se conecta a esa red como externa. No cambiar en servicios de producción. |
 
 El buzón oficial existe en DonWeb y el DNS público responde con MX, SPF, DKIM y DMARC. El organizador confirmó la recepción correcta en Gmail de las variantes enviadas el 27/10/2026. Además, se probó el trabajador con una base PostgreSQL descartable y un transporte simulado, sin enviar nuevos mensajes reales. Esto **no sustituye la prueba del worker real en Dokploy** antes de abrir inscripciones. El comando de vista previa es `pnpm email:test --to CORREO_DE_PRUEBA`; agregar `--send` envía mensajes marcados como prueba y `--only assistance_approved` limita a un solo ejemplo. El QR ficticio no acredita a nadie. `.env*` está excluido de Git y del contexto de Docker; no se despliega automáticamente. `REGISTRATION_EMAIL_READY=1` **no envía correos por sí solo**: habilita la API una vez que el trabajador está conectado y probado. El trabajador lee la cola `email_outbox`, reintenta fallos y registra estados. Los avisos de tasas/plazos de Mercado Pago se dirigirán a `danysers@gmail.com`, pero no se enviarán automáticamente hasta configurar las opciones de acreditación verificadas.
 
@@ -25,7 +27,7 @@ El buzón oficial existe en DonWeb y el DNS público responde con MX, SPF, DKIM 
 
 `compose.yaml` levanta PostgreSQL 16 en `127.0.0.1:54321` con volumen nombrado. Preparar un `.env` **local e ignorado** con `POSTGRES_PASSWORD`, `DATABASE_URL`, `WORKSHOP_EVENT_SLUG` y claves aleatorias. Luego: `docker compose up -d`, `node scripts/migrate.mjs`, `node scripts/seed-workshop.mjs`, `pnpm dev`. El seed carga los tres lotes ARS 10.000/15.000/20.000, alias y WhatsApp, pero deja inscripción, Mercado Pago, promociones y opciones de acreditación de fondos **inactivos**.
 
-Para probar el build sin afectar una vista previa local abierta: definir `NEXT_DIST_DIR=.next-test`, ejecutar `pnpm build` y luego `pnpm test` con el mismo valor. Las pruebas de PostgreSQL requieren `DATABASE_URL` de una instancia **descartable y migrada**. No usar la base de producción para pruebas.
+`pnpm test` compila automáticamente el código actual en `.next-test` y usa ese build para las pruebas HTTP, sin reemplazar una vista previa local abierta. Las pruebas de PostgreSQL requieren `DATABASE_URL` de una instancia **descartable y migrada**. No usar la base de producción para pruebas.
 
 ## Administrador
 
