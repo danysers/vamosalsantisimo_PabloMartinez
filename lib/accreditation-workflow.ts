@@ -80,7 +80,11 @@ export function verifyManualPayment(db: Db, input: {
       SELECT p.id,p.registration_id,p.source,p.status,p.amount_minor
       FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
-      WHERE r.reference=${input.reference} AND e.slug=${input.eventSlug}
+      WHERE e.slug=${input.eventSlug} AND p.status='pending' AND
+        (r.reference=${input.reference} OR EXISTS (
+          SELECT 1 FROM payment_allocations a JOIN registrations member ON member.id=a.registration_id
+          WHERE a.attempt_id=p.id AND member.reference=${input.reference}
+        ))
       ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p
     `)
     const attempt = found.rows[0] as { id: string; registration_id: string; source: string; status: string; amount_minor: number } | undefined

@@ -28,3 +28,21 @@
 .admin-scan-result.is-valid{border-color:#7fcf8e;background:#11341c}
 .admin-scan-result.is-invalid{background:#3a1518}
 .admin-assistance{margin:42px 0}.admin-assistance h2{font-size:clamp(25px,3vw,34px);color:#f4cb75;margin-bottom:8px}.admin-assistance-list{display:grid;gap:18px;margin-top:24px}.admin-assistance-card{padding:22px;border:1px solid #f4cb755b;border-radius:12px;background:#261219}.admin-assistance-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}.admin-assistance-heading h3{margin:0;font-size:23px}.admin-assistance-heading span,.admin-assistance-date,.admin-assistance-hint{font:13px Arial,sans-serif;color:#d7c6b8}.admin-assistance-card p{max-width:none}.admin-assistance-card a{color:#f4cb75}.admin-assistance-card label{display:block;font:700 14px Arial,sans-serif;margin:18px 0 7px}.admin-assistance-card textarea{box-sizing:border-box;width:100%;border:2px solid #b68952;border-radius:8px;background:#fff9ed;color:#2d1218;padding:10px;font:15px Arial,sans-serif}.admin-assistance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.admin-assistance-actions .button{cursor:pointer;border-radius:8px;padding:11px 16px;font:700 14px Arial,sans-serif}.admin-assistance-actions .button:disabled{opacity:.65;cursor:wait}.admin-assistance-card [role="alert"]:empty,.admin-assistance-card [role="status"]:empty{display:none}.admin-operator-notice{border-left:3px solid #f4cb75;padding-left:15px}
+.admin-workshop-shell{max-width:1100px}
+.admin-workshop-shell .admin-accreditation-block{max-width:none}
+.admin-workshop-shell .admin-accreditation-block p{max-width:75ch}
+.admin-workshop-shell label{display:block;font:700 14px Arial,sans-serif;margin:12px 0}
+.admin-workshop-shell input:not([type=checkbox]):not([type=radio]),.admin-workshop-shell select,.admin-workshop-shell textarea{box-sizing:border-box;display:block;width:100%;min-height:42px;margin-top:6px;padding:9px;border:2px solid #b68952;border-radius:8px;background:#fff9ed;color:#2d1218;font:15px Arial,sans-serif}
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 16px}
+.admin-lot-list,.admin-promo-list{display:grid;gap:14px}
+.admin-lot-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:12px;border:1px solid #f4cb7540;border-radius:8px}
+.admin-lot-row label{flex:1;min-width:180px;margin:0}
+.admin-promo-card,.admin-person-card,.admin-group-preview{padding:18px;margin:12px 0;border:1px solid #f4cb7540;border-radius:9px;background:#1b0d12}
+.admin-workshop-shell fieldset legend{padding:0 8px;color:#f4cb75;font-weight:700}
+.admin-workshop-shell .button{cursor:pointer;border-radius:8px;padding:11px 15px;font:700 14px Arial,sans-serif}
+.admin-workshop-shell .button:disabled{opacity:.55;cursor:not-allowed}
+.admin-check,.admin-radio-row{display:flex!important;gap:15px;align-items:center;flex-wrap:wrap}
+.admin-check input,.admin-radio-row input{margin-right:6px}
+.admin-group-preview ul{padding-left:22px;line-height:1.7}
+.admin-group-search{padding:14px;margin:15px 0;border:1px solid #f4cb7540;border-radius:8px}
+.admin-group-search ul{padding-left:22px;line-height:1.8}.admin-group-search li{margin:8px 0}.admin-group-search li button{margin-left:10px}

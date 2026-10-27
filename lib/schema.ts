@@ -13,7 +13,7 @@ export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assi
 export const accreditationDelivery = pgEnum('accreditation_delivery', ['screen', 'download', 'print', 'email'])
 export const admissionScanResult = pgEnum('admission_scan_result', ['admitted', 'already_admitted', 'not_eligible', 'revoked', 'expired', 'unknown'])
 export const promotionKind = pgEnum('promotion_kind', ['bundle', 'group_fixed'])
-export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined'])
+export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined'])
 export const emailStatus = pgEnum('email_status', ['queued', 'sending', 'sent', 'failed', 'cancelled'])
 
 export const events = pgTable('events', {
@@ -149,6 +149,7 @@ export const paymentAttempts = pgTable('payment_attempts', {
   providerOrderId: text('provider_order_id').unique(),
   externalReference: text('external_reference').unique(),
   idempotencyKey: uuid('idempotency_key').notNull().unique(),
+  groupRequestHash: text('group_request_hash'),
   source: paymentSource('source').notNull(),
   status: paymentStatus('status').notNull().default('created'),
   amountMinor: integer('amount_minor').notNull(),
@@ -176,6 +177,7 @@ export const paymentAttempts = pgTable('payment_attempts', {
   check('payment_attempts_amount_positive', sql`${table.amountMinor} > 0`),
   check('payment_attempts_paid_nonnegative', sql`${table.paidAmountMinor} >= 0`),
   check('payment_attempts_ars', sql`${table.currency} = 'ARS'`),
+  check('group_request_hash_length', sql`${table.groupRequestHash} IS NULL OR length(${table.groupRequestHash}) = 64`),
   check('approved_mp_evidence', sql`${table.source} <> 'mercado_pago' OR ${table.status} <> 'approved' OR (
     ${table.providerOrderId} IS NOT NULL AND ${table.externalReference} IS NOT NULL
     AND ${table.providerStatus} IS NOT NULL AND ${table.providerStatusDetail} IS NOT NULL
@@ -430,6 +432,7 @@ export const emailOutbox = pgTable('email_outbox', {
   status: emailStatus('status').notNull().default('queued'),
   toEmail: text('to_email').notNull(),
   registrationId: uuid('registration_id').references(() => registrations.id),
+  paymentAttemptId: uuid('payment_attempt_id').references(() => paymentAttempts.id),
   credentialId: uuid('credential_id').references(() => accreditationCredentials.id),
   settlementReminderId: uuid('settlement_reminder_id').references(() => settlementReminders.id),
   attemptCount: integer('attempt_count').notNull().default(0),

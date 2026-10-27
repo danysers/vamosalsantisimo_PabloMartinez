@@ -77,6 +77,7 @@ export default async function AdminPage() {
       <p>Panel privado del taller. Toda confirmación de pago, excepción y acreditación queda registrada con fecha, hora y operador.</p>
       <dl className="admin-counts"><div><dt>Eventos registrados</dt><dd>{state.events}</dd></div><div><dt>Inscripciones guardadas</dt><dd>{state.registrations}</dd></div></dl>
       <p><a className="button button-gold admin-panel-link" href="/admin/acreditacion">Pagos y acreditación →</a></p>
+      {state.reviewEnabled && <p><a className="button button-gold admin-panel-link" href="/admin/taller">Precios e inscripciones grupales →</a></p>}
       {state.reviewEnabled ? <AssistanceReview requests={state.requests} /> : <p className="admin-operator-notice">La revisión de solicitudes no está habilitada para esta cuenta. Un administrador debe vincularla como operador de inscripciones y configurar el evento.</p>}
       <SignOut />
     </main>

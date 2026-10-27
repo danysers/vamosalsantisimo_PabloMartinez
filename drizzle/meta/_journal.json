@@ -127,6 +127,20 @@
       "when": 1793121000000,
       "tag": "0017_audit_workflow_timestamps",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793122000000,
+      "tag": "0018_group_payment_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793123000000,
+      "tag": "0019_lock_group_request_hash",
+      "breakpoints": true
     }
   ]
 }

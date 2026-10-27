@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditation-token.ts'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
 async function claim(pool) {
   const result = await pool.query(`
@@ -62,6 +62,28 @@ async function render(pool, job) {
     })
   }
   if (registration.email.toLowerCase() !== job.to_email.toLowerCase()) return null
+  if (job.kind === 'group_payment_notice') {
+    if (!job.payment_attempt_id) return null
+    const groupResult = await pool.query(`
+      SELECT p.id,p.status,p.source,p.amount_minor,p.registration_id AS payer_id,
+        payer.name AS payer_name,payer.reference AS payer_reference,
+        count(allocation.id)::integer AS member_count
+      FROM payment_attempts p
+      JOIN registrations payer ON payer.id=p.registration_id
+      JOIN payment_allocations allocation ON allocation.attempt_id=p.id
+      WHERE p.id=$1 AND EXISTS (
+        SELECT 1 FROM payment_allocations own WHERE own.attempt_id=p.id AND own.registration_id=$2
+      ) GROUP BY p.id,payer.id
+    `, [job.payment_attempt_id, job.registration_id])
+    const group = groupResult.rows[0]
+    if (!group || !['pending', 'approved'].includes(group.status) || group.member_count < 2) return null
+    return groupPaymentEmail({ firstName: registration.first_name, reference: registration.reference,
+      payerName: group.payer_name, payerReference: group.payer_reference,
+      isPayer: group.payer_id === job.registration_id, memberCount: group.member_count,
+      amountMinor: group.amount_minor, status: group.status, source: group.source,
+      transferAlias: registration.transfer_alias, transferProvider: registration.transfer_provider,
+      proofWhatsappE164: registration.proof_whatsapp_e164 })
+  }
   if (job.kind === 'assistance_approved') {
     if (!registration.payment_difficulty || registration.assistance_status !== 'approved') return null
     return assistanceApprovedEmail({ firstName: registration.first_name, reference: registration.reference })
@@ -71,6 +93,14 @@ async function render(pool, job) {
     return assistanceDeclinedEmail({ firstName: registration.first_name, reference: registration.reference })
   }
   if (job.kind === 'registration_received' || job.kind === 'payment_instructions') {
+    // An earlier individual instruction is stale after the operator replaces
+    // that unpaid attempt with a group charge; send the group notice instead.
+    const grouped = await pool.query(`
+      SELECT 1 FROM payment_allocations a JOIN payment_attempts p ON p.id=a.attempt_id
+      WHERE a.registration_id=$1 AND p.status IN ('pending','approved')
+        AND (SELECT count(*) FROM payment_allocations x WHERE x.attempt_id=p.id)>1 LIMIT 1
+    `, [job.registration_id])
+    if (grouped.rows.length) return null
     const choice = registration.paid ? 'paid'
       : registration.waived ? 'waived'
       : registration.payment_difficulty ? 'assistance' : registration.source

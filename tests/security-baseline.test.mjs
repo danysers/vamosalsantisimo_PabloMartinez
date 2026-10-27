@@ -49,8 +49,9 @@ test('public surface never exposes panel routes even if auth secrets are present
       await new Promise(resolve => setTimeout(resolve, 100))
     }
     assert.ok(ready)
-    for (const route of ['/admin', '/admin/acreditacion', '/api/auth/sign-in/username',
-      '/api/admin/assistance/decision', '/api/admin/payments/verify', '/api/admin/accreditation/scan']) {
+    for (const route of ['/admin', '/admin/acreditacion', '/admin/taller', '/api/auth/sign-in/username',
+      '/api/admin/assistance/decision', '/api/admin/payments/verify', '/api/admin/accreditation/scan',
+      '/api/admin/taller/configuracion', '/api/admin/taller/inscripciones', '/api/admin/taller/grupos']) {
       const response = await fetch(`${base}${route}`)
       assert.equal(response.status, 404, route)
       assert.match(response.headers.get('cache-control') ?? '', /no-store/)

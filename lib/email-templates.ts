@@ -82,6 +82,39 @@ export function registrationEmail(input: {
   return { subject: `Inscripción registrada · ${input.reference}`, text, html: brandedEmailHtml(text) }
 }
 
+export function groupPaymentEmail(input: {
+  firstName: string; reference: string; payerName: string; payerReference: string;
+  isPayer: boolean; memberCount: number; amountMinor: number; status: 'pending' | 'approved';
+  source: 'bank_transfer' | 'on_site'; transferAlias?: string | null;
+  transferProvider?: string | null; proofWhatsappE164?: string | null
+}) {
+  const lines = [
+    `Hola ${input.firstName.trim()}:`, '',
+    'Tu inscripción al taller de formación católica quedó incorporada a un pago grupal.',
+    `Tu referencia personal es ${input.reference}. El grupo reúne ${input.memberCount} personas.`,
+    'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.', '',
+  ]
+  if (input.status === 'approved') {
+    lines.push('El pago grupal ya fue confirmado. Tu QR personal de acreditación se envía por separado.')
+  } else if (input.isPayer) {
+    const amount = `$${(input.amountMinor / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    lines.push(`Sos la persona encargada de pagar el total del grupo: ${amount}. El pago está PENDIENTE de verificación.`)
+    if (input.source === 'bank_transfer') {
+      if (input.transferAlias) lines.push(`Alias: ${input.transferAlias}.`)
+      if (input.transferProvider) lines.push(`Cuenta: ${input.transferProvider}.`)
+      if (input.proofWhatsappE164) lines.push('Después de transferir, adjuntá el comprobante en WhatsApp:',
+        proofWhatsappUrl(input.proofWhatsappE164, input.payerReference))
+      lines.push('El comprobante debe ser revisado por una persona de la organización.')
+    } else lines.push('El pago se registra en el lugar el día del taller.')
+  } else {
+    lines.push(`${input.payerName} figura como pagador/a del grupo. No hagas otro pago individual por esta referencia.`,
+      'Tu QR personal se enviará por separado cuando se confirme el pago grupal.')
+  }
+  lines.push('', 'Vamos al Santísimo')
+  const text = lines.join('\n')
+  return { subject: `Inscripción grupal · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
 export function assistanceReviewEmail(input: { fullName: string; reference: string; email: string; phone: string }) {
   const text = [
     'Solicitud de ayuda para pagar el taller.', '',

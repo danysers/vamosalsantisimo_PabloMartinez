@@ -2,6 +2,7 @@ node_modules
 .next
 .next-test
 .next-qr-check
+.next-group-check
 .git
 .env*
 *.log
