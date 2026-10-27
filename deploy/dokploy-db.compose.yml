@@ -22,5 +22,5 @@ volumes:
 
 networks:
   vas_workshop_private:
-    name: vas_workshop_private
-    external: true
+    name: ${WORKSHOP_PRIVATE_NETWORK:-vas_workshop_private}
+    external: ${WORKSHOP_PRIVATE_NETWORK_EXTERNAL:-true}

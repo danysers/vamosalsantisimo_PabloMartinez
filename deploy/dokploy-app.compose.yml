@@ -97,7 +97,7 @@ services:
 
 networks:
   vas_workshop_private:
-    name: vas_workshop_private
+    name: ${WORKSHOP_PRIVATE_NETWORK:-vas_workshop_private}
     external: true
   dokploy-network:
     external: true
