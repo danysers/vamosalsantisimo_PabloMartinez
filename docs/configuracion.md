@@ -1,38 +1,34 @@
-# Configuración de desarrollo (sin secretos)
+# Configuración del taller 2026
 
-**No se entrega `.env.example`: la herramienta impidió crear esa ruta.** Creá un archivo de configuración local ignorado por Git según el mecanismo del hosting; nunca lo subas ni copies credenciales del sitio anterior.
+No guardar secretos en Git ni enviarlos por chat. `.env` local está ignorado. **Todavía no se habilitaron inscripciones públicas ni cobros reales.**
 
-| Variable privada | Uso | Ejemplo ficticio |
-| --- | --- | --- |
-| `DATABASE_URL` | PostgreSQL 2026, privado; requerido para migraciones y nuevas inscripciones | **No incluir en ejemplos** |
-| `WORKSHOP_EVENT_SLUG` | Identifica el evento disponible; no aceptar IDs de inscripción del cliente | `adoracion-2026` |
-| `RATE_LIMIT_HMAC_KEY` | Clave privada aleatoria de al menos 32 bytes para buckets de limitación | **No incluir en ejemplos** |
-| `BETTER_AUTH_URL` | Origen exacto de la administración; solo loopback HTTP en el preview | `http://localhost:3000` |
-| `BETTER_AUTH_SECRET` | Secreto aleatorio NUEVO para firmar sesiones; al menos 32 caracteres | **No incluir en ejemplos** |
-| `TRUST_REVERSE_PROXY` | `1` solo si el reverse proxy controla `x-real-ip`; si no, límite global | `0` |
-| `MYSQL_HOST` | Host de base heredada solo durante migración | `db.invalid` |
-| `MYSQL_PORT` | Puerto de MySQL | `3306` |
-| `MYSQL_USERNAME` | Cuenta de base | `example_user` |
-| `MYSQL_PASSWORD` | Contraseña nueva de base | **No incluir en ejemplos** |
-| `MYSQL_DATABASE` | Base de migración | `event_example` |
-| `APP_URL` | URL HTTPS canónica solo cuando se habiliten callbacks futuros; NO configurarla para el preview local | **Pendiente** |
-| `MERCADO_PAGO_ACCESS_TOKEN` | Token de la cuenta receptora, entorno correspondiente | **No incluir en ejemplos** |
-| `MERCADO_PAGO_WEBHOOK_SECRET` | Secreto de validación del webhook | **No incluir en ejemplos** |
-| `ORGANIZATION_WHATSAPP_E164` | WhatsApp público de la organización; la vista local usa el número confirmado por el usuario | `5493704258770` |
+## Variables
 
-## Administrador privado (solo localhost)
+| Variable | Uso |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL privado. En Dokploy debe usar el host `postgres` de la red `vas_workshop_private`. |
+| `WORKSHOP_EVENT_SLUG` | `formacion-catolica-2026` para el taller sembrado. |
+| `SITE_ORIGIN` | Origen HTTPS exacto de la web pública; controla solicitudes del formulario. Solo servicio `app`. |
+| `REGISTRATION_EMAIL_READY` | `0` por defecto; `1` **solo después de verificar entrega SMTP real**. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | DonWeb Correo Profesional: `a0151359.ferozo.com`, puerto `465` con SSL, usuario `contactos@vamosalsantisimo.com`. Para desarrollo, `SMTP_PASS` va en `.env` local (ignorado por Git); al desplegar, cargarlo como variable secreta en Dokploy. |
+| `SMTP_FROM` | Debe ser exactamente `contactos@vamosalsantisimo.com`. |
+| `PANEL_ORIGIN`, `BETTER_AUTH_SECRET` | Solo servicio `panel`: origen HTTPS independiente y secreto aleatorio estable de al menos 32 caracteres. Compose pasa `PANEL_ORIGIN` a Better Auth como `BETTER_AUTH_URL`. El perfil `panel` queda inactivo hasta configurarlos. |
+| `APP_SURFACE` | `public` en `app`, `panel` en `panel`; separa las rutas aunque ambos contenedores usen la misma imagen. No configurarlo manualmente en Dokploy: Compose ya lo fija. |
+| `ADMISSION_SCAN_ENABLED` | Solo panel; `0` por defecto. Poner `1` únicamente cuando se autorice registrar ingresos reales. Cada escaneo genera historial con fecha/hora y operador. |
+| `ACCREDITATION_TOKEN_KEY_ID`, `ACCREDITATION_TOKEN_KEY` | Identificador y clave de 32 bytes codificada en base64url para cifrar el QR. Respaldar la clave; no rotarla sin plan. |
+| `TRUST_REVERSE_PROXY`, `RATE_LIMIT_HMAC_KEY` | Activar IP confiable solo tras configurar y verificar el proxy; si no, límite global. |
+| `POSTGRES_PASSWORD` | Contraseña del stack PostgreSQL de Dokploy; nunca usar la de desarrollo. |
 
-El borrador público puede verse sin PostgreSQL con `pnpm install --frozen-lockfile` y `pnpm dev`, en `http://localhost:3000`. En ese caso `/admin` muestra «Administración local no configurada» y la API de autenticación responde 503; no hay cuenta predeterminada.
+El buzón oficial existe en DonWeb y el DNS público responde con MX, SPF, DKIM y DMARC. El organizador confirmó la recepción correcta en Gmail de las variantes enviadas el 27/10/2026. Además, se probó el trabajador con una base PostgreSQL descartable y un transporte simulado, sin enviar nuevos mensajes reales. Esto **no sustituye la prueba del worker real en Dokploy** antes de abrir inscripciones. El comando de vista previa es `pnpm email:test --to CORREO_DE_PRUEBA`; agregar `--send` envía mensajes marcados como prueba y `--only assistance_approved` limita a un solo ejemplo. El QR ficticio no acredita a nadie. `.env*` está excluido de Git y del contexto de Docker; no se despliega automáticamente. `REGISTRATION_EMAIL_READY=1` **no envía correos por sí solo**: habilita la API una vez que el trabajador está conectado y probado. El trabajador lee la cola `email_outbox`, reintenta fallos y registra estados. Los avisos de tasas/plazos de Mercado Pago se dirigirán a `danysers@gmail.com`, pero no se enviarán automáticamente hasta configurar las opciones de acreditación verificadas.
 
-Para habilitar **una cuenta inicial** en una base PostgreSQL 2026 aislada, desde `site/`:
+## Desarrollo local
 
-1. Configurá `DATABASE_URL` **fuera de Git** para esa base; no uses la base ni las credenciales heredadas. Configurá `BETTER_AUTH_URL=http://localhost:3000` en la misma terminal. Generá `BETTER_AUTH_SECRET` con al menos 32 caracteres aleatorios y guardalo de manera persistente en tu gestor local de secretos: reiniciar con otro secreto invalida sesiones. En Git Bash podés generar el valor sin imprimirlo: `export BETTER_AUTH_SECRET="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64url'))")"`. No copies claves en tickets ni en el chat.
-2. Aplicá las migraciones con `pnpm exec drizzle-kit migrate` **solo después de comprobar** que `DATABASE_URL` apunta a la base correcta; no migrés datos existentes sin un plan de backup.
-3. Ejecutá `pnpm exec auth create-admin --config ./scripts/auth-cli.ts --email admin@localhost.test --name "Vamos al Santísimo" --role admin --data '{"username":"vamosalsantisimo.admin"}'`. **No incluyas `--password`**: la herramienta te pide una contraseña **NUEVA**, de 14 caracteres o más, en la terminal interactiva. Si ya hay usuarios, el CLI **pide confirmación** para crear otra cuenta: cancelá el proceso; no uses `--force` ni `--yes`. El email `.test` es solo un alias local, sin entrega ni recuperación por correo: reemplazarlo por un email verificable y configurar recuperación antes de cualquier despliegue. Confirmá luego que `/admin` acepta `vamosalsantisimo.admin` y que «Cerrar sesión» invalida la sesión **solo cuando el servidor confirma la operación**. Si aparece un error de cierre, la sesión puede seguir activa: reintentá o borrá los datos del sitio antes de dejar el equipo.
-4. Iniciá `pnpm dev` en esa misma configuración y abrí `http://localhost:3000/admin`. La vista privada actual muestra **solo cantidades**; todavía no edita lotes, inscripciones ni confirma pagos. El acceso se comprueba del lado del servidor con sesión y rol actual de PostgreSQL. El login usa limitación de intentos persistente y no hay alta pública. Los intentos de acceso y los errores se registran en salida estándar como JSON con identificador de correlación, sin contraseña, email, usuario, cookie ni token; esos logs locales no son una auditoría durable de pagos, que permanecen deshabilitados.
+`compose.yaml` levanta PostgreSQL 16 en `127.0.0.1:54321` con volumen nombrado. Preparar un `.env` **local e ignorado** con `POSTGRES_PASSWORD`, `DATABASE_URL`, `WORKSHOP_EVENT_SLUG` y claves aleatorias. Luego: `docker compose up -d`, `node scripts/migrate.mjs`, `node scripts/seed-workshop.mjs`, `pnpm dev`. El seed carga los tres lotes ARS 10.000/15.000/20.000, alias y WhatsApp, pero deja inscripción, Mercado Pago, promociones y opciones de acreditación de fondos **inactivos**.
 
-Si la máquina se comparte, no dejes el servidor ni la sesión abiertos; el proceso escucha únicamente en localhost. La base descartable de pruebas se detiene al terminar y no contiene la cuenta de operación.
+Para probar el build sin afectar una vista previa local abierta: definir `NEXT_DIST_DIR=.next-test`, ejecutar `pnpm build` y luego `pnpm test` con el mismo valor. Las pruebas de PostgreSQL requieren `DATABASE_URL` de una instancia **descartable y migrada**. No usar la base de producción para pruebas.
 
-Dominio previsto para cuando se decida desplegar: `taller.vamosalsantisimo.com.ar`. Por ahora levantar solo en `localhost`; no configurar canónica/HTTPS externo ni indexar el borrador. Abrir WhatsApp no inscribe ni confirma pagos. El mensaje general no incluye datos personales ni token.
+## Administrador
 
-En el sitio público, **no** están habilitados aún inscripciones ni pagos. El esquema nuevo usa PostgreSQL; los `MYSQL_*` se conservan únicamente para una migración explícita si la organización la autoriza. La contraseña heredada requiere rotación. Las variables previstas para esas integraciones no deben considerarse configuradas o efectivas hasta que sus tareas estén implementadas y probadas. Rotá inmediatamente la antigua contraseña de base de datos que estuvo publicada en el repositorio de 2025; quitarla del código nuevo no la revoca. No activar credenciales de producción durante pruebas.
+`/admin` usa Better Auth con alta pública deshabilitada. La web pública responde 404 en `/admin`, `/api/admin/*` y `/api/auth/*`; el panel responde 404 en rutas públicas. En desarrollo, iniciar el panel como proceso separado con `APP_SURFACE=panel` y `BETTER_AUTH_URL` apuntando a su puerto local; en producción, solo después de configurar el perfil `panel` y su dominio HTTPS. Crear la primera cuenta **solo** en una base segura y desde consola interactiva: `pnpm exec auth create-admin --config ./scripts/auth-cli.ts --email TU_CORREO --name "Vamos al Santísimo" --role admin --data '{"username":"OPERADOR"}'`. La contraseña debe ingresarse en el prompt, nunca en argumentos o archivos. No existe contraseña predeterminada en el código. Después, vincular explícitamente la cuenta al rol operativo: `node --env-file=.env scripts/link-admin-operator.mjs --email TU_CORREO --role registration_operator` muestra una vista previa; repetir con `--apply` para guardar. En Dokploy se usa el mismo script desde la terminal privada del contenedor `panel` (sin subir `.env`). Una cuenta local de desarrollo no crea automáticamente otra en producción. La vista privada permite aprobar o rechazar solicitudes de ayuda y, en `/admin/acreditacion`, verificar pagos manuales, emitir/reimprimir volantes y escanear ingresos. Cada decisión registra operador, fecha, nota y auditoría; los correos quedan en cola en la misma transacción. El panel todavía no configura lotes/promociones ni integra órdenes/webhooks reales de Mercado Pago. No abrir las inscripciones reales antes de completar y probar el circuito completo.
+
+Ver `docs/inscripciones.md` y `docs/despliegue-dokploy.md`. La contraseña de MySQL de 2025 expuesta históricamente debe rotarse; ese sistema heredado no es la base nueva.

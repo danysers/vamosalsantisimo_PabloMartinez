@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vas_workshop
+      POSTGRES_USER: vas_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a unique production PostgreSQL password in Dokploy}
+    volumes:
+      - vas_workshop_pg_data:/var/lib/postgresql/data
+    networks:
+      - vas_workshop_private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vas_app -d vas_workshop"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    # No ports: PostgreSQL is reachable only through the private Docker network.
+
+volumes:
+  vas_workshop_pg_data:
+
+networks:
+  vas_workshop_private:
+    name: vas_workshop_private
+    external: true

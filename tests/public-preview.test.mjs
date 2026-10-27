@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 
 // Run after pnpm build. The real HTTP surface must not use a database.
 test('animated homepage is served at the root and keeps legacy APIs closed', async () => {
@@ -8,6 +9,7 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
     cwd: process.cwd(),
     stdio: 'ignore',
+    env: { ...process.env, DATABASE_URL: '', WORKSHOP_EVENT_SLUG: '', REGISTRATION_EMAIL_READY: '' },
   })
   const base = `http://localhost:${port}`
   try {
@@ -24,7 +26,7 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.equal(home.status, 200)
     assert.equal((await fetch(`${base}/encuentro`)).status, 404, 'retired encounter page must not be served')
     const html = await home.text()
-    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '17:00 h', 'Entrada gratuita', 'Cada gesto de', 'directions-main']) {
+    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '15:00 h', 'Entrada gratuita', 'Cada gesto de', 'directions-main']) {
       assert.ok(html.includes(text), `missing public text: ${text}`)
     }
     assert.ok(!html.includes('Daniel Poli'), 'archived performer leaked into new homepage')
@@ -69,6 +71,12 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.equal(rejected.status, 503)
     assert.deepEqual(await rejected.json(), { error: 'Las inscripciones todavía no están habilitadas.' })
     assert.equal(rejected.headers.get('cache-control'), 'no-store')
+    const gated = await fetch(`${base}/api/taller/inscripciones`, {
+      method: 'POST',
+      headers: { origin: base, 'content-type': 'application/json', 'idempotency-key': randomUUID() },
+      body: JSON.stringify({}),
+    })
+    assert.equal(gated.status, 503, 'complete enrollment must remain closed without verified email delivery')
   } finally {
     server.kill()
   }

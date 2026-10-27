@@ -15,19 +15,21 @@ function auditAction(request: NextRequest, status: number, correlationId: string
   }
 }
 
-function localAuthReady(request: NextRequest): boolean {
+function panelAuthReady(): boolean {
+  if (process.env.APP_SURFACE !== 'panel') return false
   const base = process.env.BETTER_AUTH_URL
   if (!base || !process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32) return false
   try {
     const expected = new URL(base)
-    return expected.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(expected.hostname) &&
-      expected.origin === request.nextUrl.origin
+    return expected.protocol === 'https:' ||
+      (expected.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(expected.hostname))
   } catch { return false }
 }
 
 async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Response> {
   const correlationId = randomUUID()
-  if (!localAuthReady(request)) {
+  if (process.env.APP_SURFACE !== 'panel') return new NextResponse('No disponible.', { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
+  if (!panelAuthReady()) {
     auditAction(request, 503, correlationId)
     return NextResponse.json({ error: 'Administración local no configurada.' }, {
       status: 503, headers: { 'Cache-Control': 'no-store', 'X-Correlation-ID': correlationId },

@@ -1,0 +1,148 @@
+export type PaymentChoice = 'mercado_pago' | 'bank_transfer' | 'on_site' | 'assistance' | 'waived' | 'paid'
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+})[character]!)
+
+// Table layout and inline styles keep the source email's black/gold/white
+// visual identity in clients that strip stylesheets. No priest contact is shown.
+export function brandedEmailHtml(text: string, qrCid?: string): string {
+  const paragraphs = text.trim().split(/\n\s*\n/).map(paragraph =>
+    `<p style="margin:0 0 18px">${paragraph.split('\n').map(escapeHtml).join('<br>')}</p>`,
+  ).join('')
+  const qr = qrCid ? `<p style="margin:0 0 18px;text-align:center"><img src="cid:${escapeHtml(qrCid)}" alt="QR de acreditación" width="280" style="display:block;width:280px;max-width:100%;height:auto;margin:0 auto"></p>` : ''
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#111111">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="660" cellspacing="0" cellpadding="0" style="width:100%;max-width:660px;background:#ffffff">
+<tr><td align="center" style="padding:32px 28px 27px;background:#000000"><img src="https://vamosalsantisimo.com/logo-vamos.png" width="158" alt="Vamos al Santísimo" style="display:block;width:158px;max-width:100%;height:auto;margin:0 auto"><div style="font-size:11px;letter-spacing:2px;font-weight:bold;color:#ffffff;margin-top:15px">FORMOSA · ARGENTINA</div></td></tr>
+<tr><td style="height:3px;background:#d2ad58;font-size:0;line-height:0">&nbsp;</td></tr>
+<tr><td style="padding:39px 44px 32px;font-size:15px;line-height:1.78;color:#111111"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.3;font-weight:normal;color:#000000;margin:0 0 12px">Taller de formación católica</h1><div style="width:56px;height:3px;background:#d2ad58;margin:0 0 25px"></div>${paragraphs}${qr}</td></tr>
+<tr><td style="padding:24px 44px;background:#ffffff;border-top:1px solid #d2ad58"><p style="font-family:Georgia,'Times New Roman',serif;font-size:16px;text-align:center;margin:0 0 12px"><em>Con fraternal cercanía,</em></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0;border-bottom:1px solid #dddddd"><strong>Sergio Daniel Servin</strong> · <a href="tel:+543704258770" style="color:#111111">(+54 3704) 258770</a> · <a href="mailto:danielservin@vamosalsantisimo.com" style="color:#111111">danielservin@vamosalsantisimo.com</a></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0;border-bottom:1px solid #dddddd"><strong>Luciano Barrios</strong> · <a href="tel:+543704632884" style="color:#111111">(+54 3704) 632884</a> · <a href="mailto:lucianobarrios@vamosalsantisimo.com" style="color:#111111">lucianobarrios@vamosalsantisimo.com</a></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0"><strong>Enzo Machuca</strong> · (+54 3704) 208333 · <a href="mailto:contactos@vamosalsantisimo.com" style="color:#111111">contactos@vamosalsantisimo.com</a></p><p style="font-size:11px;line-height:1.6;text-align:center;border-top:1px solid #dddddd;padding-top:11px;margin:8px 0 0"><strong><em>Coordinadores locales de la Comunidad Vamos al Santísimo</em></strong></p></td></tr>
+<tr><td align="center" style="padding:19px 27px 20px;background:#000000;color:#ffffff;font-size:12px;line-height:1.8">Correo oficial: <a href="mailto:contactos@vamosalsantisimo.com" style="color:#ffffff">contactos@vamosalsantisimo.com</a><br>Redes oficiales: <a href="https://www.instagram.com/vamosalsantisimof/" style="color:#d2ad58">Instagram</a> · <a href="https://www.facebook.com/vamosalsantisimof/" style="color:#d2ad58">Facebook</a> · <a href="https://www.tiktok.com/@vamosalsantisimo" style="color:#d2ad58">TikTok</a><br><span style="font-size:10px">Comunidad Vamos al Santísimo · Formosa</span></td></tr>
+<tr><td style="height:3px;background:#d2ad58;font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr></table></body></html>`
+}
+
+export function proofWhatsappUrl(phoneE164: string, reference: string): string {
+  if (!/^\d{10,15}$/.test(phoneE164)) throw new Error('Invalid WhatsApp destination')
+  const message = `Hola, envío el comprobante de transferencia de mi inscripción al taller. Referencia: ${reference}. Voy a adjuntar la imagen del comprobante.`
+  return `https://wa.me/${phoneE164}?text=${encodeURIComponent(message)}`
+}
+
+export function assistanceWhatsappUrl(phoneE164: string, reference: string): string {
+  if (!/^\d{10,15}$/.test(phoneE164)) throw new Error('Invalid WhatsApp destination')
+  const message = `Hola, solicité ayuda para la inscripción al taller porque no puedo pagar. Mi referencia es ${reference}.`
+  return `https://wa.me/${phoneE164}?text=${encodeURIComponent(message)}`
+}
+
+export function registrationEmail(input: {
+  firstName: string
+  reference: string
+  choice: PaymentChoice
+  amountMinor?: number
+  transferAlias?: string | null
+  transferProvider?: string | null
+  proofWhatsappE164?: string | null
+}) {
+  const name = input.firstName.trim()
+  const amount = input.amountMinor == null ? null : `$${(input.amountMinor / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const lines = [
+    `Hola ${name}:`,
+    '',
+    'Tu inscripción al taller de formación católica de Pablo Martínez fue registrada con éxito.',
+    `Tu referencia es ${input.reference}.`,
+    'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
+    '',
+  ]
+  if (input.choice === 'bank_transfer') {
+    lines.push('Elegiste pagar por transferencia. Tu pago está PENDIENTE de verificación.')
+    if (amount) lines.push(`Importe a transferir: ${amount}.`)
+    if (input.transferAlias) lines.push(`Alias: ${input.transferAlias}.`)
+    if (input.transferProvider) lines.push(`Cuenta: ${input.transferProvider}.`)
+    if (input.proofWhatsappE164) {
+      lines.push('Después de transferir, abrí este enlace y adjuntá el comprobante en WhatsApp:')
+      lines.push(proofWhatsappUrl(input.proofWhatsappE164, input.reference))
+    }
+    lines.push('El botón de WhatsApp no adjunta ni verifica el comprobante automáticamente; una persona de la organización confirmará el pago.')
+  } else if (input.choice === 'on_site') {
+    lines.push('Elegiste pagar en el lugar. Tu pago queda PENDIENTE hasta que la organización lo registre el día del taller.')
+    if (amount) lines.push(`Importe previsto: ${amount}.`)
+  } else if (input.choice === 'mercado_pago') {
+    // The checkout itself communicates its current status. Do not promise a
+    // settlement or accreditation timeline that depends on merchant settings.
+  } else if (input.choice === 'assistance') {
+    lines.push('Recibimos tu solicitud por inconvenientes para pagar. Está pendiente de revisión; por ahora no necesitás abonar.')
+  } else if (input.choice === 'paid') {
+    lines.push('Tu pago ya fue confirmado. No tenés ningún importe pendiente para esta inscripción.')
+  } else {
+    lines.push('La organización aprobó tu exención de pago. No tenés que abonar la inscripción.')
+  }
+  if (input.choice !== 'mercado_pago') lines.push('', 'El volante de acreditación con QR se enviará por separado después de verificar el pago o aprobar la excepción.')
+  lines.push('', 'Vamos al Santísimo')
+  const text = lines.join('\n')
+  return { subject: `Inscripción registrada · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
+export function assistanceReviewEmail(input: { fullName: string; reference: string; email: string; phone: string }) {
+  const text = [
+    'Solicitud de ayuda para pagar el taller.', '',
+    `${input.fullName} indicó que no puede abonar la inscripción.`,
+    `Referencia: ${input.reference}.`,
+    `Correo de contacto: ${input.email}.`,
+    `Teléfono de contacto: ${input.phone}.`, '',
+    'La solicitud está pendiente de revisión. No se enviará una aprobación al participante hasta que un administrador la apruebe.',
+    '', 'Vamos al Santísimo',
+  ].join('\n')
+  return { subject: `Revisar solicitud de ayuda · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
+export function assistanceApprovedEmail(input: { firstName: string; reference: string }) {
+  const text = [
+    `Hola ${input.firstName.trim()}:`, '',
+    'Tu solicitud por inconvenientes para pagar fue aprobada. No tenés que abonar la inscripción.',
+    `Tu referencia es ${input.reference}.`,
+    'El volante de acreditación con QR se enviará por separado cuando esté emitido.',
+    '', 'Vamos al Santísimo',
+  ].join('\n')
+  return { subject: `Solicitud de ayuda aprobada · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
+export function assistanceDeclinedEmail(input: { firstName: string; reference: string }) {
+  const text = [
+    `Hola ${input.firstName.trim()}:`, '',
+    'Revisamos tu solicitud por inconvenientes para pagar, pero no pudimos aprobar la excepción.',
+    `Tu referencia es ${input.reference}.`,
+    'Contactá a la organización para acordar una forma de pago antes del taller. Tu pago sigue pendiente.',
+    '', 'Vamos al Santísimo',
+  ].join('\n')
+  return { subject: `Respuesta a tu solicitud de ayuda · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
+export function accreditationEmail(input: { firstName: string; reference: string }) {
+  const message = {
+    subject: `Tu acreditación al taller · ${input.reference}`,
+    text: [
+      `Hola ${input.firstName.trim()}:`, '',
+      'Tu inscripción al taller quedó confirmada. Adjuntamos tu QR personal de acreditación.',
+      `Referencia: ${input.reference}.`,
+      'Presentá este mensaje o el volante impreso al ingresar. El QR identifica una sola inscripción y no debe compartirse.',
+      'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
+      '', 'Vamos al Santísimo',
+    ].join('\n'),
+  }
+  return { ...message, html: brandedEmailHtml(message.text, 'acreditacion') }
+}
+
+export function settlementReminderEmail(input: { switchDate: string; targetDate: string; releaseDays: number }) {
+  const message = {
+    subject: 'Revisar plazo de acreditación de Mercado Pago · taller 2026',
+    text: [
+      'Recordatorio para la organización:', '',
+      `Revisá manualmente en tu cuenta de Mercado Pago el plazo de dinero disponible para futuros cobros el ${input.switchDate}.`,
+      `El plan sugiere un plazo de ${input.releaseDays} día(s) a partir de esa fecha.`,
+      `Objetivo estimado de disponibilidad: ${input.targetDate} (tres días antes del evento).`,
+      'Confirmá tasas y plazos reales en tu cuenta; esta aplicación no cambia la configuración de Mercado Pago y no puede garantizar la fecha exacta de liberación.',
+      'Después de cambiarla, marcá el recordatorio como realizado en el panel.',
+    ].join('\n'),
+  }
+  return { ...message, html: brandedEmailHtml(message.text) }
+}

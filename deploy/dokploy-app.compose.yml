@@ -1,0 +1,103 @@
+x-app-build: &app-build
+  context: ..
+  dockerfile: deploy/Dockerfile
+
+x-app-environment: &app-environment
+  DATABASE_URL: ${DATABASE_URL:?Set a private PostgreSQL URL pointing to postgres on vas_workshop_private}
+  WORKSHOP_EVENT_SLUG: ${WORKSHOP_EVENT_SLUG:-formacion-catolica-2026}
+  ACCREDITATION_TOKEN_KEY_ID: ${ACCREDITATION_TOKEN_KEY_ID:?Set an encryption key ID}
+  ACCREDITATION_TOKEN_KEY: ${ACCREDITATION_TOKEN_KEY:?Set a 32-byte base64url key}
+  REGISTRATION_EMAIL_READY: ${REGISTRATION_EMAIL_READY:-0}
+  TRUST_REVERSE_PROXY: ${TRUST_REVERSE_PROXY:-0}
+  RATE_LIMIT_HMAC_KEY: ${RATE_LIMIT_HMAC_KEY:-}
+
+services:
+  migrate:
+    build: *app-build
+    image: vas-workshop-app:${DEPLOY_TAG:-latest}
+    command: ["node", "scripts/migrate.mjs"]
+    environment: *app-environment
+    networks:
+      - vas_workshop_private
+    restart: "no"
+
+  app:
+    build: *app-build
+    image: vas-workshop-app:${DEPLOY_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      APP_SURFACE: public
+      SITE_ORIGIN: ${SITE_ORIGIN:?Set the public canonical HTTPS origin}
+    expose:
+      - "3000"
+    networks:
+      - vas_workshop_private
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  panel:
+    profiles: ["panel"]
+    build: *app-build
+    image: vas-workshop-app:${DEPLOY_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      APP_SURFACE: panel
+      BETTER_AUTH_URL: ${PANEL_ORIGIN:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      ADMISSION_SCAN_ENABLED: ${ADMISSION_SCAN_ENABLED:-0}
+    # Deliberately opt-in: no public domain or production credential is configured yet.
+    command:
+      - sh
+      - -ec
+      - |
+        case "$$BETTER_AUTH_URL" in https://*) ;; *) echo "PANEL_ORIGIN must be HTTPS" >&2; exit 1;; esac
+        test "$${#BETTER_AUTH_SECRET}" -ge 32 || { echo "BETTER_AUTH_SECRET is missing" >&2; exit 1; }
+        exec node server.js
+    expose:
+      - "3000"
+    networks:
+      - vas_workshop_private
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/admin').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  email-worker:
+    profiles: ["mail"]
+    build: *app-build
+    image: vas-workshop-app:${DEPLOY_TAG:-latest}
+    command: ["node", "--experimental-strip-types", "scripts/email-worker.mjs"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-environment
+      SMTP_HOST: ${SMTP_HOST:-a0151359.ferozo.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-contactos@vamosalsantisimo.com}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: contactos@vamosalsantisimo.com
+    networks:
+      - vas_workshop_private
+
+networks:
+  vas_workshop_private:
+    name: vas_workshop_private
+    external: true
+  dokploy-network:
+    external: true

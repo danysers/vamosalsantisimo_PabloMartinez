@@ -25,7 +25,7 @@ export default function FormationSection() {
       <div className={styles.content}>
         <h2 id="formation-title">Formación<span>católica</span></h2>
         <div className={styles.rule} aria-hidden="true" />
-        <p className={styles.date}><time dateTime="2026-12-19T17:00:00-03:00">19 de diciembre · 17:00 h</time></p>
+        <p className={styles.date}><time dateTime="2026-12-19T15:00:00-03:00">19 de diciembre · 15:00 h</time></p>
         <p className={styles.description}>Una tarde de formación católica para profundizar en la fe, la vida y la música como camino de encuentro con Dios.</p>
         <a className={styles.button} href="/formacion">Ir al taller <span aria-hidden="true">↗</span></a>
       </div>

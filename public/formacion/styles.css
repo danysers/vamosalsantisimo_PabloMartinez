@@ -74,3 +74,43 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .transition-scrolled::view-transition-new(root){animation:stable-in 220ms ease-in both;mix-blend-mode:normal}
 ::view-transition{pointer-events:none}
 @media(min-width:701px){.portrait{height:min(67.5vw,972px)}}
+.location-link{display:inline-flex;align-items:center;gap:7px;margin-top:5px;color:var(--wine);font-size:clamp(14px,1.2vw,17px);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.location-link:hover{color:#a02747}
+@media(min-width:701px){.info-grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px;row-gap:12px}.info-item+.info-item{border-left:0;padding-left:0}.info-item:nth-child(2n){border-left:1px solid #e6bb6e70;padding-left:30px}}
+.home-faq{margin:4% 5% 5%;padding:0;background:transparent;border:0;border-top:1px solid #e6cda2;border-bottom:1px solid #e6cda2;border-radius:0;box-shadow:none}
+.home-faq .faq-overview{padding:0;border:0}
+.faq-overview>summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 4px;list-style:none;cursor:pointer}
+.faq-overview>summary::-webkit-details-marker{display:none}
+.faq-overview__label{color:var(--wine);font:600 clamp(12px,1.35vw,16px) var(--sans);letter-spacing:.2em;text-transform:uppercase}
+.faq-overview__control{display:inline-grid;place-items:center;width:29px;height:29px;border:1px solid #d9ba8a;border-radius:50%;color:var(--wine);font:400 22px/1 var(--sans);transition:transform .2s ease}
+.faq-overview[open] .faq-overview__control{transform:rotate(45deg)}
+.faq-overview__content{padding:0 4px 20px}
+.faq-overview__content>details{padding:13px 0;border-bottom:1px solid #ead4ac}
+.faq-overview__content>details:first-child{border-top:1px solid #ead4ac}
+.faq-overview__content>details>summary{font-size:clamp(16px,1.5vw,19px)}
+.faq-overview__content>details>p{font-size:clamp(15px,1.35vw,18px)}
+.all-faqs{display:inline-flex;align-items:center;gap:10px;margin-top:20px;color:var(--wine);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.all-faqs:hover{color:#a02747}
+@media(max-width:700px){.home-faq{margin:30px 5%}.faq-overview>summary{padding:17px 0}.faq-overview__content{padding:0 0 18px}.faq-overview__label{letter-spacing:.14em}.all-faqs{font-size:13px}}
+.registration-grid[hidden],.registration-result[hidden],.registration-page.registration-preview-mode .hero{display:none}
+.registration-result{position:relative;width:min(850px,92%);margin:5% auto;padding:clamp(28px,5vw,65px);background:#fffdf7;border:1px solid #ead4ac;border-radius:18px;box-shadow:0 16px 45px #7c4c1918}
+.result-symbol{display:grid;place-items:center;width:64px;height:64px;margin-bottom:25px;border-radius:50%;background:#f9edce;color:var(--wine);font-size:34px}
+.registration-result .eyebrow{margin-bottom:15px;color:var(--wine)}
+.registration-result h2{font-size:clamp(40px,5vw,64px);line-height:1;margin:0 0 17px}
+.result-intro{max-width:640px;color:#665b50;font-size:clamp(16px,1.7vw,21px)}
+.payment-next[hidden]{display:none}
+.payment-next{margin:28px 0;padding:25px 28px;border:1px solid #c8e7f1;border-radius:14px;background:#f2faff}
+.payment-next .eyebrow{color:#087eaa;font-size:12px}
+.payment-next h3{margin:0 0 10px;font:600 clamp(24px,2.5vw,32px) var(--sans);letter-spacing:-.03em}
+.payment-next p:not(.eyebrow){margin:0 0 20px;color:#51606a;font-size:16px}
+.payment-next-button{background:#009ee3;color:#fff;font-size:16px;min-height:48px}
+.payment-next-button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+#registration-error:not([hidden]){margin:14px 0 0;padding:12px 14px;border:1px solid #b75b66;border-radius:9px;background:#fff2f2;color:#7c1f31}
+#payment-method-field p{margin:12px 0 0;color:#665b50;font-size:14px;line-height:1.5}
+#payment-proof-link:not([hidden]){display:inline-block;color:#7c1f31;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.result-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 30px;margin:32px 0}
+.result-details>div{min-width:0;padding:13px 0;border-top:1px solid #ead4ac}
+.result-details dt{color:#8b7764;font-size:13px;text-transform:uppercase;letter-spacing:.1em}
+.result-details dd{margin:5px 0 0;overflow-wrap:anywhere;font-size:17px}
+.result-edit{font-size:17px}
+@media(max-width:700px){.registration-result{margin:25px auto;padding:28px 22px}.result-details{grid-template-columns:1fr;gap:0}.result-details dd{font-size:16px}.payment-next{padding:21px 18px}}

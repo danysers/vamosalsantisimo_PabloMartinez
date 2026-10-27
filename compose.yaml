@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vas_dev
+      POSTGRES_USER: vas_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Create a local .env with POSTGRES_PASSWORD}
+    ports:
+      - '127.0.0.1:54321:5432'
+    volumes:
+      - vas_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vas_app -d vas_dev']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  vas_postgres_data:
