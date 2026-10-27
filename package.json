@@ -9,7 +9,7 @@
     "email:test": "node --env-file=.env --experimental-strip-types scripts/send-test-emails.mjs",
     "lint": "eslint app/page.tsx app/layout.tsx app/inscripcion/page.tsx app/sitemap.ts app/manifest.ts \"app/admin/**/*.{ts,tsx}\" \"app/api/**/route.ts\" \"lib/*.ts\" \"scripts/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test": "node scripts/run-tests.mjs",
     "start": "next start --hostname localhost"
   },
   "dependencies": {

@@ -41,7 +41,7 @@
 - Al agrupar inscripciones individuales pendientes se cancelan sus intentos e instrucciones de pago anteriores. No se agrupan pagos confirmados, ayudas/exenciones ni credenciales QR ya emitidas. Si el precio individual congelado difiere del precio actual del lote, también se bloquea el agrupamiento para no modificarlo silenciosamente.
 - La confirmación manual del pago grupal puede hacerse usando la referencia de cualquiera de sus integrantes: confirma el intento común y habilita un QR individual para cada persona. El importe y las instrucciones del grupo se envían solo al pagador; los demás reciben aviso para no pagar por separado.
 - **Estado operativo:** se pueden probar cotizaciones, pero la creación de inscripciones grupales reales sigue cerrada hasta activar deliberadamente `workshops.registration_open` y `REGISTRATION_EMAIL_READY=1`. La integración con Mercado Pago y las pruebas desplegadas siguen pendientes. No usar el panel local como comprobación de funcionamiento en producción.
-- **Verificaciones locales:** tipos, lint, compilación, pruebas automatizadas, imagen Docker y un flujo grupal integral sobre una base descartable. No se enviaron correos reales ni quedaron registros ficticios de la prueba.
+- **Verificaciones locales:** tipos, lint, compilación, pruebas automatizadas, imagen Docker y un flujo grupal integral sobre una base descartable. `pnpm test` genera ahora su propio build actualizado en `.next-test`, sin usar una compilación vieja ni reemplazar la vista local abierta. No se enviaron correos reales ni quedaron registros ficticios de la prueba.
 
 ## Criterio para abrir al público
 
