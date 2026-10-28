@@ -1,14 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { classifyDuplicate, lotAmountMinor, minorToArs, normalizeIdentity } from '../lib/registration-policy.ts'
+import { classifyDuplicate, minorToArs, normalizeIdentity } from '../lib/registration-policy.ts'
 
-test('the active lot price comes from server policy and converts without floats', () => {
-  assert.equal(lotAmountMinor(1), 1_000_000)
-  assert.equal(lotAmountMinor(2), 1_500_000)
-  assert.equal(lotAmountMinor(3), 2_000_000)
-  assert.equal(minorToArs(lotAmountMinor(2)), '15000.00')
-  assert.throws(() => lotAmountMinor(0), /Invalid lot/)
-  assert.throws(() => lotAmountMinor(4), /Invalid lot/)
+test('integer-cent amounts convert without floats; lot prices live in PostgreSQL', () => {
+  assert.equal(minorToArs(1_500_000), '15000.00')
   assert.throws(() => minorToArs(1.5), /Invalid amount/)
 })
 

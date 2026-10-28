@@ -1,0 +1,38 @@
+services:
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    cpus: '0.15'
+    mem_limit: 128m
+    environment:
+      PGHOST: ${PGHOST:?Set the private PostgreSQL service name}
+      PGUSER: vas_app
+      PGDATABASE: vas_workshop
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set the production database password in Dokploy}
+    volumes:
+      - backups:/backups
+    networks: [private]
+    command:
+      - sh
+      - -ec
+      - |
+        umask 077
+        until pg_isready; do sleep 5; done
+        while true; do
+          file="/backups/vas-$$(date -u +%Y%m%dT%H%M%SZ).dump"
+          pg_dump -Fc -f "$$file.tmp"
+          pg_restore --list "$$file.tmp" >/dev/null
+          mv "$$file.tmp" "$$file"
+          probe="vas_restore_$$(date -u +%Y%m%d%H%M%S)"
+          createdb "$$probe"
+          pg_restore --exit-on-error -d "$$probe" "$$file"
+          dropdb "$$probe"
+          echo "PostgreSQL backup verified and restored successfully"
+          sleep 21600
+        done
+volumes:
+  backups:
+networks:
+  private:
+    name: vas_workshop_production_v2
+    external: true

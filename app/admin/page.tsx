@@ -1,17 +1,21 @@
 import { randomUUID } from 'node:crypto'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { count, eq } from 'drizzle-orm'
+import { notFound } from 'next/navigation'
+import { and, asc, count, eq } from 'drizzle-orm'
 import { user as authUser } from '../../lib/auth-schema'
-import { events, registrations } from '../../lib/schema'
+import { adminUsers, assistanceRequests, events, registrationIntakes, registrations, workshops } from '../../lib/schema'
 import { getDb } from '../../lib/db'
 import AdminLogin, { SignOut } from './login-form'
+import AssistanceReview, { type PendingAssistance } from './assistance-review'
 import './admin.css'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Administración local', robots: { index: false, follow: false } }
 
-type AdminState = { kind: 'login' } | { kind: 'denied' } | { kind: 'unavailable' } | { kind: 'dashboard'; events: number; registrations: number }
+type AdminState = { kind: 'login' } | { kind: 'denied' } | { kind: 'unavailable' } | {
+  kind: 'dashboard'; events: number; registrations: number; reviewEnabled: boolean; requests: PendingAssistance[]
+}
 
 async function loadAdminState(correlationId: string): Promise<AdminState> {
   try {
@@ -24,7 +28,30 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
     if (!operator || operator.role !== 'admin' || operator.banned) return { kind: 'denied' }
     const [eventCount] = await db.select({ total: count() }).from(events)
     const [registrationCount] = await db.select({ total: count() }).from(registrations)
-    return { kind: 'dashboard', events: eventCount.total, registrations: registrationCount.total }
+    const [reviewer] = await db.select({ role: adminUsers.role, disabled: adminUsers.disabled })
+      .from(adminUsers).where(eq(adminUsers.authUserId, session.user.id)).limit(1)
+    const reviewEnabled = !!reviewer && !reviewer.disabled &&
+      ['configuration', 'registration_operator'].includes(reviewer.role) && !!process.env.WORKSHOP_EVENT_SLUG
+    let requests: PendingAssistance[] = []
+    if (reviewEnabled) {
+      const rows = await db.select({
+        registrationId: assistanceRequests.registrationId,
+        reference: registrations.reference,
+        name: registrations.name,
+        email: registrations.email,
+        phone: registrations.phone,
+        notes: registrationIntakes.paymentDifficultyNotes,
+        requestedAt: assistanceRequests.createdAt,
+      }).from(assistanceRequests)
+        .innerJoin(registrations, eq(registrations.id, assistanceRequests.registrationId))
+        .innerJoin(registrationIntakes, eq(registrationIntakes.registrationId, registrations.id))
+        .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
+        .innerJoin(events, eq(events.id, workshops.eventId))
+        .where(and(eq(assistanceRequests.status, 'requested'), eq(events.slug, process.env.WORKSHOP_EVENT_SLUG!)))
+        .orderBy(asc(assistanceRequests.createdAt)).limit(50)
+      requests = rows.map(row => ({ ...row, requestedAt: row.requestedAt.toISOString() }))
+    }
+    return { kind: 'dashboard', events: eventCount.total, registrations: registrationCount.total, reviewEnabled, requests }
   } catch {
     console.error(JSON.stringify({ event: 'admin_page_error', kind: 'configuration_or_database', correlationId }))
     return { kind: 'unavailable' }
@@ -32,6 +59,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
 }
 
 export default async function AdminPage() {
+  if (process.env.APP_SURFACE !== 'panel') notFound()
   await headers() // Keep the page request-bound; no static or shared user data.
   const correlationId = randomUUID()
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32 || !process.env.BETTER_AUTH_URL) {
@@ -46,8 +74,11 @@ export default async function AdminPage() {
   return (
     <main className="admin-shell">
       <h1>Administración local</h1>
-      <p>Vista privada de diagnóstico. Editar datos y validar pagos manuales todavía no está habilitado.</p>
+      <p>Panel privado del taller. Toda confirmación de pago, excepción y acreditación queda registrada con fecha, hora y operador.</p>
       <dl className="admin-counts"><div><dt>Eventos registrados</dt><dd>{state.events}</dd></div><div><dt>Inscripciones guardadas</dt><dd>{state.registrations}</dd></div></dl>
+      <p><a className="button button-gold admin-panel-link" href="/admin/acreditacion">Pagos y acreditación →</a></p>
+      {state.reviewEnabled && <p><a className="button button-gold admin-panel-link" href="/admin/taller">Precios e inscripciones grupales →</a></p>}
+      {state.reviewEnabled ? <AssistanceReview requests={state.requests} /> : <p className="admin-operator-notice">La revisión de solicitudes no está habilitada para esta cuenta. Un administrador debe vincularla como operador de inscripciones y configurar el evento.</p>}
       <SignOut />
     </main>
   )

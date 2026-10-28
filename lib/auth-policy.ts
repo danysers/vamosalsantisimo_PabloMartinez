@@ -3,8 +3,8 @@ import { admin, username } from 'better-auth/plugins'
 export function localAuthPolicy(base: string, secret: string) {
   if (secret.length < 32) throw new Error('Local admin secret is missing')
   const url = new URL(base)
-  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(url.hostname)) {
-    throw new Error('Admin must stay on loopback until HTTPS launch is configured')
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+    throw new Error('Admin requires HTTPS or local loopback')
   }
   return {
     baseURL: url.origin,
@@ -21,6 +21,6 @@ export function localAuthPolicy(base: string, secret: string) {
       max: 30,
       customRules: { '/sign-in/username': { window: 60, max: 5 } },
     },
-    advanced: { disableCSRFCheck: false, disableOriginCheck: false, trustedProxyHeaders: false },
+    advanced: { disableCSRFCheck: false, disableOriginCheck: false, trustedProxyHeaders: false, useSecureCookies: url.protocol === 'https:' },
   }
 }

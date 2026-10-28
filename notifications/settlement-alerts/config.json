@@ -1,0 +1,12 @@
+{
+  "planId": "taller-2026-disponibilidad-v1",
+  "timezone": "America/Argentina/Buenos_Aires",
+  "targetDate": "2026-12-16",
+  "advanceDays": [4, 3, 2],
+  "advanceHour": 9,
+  "phases": [
+    { "id": "18-dias", "fromDays": 35, "toDays": 18, "ratePercent": 3.48 },
+    { "id": "10-dias", "fromDays": 18, "toDays": 10, "ratePercent": 4.5 },
+    { "id": "al-instante", "fromDays": 10, "toDays": 0, "ratePercent": 6.45 }
+  ]
+}

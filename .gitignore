@@ -5,6 +5,10 @@
 
 # next.js
 /.next/
+/.next-test/
+/.next-qr-check/
+/.next-group-check/
+/.next-build-limit-check/
 /out/
 
 # production
@@ -28,3 +32,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated deployment payload; regenerate from notifications/settlement-alerts.
+/notifications/settlement-alerts/compose.generated.yaml

@@ -1,0 +1,1 @@
+ALTER TABLE "settlement_reminders" ADD COLUMN "cancelled_at" timestamp with time zone;

@@ -74,3 +74,145 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .transition-scrolled::view-transition-new(root){animation:stable-in 220ms ease-in both;mix-blend-mode:normal}
 ::view-transition{pointer-events:none}
 @media(min-width:701px){.portrait{height:min(67.5vw,972px)}}
+.location-link{display:inline-flex;align-items:center;gap:7px;margin-top:5px;color:var(--wine);font-size:clamp(14px,1.2vw,17px);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.location-link:hover{color:#a02747}
+@media(min-width:701px){.info-grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px;row-gap:12px}.info-item+.info-item{border-left:0;padding-left:0}.info-item:nth-child(2n){border-left:1px solid #e6bb6e70;padding-left:30px}}
+.home-faq{margin:4% 5% 5%;padding:0;background:transparent;border:0;border-top:1px solid #e6cda2;border-bottom:1px solid #e6cda2;border-radius:0;box-shadow:none}
+.home-faq .faq-overview{padding:0;border:0}
+.faq-overview>summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 4px;list-style:none;cursor:pointer}
+.faq-overview>summary::-webkit-details-marker{display:none}
+.faq-overview__label{color:var(--wine);font:600 clamp(12px,1.35vw,16px) var(--sans);letter-spacing:.2em;text-transform:uppercase}
+.faq-overview__control{display:inline-grid;place-items:center;width:29px;height:29px;border:1px solid #d9ba8a;border-radius:50%;color:var(--wine);font:400 22px/1 var(--sans);transition:transform .2s ease}
+.faq-overview[open] .faq-overview__control{transform:rotate(45deg)}
+.faq-overview__content{padding:0 4px 20px}
+.faq-overview__content>details{padding:13px 0;border-bottom:1px solid #ead4ac}
+.faq-overview__content>details:first-child{border-top:1px solid #ead4ac}
+.faq-overview__content>details>summary{font-size:clamp(16px,1.5vw,19px)}
+.faq-overview__content>details>p{font-size:clamp(15px,1.35vw,18px)}
+.all-faqs{display:inline-flex;align-items:center;gap:10px;margin-top:20px;color:var(--wine);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.all-faqs:hover{color:#a02747}
+@media(max-width:700px){.home-faq{margin:30px 5%}.faq-overview>summary{padding:17px 0}.faq-overview__content{padding:0 0 18px}.faq-overview__label{letter-spacing:.14em}.all-faqs{font-size:13px}}
+.registration-grid[hidden],.registration-result[hidden],.registration-page.registration-preview-mode .hero{display:none}
+.registration-result{position:relative;width:min(850px,92%);margin:5% auto;padding:clamp(28px,5vw,65px);background:#fffdf7;border:1px solid #ead4ac;border-radius:18px;box-shadow:0 16px 45px #7c4c1918}
+.result-symbol{display:grid;place-items:center;width:64px;height:64px;margin-bottom:25px;border-radius:50%;background:#f9edce;color:var(--wine);font-size:34px}
+.registration-result .eyebrow{margin-bottom:15px;color:var(--wine)}
+.registration-result h2{font-size:clamp(40px,5vw,64px);line-height:1;margin:0 0 17px}
+.result-intro{max-width:640px;color:#665b50;font-size:clamp(16px,1.7vw,21px)}
+.payment-next[hidden]{display:none}
+.payment-next{margin:32px 0 12px;padding:28px 0 0;border:0;border-top:1px solid #e9bc6c80;border-radius:0;background:transparent}
+.payment-next .eyebrow{color:var(--wine);font-size:12px}
+.payment-next h3{margin:0 0 10px;font:600 clamp(24px,2.5vw,32px) var(--sans);letter-spacing:-.03em}
+.payment-next p:not(.eyebrow){margin:0 0 20px;color:var(--muted);font-size:16px}
+.payment-next-button{background:#009ee3;color:#fff;font-size:16px;min-height:48px}
+.payment-next-button:disabled{opacity:.55;cursor:not-allowed;filter:none}
+#registration-error:not([hidden]){margin:14px 0 0;padding:12px 14px;border:1px solid #b75b66;border-radius:9px;background:#fff2f2;color:#7c1f31}
+#payment-method-field p{margin:12px 0 0;color:#665b50;font-size:14px;line-height:1.5}
+#payment-proof-link:not([hidden]){display:inline-block;color:#7c1f31;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.result-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 30px;margin:32px 0}
+.result-details>div{min-width:0;padding:13px 0;border-top:1px solid #ead4ac}
+.result-details dt{color:#8b7764;font-size:13px;text-transform:uppercase;letter-spacing:.1em}
+.result-details dd{margin:5px 0 0;overflow-wrap:anywhere;font-size:17px}
+.result-edit{font-size:17px}
+@media(max-width:700px){.registration-result{margin:25px auto;padding:28px 22px}.result-details{grid-template-columns:1fr;gap:0}.result-details dd{font-size:16px}.payment-next{padding:21px 18px}}
+
+/* Checkout del taller: importe desglosado y controles accesibles. */
+#workshop-price-note{font-size:15px;line-height:1.7;margin:0 0 12px}
+#workshop-checkout-hint{font-size:12px;line-height:1.7;margin:0 0 24px;color:#76614c}
+#payment-method-field .payment-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+#payment-method-field input[type=radio]{flex-shrink:0}
+#payment-method-field input:disabled+span{opacity:.55;cursor:not-allowed}
+#checkout-controls{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+#checkout-breakdown,#checkout-status{width:100%;font-size:14px;line-height:1.7}
+#checkout-controls .button{font-size:13px;min-height:44px;padding:12px 18px}
+#checkout-controls [hidden]{display:none!important}
+.checkout-edit{border:0;border-bottom:1px solid #701c2d60;padding:5px 0;background:transparent;color:var(--wine);font-size:14px;cursor:pointer;align-self:center}
+.checkout-edit:disabled{opacity:.5;cursor:wait}
+.checkout-method-editor{width:100%;padding:25px 0 0;margin-top:10px;border-top:1px solid #e9bc6c70}
+.checkout-method-editor fieldset{padding:0;border:0;margin:0}
+.checkout-method-editor legend{font-size:20px;font-weight:500;margin-bottom:18px;color:var(--ink)}
+.checkout-method-editor label{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;cursor:pointer;font-size:16px;color:var(--ink)}
+.checkout-method-editor input[type=radio]{width:18px;height:18px;min-height:18px;padding:0;margin:4px 0 0;flex-shrink:0;accent-color:var(--wine)}
+.checkout-method-editor small{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.checkout-method-editor input:disabled+span{opacity:.45}
+.method-editor-actions{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+.payment-next .method-editor-note,.payment-next #payment-method-error{font-size:13px}
+.payment-next #payment-method-error{color:var(--wine);margin:15px 0 0}
+#checkout-proof{align-self:center;font-size:14px;color:var(--wine);text-decoration:underline;text-underline-offset:4px}
+#registration-reference{font-size:12px;letter-spacing:.04em;color:var(--muted);margin:22px 0 0;overflow-wrap:anywhere}
+.registration-test-notice{font-size:12px;color:var(--wine);margin:24px 0 0}
+.registration-confirmed[hidden],.workshop-pass [hidden]{display:none!important}
+.registration-result[data-state=confirmed]{width:min(1120px,92%);display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,350px);column-gap:60px;align-items:start;padding:clamp(30px,4.4vw,60px);background:#fffdf8f7}
+.registration-result[data-state=confirmed]>.result-symbol,.registration-result[data-state=confirmed]>.eyebrow,.registration-result[data-state=confirmed]>h2,.registration-result[data-state=confirmed]>.result-intro,.registration-result[data-state=confirmed]>.registration-test-notice{grid-column:1}
+.registration-result[data-state=confirmed]>h2{font-size:clamp(43px,4.7vw,61px);max-width:9ch}
+.registration-result[data-state=confirmed]>.result-intro{font-size:19px;max-width:34ch;margin-bottom:24px}
+.registration-confirmed{display:contents}
+.confirmation-copy{grid-column:1}
+.confirmation-welcome{font-size:16px;color:var(--muted);line-height:1.7;max-width:39ch}
+.confirmation-verse{margin:30px 0;padding:0 0 0 22px;border-left:1px solid #e6a00790}
+.confirmation-verse p{font:500 italic clamp(28px,3vw,37px)/1.14 var(--serif);letter-spacing:-.025em;color:var(--wine);margin-bottom:13px}
+.confirmation-verse cite{font:400 11px var(--sans);text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.confirmation-email{font-size:13px;color:var(--muted);line-height:1.65;max-width:40ch;margin-bottom:24px}
+.confirmation-payment-note{font-size:14px;color:var(--wine);line-height:1.65;max-width:40ch;margin-bottom:22px}
+.workshop-pass__nickname{font:500 italic 23px var(--serif);color:var(--wine);margin:0 0 12px;overflow-wrap:anywhere}
+.workshop-pass__payment{font-size:10px;letter-spacing:.08em;color:var(--wine);padding:8px 0;margin:0 0 8px;border-block:1px solid #e9bc6c70}
+#confirmation-method-slot .checkout-method-editor{margin-bottom:20px}
+#confirmation-method-slot .button{font-size:13px;padding:12px 18px;min-height:44px}
+.pass-actions{display:flex;flex-direction:column;align-items:flex-start;gap:18px}
+.pass-actions .button{min-height:48px;font-size:15px;padding:14px 23px;gap:20px}
+.pass-actions .button:disabled{opacity:.5;cursor:wait}
+.pass-actions .checkout-edit{align-self:flex-start}
+.confirmation-back{font-size:13px;color:var(--wine);text-decoration:underline;text-underline-offset:4px}
+.pass-caption{font-size:12px;color:var(--muted);margin:20px 0 0}
+.pass-stage{grid-column:2;grid-row:1/span 7;perspective:1000px;align-self:center;min-width:0;padding:10px 4px 18px}
+.workshop-pass{--pass-x:0deg;--pass-y:0deg;width:100%;max-width:350px;margin:auto;position:relative;border-radius:9px;background:#fffbf1;border:1px solid #d8ba8090;box-shadow:12px 22px 42px #65401924,2px 3px 0 #c9ab7640;transform-style:preserve-3d;animation:workshop-pass-float 7s ease-in-out infinite;transition:transform .35s ease;overflow:hidden}
+.workshop-pass.is-tilting{animation:none;transform:translateY(-4px) rotateX(var(--pass-x)) rotateY(var(--pass-y))}
+.workshop-pass__art{position:relative;height:248px;padding:24px;isolation:isolate;background:linear-gradient(90deg,#fff9ebed,#fff9eb90 44%,#fff9eb00 73%),url('/formacion/assets/pablo-martinez.png') 69% 15%/cover}
+.workshop-pass__art:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#fffbf1,transparent 30%);pointer-events:none}
+.workshop-pass__logo{position:absolute;top:17px;left:20px;width:58px;height:43px;object-fit:contain}
+.workshop-pass__edition{position:absolute;top:29px;right:19px;font-size:8px;letter-spacing:.18em;color:var(--wine)}
+.workshop-pass__type{display:block;margin-top:55px;font-size:8px;letter-spacing:.19em;color:var(--wine)}
+.workshop-pass__art h3{font:500 italic 43px/.9 var(--serif);letter-spacing:-.045em;margin:12px 0 15px;color:var(--ink)}
+.workshop-pass__art h3 em{color:#bb7c12}
+.workshop-pass__speaker{font-size:16px;font-weight:500;color:var(--wine);margin:0}
+.workshop-pass__body{position:relative;padding:10px 23px 24px;text-align:center}
+.workshop-pass__body:before{content:'';position:absolute;left:23px;right:23px;top:0;border-top:1px solid #e9bc6c70}
+.workshop-pass__date{font-size:14px;font-weight:500;margin:10px 0 4px;color:var(--wine)}
+.workshop-pass__venue{font-size:12px;color:var(--muted);margin:0 0 16px}
+.workshop-pass__qr{display:grid;place-items:center;min-height:194px;width:194px;margin:0 auto 13px;background:#fff;padding:10px;border-radius:3px}
+.workshop-pass__qr img{display:block;width:174px;height:174px;max-width:100%;object-fit:contain}
+.workshop-pass__qr p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+.workshop-pass__admission{font-size:9px;letter-spacing:.17em;color:var(--wine);margin:0 0 6px}
+.workshop-pass__reference{font:11px var(--sans);letter-spacing:.09em;margin:0;color:var(--muted);overflow-wrap:anywhere}
+.workshop-pass__test{font-size:9px;letter-spacing:.06em;background:var(--wine);color:#fff;padding:7px 5px;border-radius:3px;margin:13px 0 0}
+.pass-stage:has(.workshop-pass__qr:hover) .workshop-pass{animation:none;transform:none}
+@keyframes workshop-pass-float{0%,100%{transform:translateY(0) rotateX(.8deg) rotateY(-3deg) rotateZ(-.7deg)}50%{transform:translateY(-8px) rotateX(-.8deg) rotateY(2.5deg) rotateZ(.7deg)}}
+@media(max-width:850px){
+  .registration-result[data-state=confirmed]{display:block;width:min(650px,92%);padding:32px 25px}
+  .registration-result[data-state=confirmed]>h2{max-width:none;font-size:46px}
+  .registration-confirmed{display:flex;flex-direction:column;gap:0}
+  .confirmation-copy{display:contents}
+  .confirmation-welcome{order:1;max-width:none}
+  .confirmation-verse{order:2;margin:10px 0 27px}
+  .pass-stage{order:3;width:min(350px,100%);margin:0 auto 25px;align-self:center}
+  .confirmation-email{order:4;max-width:none}
+  .confirmation-payment-note{order:4;max-width:none}
+  #confirmation-method-slot{order:7}
+  .pass-actions{order:5;align-items:center}
+  .pass-caption{order:6;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.workshop-pass,.workshop-pass.is-tilting{animation:none;transform:none;transition:none}}
+@media print{
+  @page{size:A4;margin:15mm}
+  html,body,.page{background:#fff!important;min-height:0!important;height:auto!important;overflow:visible!important}
+  body:has(.registration-confirmed:not([hidden]))>:not(.page),.registration-preview-mode .header,.registration-preview-mode .portrait,.registration-preview-mode footer,.registration-preview-mode main>:not(.registration-result){display:none!important}
+  .registration-result[data-state=confirmed]{display:block!important;width:100%!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+  .registration-result[data-state=confirmed]>:not(.registration-confirmed){display:none!important}
+  .registration-confirmed{display:block!important}
+  .confirmation-copy,.confirmation-welcome,.confirmation-verse,.confirmation-email,.confirmation-payment-note,.pass-actions,.pass-caption,#confirmation-method-slot{display:none!important}
+  .pass-stage{display:block!important;perspective:none!important;padding:0!important;margin:0 auto!important;width:90mm!important}
+  .workshop-pass,.workshop-pass.is-tilting{animation:none!important;transform:none!important;transition:none!important;box-shadow:none!important;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+@media(max-width:700px){
+  #payment-method-field .payment-options{grid-template-columns:1fr}
+  #checkout-controls .button{width:100%;justify-content:center}
+}
