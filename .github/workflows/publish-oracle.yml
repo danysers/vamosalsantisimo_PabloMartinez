@@ -34,13 +34,5 @@ jobs:
             ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Deploy the completed image to Dokploy
-        env:
-          DEPLOY_WEBHOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
-        run: |
-          test -n "$DEPLOY_WEBHOOK"
-          curl --fail --silent --show-error --max-time 30 \
-            -H 'Content-Type: application/json' \
-            -H 'x-github-event: registry_package' \
-            --data '{"registry_package":{"package_version":{"package_url":"ghcr.io/danysers/vamosalsantisimo-pablomartinez:latest","container_metadata":{"tag":{"name":"latest"}}}}}' \
-            "$DEPLOY_WEBHOOK"
+      # Dokploy's private release watcher deploys a changed GHCR digest after
+      # publication. GitHub runners do not need credentials for the control plane.

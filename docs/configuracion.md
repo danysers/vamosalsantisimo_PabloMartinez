@@ -4,7 +4,7 @@ No guardar secretos en Git ni enviarlos por chat. `.env` local está ignorado. *
 
 ## Publicación de ensayo del 28/10/2026
 
-El push a `main` construye la imagen ARM64 en GitHub Actions y recién después llama al webhook privado de Dokploy. El servidor descarga la imagen; no ejecuta el build de Next.js. El webhook se guarda como secreto de GitHub y las credenciales permanecen en Dokploy, fuera del repositorio.
+El push a `main` construye la imagen ARM64 en GitHub Actions. El servicio privado de despliegue comprueba GHCR cada 30 segundos y llama al webhook interno de esta aplicación únicamente cuando cambia el digest publicado. Guarda su estado en un volumen para evitar despliegues repetidos. El servidor descarga la imagen; no ejecuta el build de Next.js. La llamada externa desde runners de GitHub recibió HTTP 403, por lo que el servicio interno no depende de ese acceso. El webhook y las credenciales permanecen en Dokploy, fuera del repositorio; GitHub no recibe claves administrativas. `deploy/render-production-compose.mjs` prepara el Compose de copias y despliegue con límites de CPU/memoria, sin puertos ni Docker socket.
 
 La aplicación conserva su dominio y protección existentes. Usa una instancia PostgreSQL propia, volumen persistente y red privada `vas_workshop_production_v2` (`172.30.30.0/24`), sin puerto público. No se importan los registros de desarrollo. El inicio aplica migraciones bajo bloqueo, carga el catálogo de manera idempotente y verifica SMTP antes de habilitar el ensayo.
 
