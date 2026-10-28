@@ -34,6 +34,9 @@ if (process.env.WORKSHOP_EMAIL_WORKER_ENABLED === '1') {
 if (process.env.WORKSHOP_DRIVE_WORKER_ENABLED === '1') {
   launch(['scripts/drive-proof-worker.mjs'])
 }
+if (process.env.APP_SURFACE !== 'panel' && process.env.SPONSOR_SYNC_ENABLED === '1') {
+  launch(['scripts/sponsor-sync-worker.mjs'])
+}
 launch(['server.js'])
 process.on('SIGTERM', () => stop(0))
 process.on('SIGINT', () => stop(0))

@@ -50,7 +50,7 @@
   }
 
   // Sponsor cards also tilt, with their own independent light and reset state.
-  if (!prefersReducedMotion.matches) document.querySelectorAll('.sponsor-link').forEach(card => {
+  if (!prefersReducedMotion.matches) document.querySelectorAll('.brand-link').forEach(card => {
     let frame = 0;
     let pointerX = 0;
     let pointerY = 0;
@@ -68,10 +68,10 @@
         }
         const x = Math.max(0, Math.min(1, (pointerX - rect.left) / rect.width));
         const y = Math.max(0, Math.min(1, (pointerY - rect.top) / rect.height));
-        card.style.setProperty('--sponsor-tilt-x', `${(0.5 - y) * 8}deg`);
-        card.style.setProperty('--sponsor-tilt-y', `${(x - 0.5) * 10}deg`);
-        card.style.setProperty('--sponsor-glow-x', `${x * 100}%`);
-        card.style.setProperty('--sponsor-glow-y', `${y * 100}%`);
+        card.style.setProperty('--brand-tilt-x', `${(0.5 - y) * 8}deg`);
+        card.style.setProperty('--brand-tilt-y', `${(x - 0.5) * 10}deg`);
+        card.style.setProperty('--brand-glow-x', `${x * 100}%`);
+        card.style.setProperty('--brand-glow-y', `${y * 100}%`);
         frame = 0;
       });
     });
@@ -79,10 +79,10 @@
     const resetCard = () => {
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
-      card.style.removeProperty('--sponsor-tilt-x');
-      card.style.removeProperty('--sponsor-tilt-y');
-      card.style.removeProperty('--sponsor-glow-x');
-      card.style.removeProperty('--sponsor-glow-y');
+      card.style.removeProperty('--brand-tilt-x');
+      card.style.removeProperty('--brand-tilt-y');
+      card.style.removeProperty('--brand-glow-x');
+      card.style.removeProperty('--brand-glow-y');
     };
     card.addEventListener('pointerleave', resetCard);
     card.addEventListener('blur', resetCard);
