@@ -41,5 +41,6 @@ jobs:
           test -n "$DEPLOY_WEBHOOK"
           curl --fail --silent --show-error --max-time 30 \
             -H 'Content-Type: application/json' \
-            --data '{"push_data":{"tag":"latest"},"repository":{"repo_name":"danysers/vamosalsantisimo-pablomartinez"}}' \
+            -H 'x-github-event: registry_package' \
+            --data '{"registry_package":{"package_version":{"package_url":"ghcr.io/danysers/vamosalsantisimo-pablomartinez:latest","container_metadata":{"tag":{"name":"latest"}}}}}' \
             "$DEPLOY_WEBHOOK"

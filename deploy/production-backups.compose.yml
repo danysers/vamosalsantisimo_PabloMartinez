@@ -27,6 +27,7 @@ services:
           createdb "$$probe"
           pg_restore --exit-on-error -d "$$probe" "$$file"
           dropdb "$$probe"
+          printf '%s\n' "$$file" > /backups/last-restore-ok.txt
           echo "PostgreSQL backup verified and restored successfully"
           sleep 21600
         done
