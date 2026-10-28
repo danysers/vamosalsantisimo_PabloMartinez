@@ -211,6 +211,13 @@
       "when": 1793201348566,
       "tag": "0029_checkout_fee_simulator",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793214374716,
+      "tag": "0030_registration_recovery_location",
+      "breakpoints": true
     }
   ]
 }

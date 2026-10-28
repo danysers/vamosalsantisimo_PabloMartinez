@@ -139,15 +139,38 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .method-editor-actions{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
 .payment-next .method-editor-note,.payment-next #payment-method-error{font-size:13px}
 .payment-next #payment-method-error{color:var(--wine);margin:15px 0 0}
-.checkout-transfer-option{width:100%;margin:16px 0 8px;padding:18px;border:1px solid #e9bc6c80;border-radius:18px;background:#fffaf0}
-.checkout-transfer-option strong{display:block;margin-bottom:10px}
-.checkout-transfer-option p{margin:0!important;overflow-wrap:anywhere}
+.checkout-transfer-option{width:100%;margin:16px 0 8px;padding:28px;border:1px solid #ddb55f;border-radius:18px;background:linear-gradient(125deg,#fff8e6,#fffdf7);box-shadow:0 8px 30px #c99c3020}
+.checkout-transfer-option .alias-label{margin:0 0 9px!important;font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--wine)}
+#checkout-alias-value{display:block;margin:0 0 12px;font-size:clamp(25px,5vw,38px);line-height:1.2;font-weight:700;color:var(--ink);overflow-wrap:anywhere;user-select:all}
+#copy-alias-feedback{font-size:13px;margin-left:12px;color:var(--wine)}
+#checkout-alias-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0 0;padding-top:20px;border-top:1px solid #e2bb6b66}
+#checkout-alias-details dt{font-size:12px;color:var(--muted);margin-bottom:4px}
+#checkout-alias-details dd{margin:0;font-size:17px;font-weight:600;overflow-wrap:anywhere}
 #checkout-proof{display:flex;flex-wrap:wrap;align-items:center;gap:12px;width:100%;padding:18px 0;border-top:1px solid #e9bc6c80}
-#checkout-proof label{width:100%;font-weight:600}
+#checkout-proof label{width:100%;font-weight:600;font-size:22px;line-height:1.4}
+.payment-next .proof-payment-note{width:100%;margin:0 0 9px;font-size:16px}
 #checkout-proof input{max-width:100%;font-size:14px}
 #checkout-proof-feedback{width:100%;margin:0!important;font-size:13px}
-#checkout-help{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--wine);font-weight:700;color:var(--wine);text-decoration:none}
-#checkout-help:hover,#checkout-help:focus-visible{background:var(--wine);color:#fff}
+.whatsapp-help{display:flex;align-items:center;gap:16px;width:100%;margin:18px 0;padding:20px;border-radius:14px;background:#eef9f0;color:#16633b;text-decoration:none}
+.whatsapp-help svg{width:45px;height:45px;flex-shrink:0;color:#169e50}
+.whatsapp-help strong{display:block;font-size:18px;font-weight:600;line-height:1.4}
+.whatsapp-help small{display:block;font-size:14px;margin-top:5px}
+.whatsapp-help:hover,.whatsapp-help:focus-visible{background:#daf2e0;outline:2px solid #128345;outline-offset:3px}
+.checkout-test-notice{padding:14px 18px;background:#fff0bd;color:#623b15;border-left:3px solid #c38d25;font-size:14px!important}
+#checkout-method-warning{padding:14px 18px;background:#fff2e1;color:var(--wine);font-size:16px!important}
+.workshop-pass__test{font-size:10px;font-weight:700;color:var(--wine);letter-spacing:.06em}
+.location-fields{border:0;padding:0;margin:24px 0}
+.location-fields legend{font-size:18px;font-weight:600;margin-bottom:16px}
+.recovery-panel{max-width:720px;margin:30px auto 90px;padding:36px;background:#fffdf7;border:1px solid #e9bc6c80;border-radius:18px}
+.recovery-panel h2{font-size:30px;margin:0 0 24px}
+.recovery-panel label{display:block;font-weight:500;font-size:17px;margin-bottom:10px}
+.recovery-panel input{display:block;width:100%;padding:14px;border:1px solid #bfa995;border-radius:6px;background:#fff;font:inherit;color:var(--ink)}
+.recovery-panel p{font-size:15px;line-height:1.7;margin:16px 0}
+.recovery-panel .checkout-edit{display:block;margin-top:18px}
+#recovery-code{max-width:300px;font-size:30px;letter-spacing:.25em}
+#recovery-feedback{color:var(--wine)}
+[hidden]{display:none!important}
+@media(max-width:600px){.checkout-transfer-option{padding:22px}#checkout-alias-details{grid-template-columns:1fr}.whatsapp-help{padding:17px;gap:12px}.whatsapp-help strong{font-size:16px}.recovery-panel{padding:24px;margin-inline:20px}}
 #checkout-transfer-qr{margin:16px 0 22px;padding:18px;max-width:330px;border:1px solid #e9bc6c80;border-radius:18px;background:#fffaf0;text-align:center}
 #checkout-transfer-qr[hidden]{display:none}
 #checkout-transfer-qr p{margin:0 0 12px;font-weight:600;color:#3c281d}

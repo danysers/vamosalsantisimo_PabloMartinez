@@ -1,4 +1,16 @@
-# Inscripciones del taller 2026 (en desarrollo, cerradas al público)
+# Inscripciones del taller 2026
+
+## Revisión del 28/10/2026: comprobantes y ensayo protegido
+
+El despliegue protegido por usuario y contraseña permite ensayar inscripciones, Mercado Pago con cuentas y tarjetas de prueba, correos reales de prueba y credenciales marcadas sin validez para el evento. No equivale a habilitar cobros reales. Las referencias posteriores a cierre preventivo describen los valores iniciales del seed; la apertura de ensayo exige los interruptores explícitos de sandbox.
+
+La ficha individual exige DNI/documento, país y provincia; el apodo es opcional. Argentina ofrece sus 24 jurisdicciones. Para otro país se escriben país, provincia/estado y localidad. La migración `0030_registration_recovery_location.sql` agrega estos datos sin invalidar fichas anteriores.
+
+`/formacion/comprobante`, accesible desde el menú **Enviar comprobante**, recupera una inscripción mediante DNI o referencia y un código de un solo uso enviado al correo ya registrado. La consulta no revela si existe una persona. El código vence a los quince minutos, admite cinco intentos, se almacena cifrado para el trabajador SMTP y se consume al usarlo. También hay límites de solicitudes. Requiere conservar `WORKSHOP_CHECKOUT_TOKEN_KEY` estable; no necesita un nuevo secreto. El trabajador debe desplegarse junto con `lib/recovery-code.ts` y la migración.
+
+Alias y QR permiten subir el comprobante en la misma pantalla, recuerdan no pagar dos veces y conservan el pago pendiente hasta la revisión. Al recibir el archivo se ocultan las instrucciones de transferencia. La ayuda usa WhatsApp con un mensaje preparado; el participante decide enviarlo. El efectivo muestra su credencial de registro, pago pendiente y precio de ventanilla, sin instrucciones de alias; su correo indica lo mismo. Una inscripción recuperada no crea otro cobro: si ya tiene comprobante en revisión, se explica por qué no se permite cambiar de método.
+
+La suite incluye recuperación por DNI/referencia, entrega SMTP simulada del código, vencimiento, bloqueo, uso único y carga privada del comprobante con el acceso recuperado. El ensayo manual verifica además la navegación, el cambio entre alias, efectivo y Mercado Pago y el diseño responsive.
 
 **Efectivo en el taller:** el precio de ventanilla está a definir y no usa lotes ni promociones. Una inscripción individual por esta vía se guarda con importe `NULL`, como pago pendiente y con QR de registro (no de acreditación pagada). El panel debe fijar el precio de ventanilla antes de verificar el efectivo; al verificarlo se conserva el intento histórico sin cotización y se genera otro con el importe definitivo. No se puede aprobar como pagado un intento sin precio. Los grupos en efectivo no se cotizan hasta que el precio esté definido.
 

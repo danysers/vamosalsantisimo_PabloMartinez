@@ -29,7 +29,7 @@ test('order notifications require the genuine signature and canonical lowercase 
 })
 
 test('the enrollment contract never accepts an amount or a Mercado Pago choice with an assistance request', () => {
-  const person={firstName:'Ana',lastName:'Prueba',documentNumber:'12345678',birthDate:'1990-04-15',phone:'370 4123456',email:'ana@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago'}
+  const person={firstName:'Ana',lastName:'Prueba',documentNumber:'12345678',country:'Argentina',province:'Formosa',birthDate:'1990-04-15',phone:'370 4123456',email:'ana@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago'}
   assert.equal(individualRegistrationSchema.safeParse(person).success,true)
   assert.equal(individualRegistrationSchema.safeParse({...person,documentNumber:'12.345.678'}).data.documentNumber,'12345678')
   assert.equal(individualRegistrationSchema.safeParse({...person,documentNumber:''}).success,false)

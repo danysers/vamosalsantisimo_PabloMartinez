@@ -24,7 +24,7 @@ COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts ./scripts
-COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts ./lib/
+COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts /app/lib/recovery-code.ts ./lib/
 COPY --from=production-dependencies /app/node_modules ./node_modules
 USER app
 EXPOSE 3000

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { validWorkshopLocation } from './workshop-location.ts'
 
 const personName = z.string().trim().min(2).max(80).regex(/^[\p{L}\p{M}]+(?:[ '-][\p{L}\p{M}]+)*$/u)
 const optionalText = (limit: number) => z.string().trim().max(limit).optional()
@@ -27,12 +28,16 @@ export const workshopPersonSchema = z.object({
 }).strict()
 
 export const individualRegistrationSchema = workshopPersonSchema.extend({
+  country: z.string().trim().min(2).max(80),
+  province: z.string().trim().min(2).max(80),
+  locality: optionalText(100),
   nickname: optionalText(80),
   resumeReceipts: z.array(z.object({ reference: z.string().regex(/^[A-Za-z0-9_-]{10,80}$/), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict()).max(8).optional(),
   paymentDifficulty: z.boolean(),
   paymentDifficultyNotes: optionalText(1000),
   paymentMethod: z.enum(['bank_transfer', 'on_site', 'mercado_pago']).optional(),
 }).strict().superRefine((value, ctx) => {
+  if (!validWorkshopLocation(value.country, value.province, value.locality)) ctx.addIssue({ code: 'custom', path: ['province'], message: 'Elegí una provincia argentina o completá tu provincia y localidad si venís de otro país.' })
   if (value.paymentDifficulty === !!value.paymentMethod) ctx.addIssue({ code: 'custom', path: ['paymentMethod'], message: 'Elegí una forma de pago válida.' })
   if (!value.paymentDifficulty && value.paymentDifficultyNotes?.trim()) ctx.addIssue({ code: 'custom', path: ['paymentDifficultyNotes'], message: 'No corresponde.' })
 })

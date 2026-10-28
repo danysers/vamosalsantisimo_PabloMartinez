@@ -34,7 +34,7 @@ test('on-site registration has a printable QR without approving payment; it admi
     await pool.query('INSERT INTO workshop_lots(workshop_id,number,amount_minor)VALUES($1,1,1000000)',[workshop.id])
     await pool.query('INSERT INTO workshop_payment_settings(workshop_id)VALUES($1)',[workshop.id])
     const operator=(await pool.query("INSERT INTO admin_users(email,role)VALUES($1,'registration_operator')RETURNING id",['card-'+randomUUID()+'@example.invalid'])).rows[0]
-    const input={firstName:'Daniela',lastName:'Prueba',documentNumber:'12345678',nickname:'Dany',birthDate:'1990-01-01',phone:'3704000000',email:'card@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()}
+    const input={firstName:'Daniela',lastName:'Prueba',documentNumber:'12345678',country:'Argentina',province:'Formosa',nickname:'Dany',birthDate:'1990-01-01',phone:'3704000000',email:'card@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()}
     const {creationKey,...payload}=input
     assert.equal(individualRegistrationSchema.safeParse(payload).success,true)
     assert.equal(individualRegistrationSchema.safeParse({...payload,nickname:undefined}).success,true)

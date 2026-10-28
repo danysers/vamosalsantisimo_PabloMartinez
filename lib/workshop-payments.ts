@@ -6,6 +6,7 @@ import { hasCheckoutAccess, localWorkshopTestMode } from './checkout-access'
 import { createCheckoutProOrder, fetchCheckoutProOrder, cancelCheckoutProOrder, checkoutConfigured, mercadoPagoConfig, assertOrderEnvironment } from './mercado-pago-client'
 import { inspectUnpaidCheckoutOrder } from './checkout-method-contract'
 import { proofWhatsappUrl } from './email-templates'
+import { organizationWhatsApp } from './whatsapp-link'
 import { projectMercadoPagoOrder } from './mercado-pago-reconciliation'
 import { issueAccreditationAfterApproval } from './accreditation-workflow'
 import { decryptAccreditationQr, hashAccreditationQr } from './accreditation-token'
@@ -217,6 +218,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
     } : null,
     amountMinor: attempt.amount_minor, feeMinor: attempt.provider_fee_minor, baseAmountMinor: attempt.amount_minor === null ? null : attempt.amount_minor - attempt.provider_fee_minor,
     emailStatus: delivery.rows[0]?.status ?? 'not_ready', accreditation, registrationCard,
+    supportWhatsappUrl: proofWhatsappUrl(organizationWhatsApp,attempt.reference),
     nickname: typeof profile.rows[0]?.nickname === 'string' ? profile.rows[0].nickname : null,
     testMode: process.env.MP_ENVIRONMENT === 'test',
     verification, checkoutUrl: attempt.status === 'pending' && attempt.registration_status === 'pending' ? attempt.checkout_url : null }

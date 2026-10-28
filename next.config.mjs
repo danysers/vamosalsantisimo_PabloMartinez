@@ -14,7 +14,7 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [{ source: '/', destination: '/pagina%20principal%20con%20efecto/index.html' }],
-      afterFiles: ['', 'pablo-martinez', 'inscripcion', 'pago', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
+      afterFiles: ['', 'pablo-martinez', 'inscripcion', 'pago', 'comprobante', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
         source: page ? `/formacion/${page}` : '/formacion',
         destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',
       })),

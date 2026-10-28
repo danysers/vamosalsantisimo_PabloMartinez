@@ -25,11 +25,13 @@ test('the configured online surcharge is itemized; alias, QR and on-site have no
 
 test('transfer QR uses donation asset, and proof is uploaded privately with WhatsApp only for help', async () => {
   const checkout = await read('public/formacion/checkout.js')
-  assert.doesNotMatch(checkout, /checkout-transfer-qr-warning|PRUEBA|Modo de prueba/)
+  assert.doesNotMatch(checkout, /checkout-transfer-qr-warning/)
+  assert.match(checkout,/testMode=config.environment==='test'/)
   assert.match(checkout, /\/2026\/donaciones\/qr-billeteras\.png/)
   assert.match(checkout, /Subir comprobante/)
   assert.match(checkout, /\/api\/taller\/pagos\/comprobante/)
-  assert.match(checkout, /Ayuda por WhatsApp/)
+  assert.match(checkout, /Consultanos por WhatsApp/)
+  assert.match(checkout, /whatsappIcon/)
   assert.doesNotMatch(checkout, /Enviar comprobante por WhatsApp/)
   const qr = await readFile(new URL('../public/2026/donaciones/qr-billeteras.png', import.meta.url))
   assert.ok(qr.byteLength > 1000)

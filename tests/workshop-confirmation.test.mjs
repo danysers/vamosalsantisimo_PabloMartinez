@@ -67,7 +67,7 @@ test('registration starts polling without a click, keeps waiting beyond 100s, an
   assert.equal(app.ids.get('payment-next').hidden,true)
   assert.equal(app.ids.get('pass-qr').hidden,false)
   assert.match(app.ids.get('pass-date').textContent,/15:00 h/)
-  assert.equal(app.ids.has('pass-test'),false)
+  assert.equal(app.ids.get('pass-test').hidden,false)
   app.ids.get('print-workshop-pass').handlers.get('click')()
   assert.equal(app.printed,1)
   app.response={status:'refunded',registrationStatus:'review',accreditation:null}
@@ -134,7 +134,7 @@ test('only the edit action is visible and another method is saved without repeat
   assert.equal(app.ids.get('checkout-method-editor').hidden,true)
   assert.equal(app.ids.get('checkout-pay').hidden,true)
   assert.equal(app.ids.get('checkout-proof').hidden,false)
-  assert.match(app.ids.get('checkout-alias-details').textContent,/test.alias/)
+  assert.match(app.ids.get('checkout-alias-value').textContent,/test.alias/)
   assert.equal(JSON.parse(storage.get('vas-workshop-payment:'+reference)).payment,'bank_transfer')
   assert.equal(app.calls.filter(call=>call.path.endsWith('/metodo')).length,1)
   assert.ok(!app.calls.some(call=>call.path.endsWith('/inscripciones')))
@@ -185,4 +185,44 @@ test('pay-at-workshop displays and prints a registration card while retaining a 
   assert.equal(app.ids.get('checkout-method-editor').hidden,false)
   app.ids.get('payment-method-cancel').handlers.get('click')()
   assert.equal(app.ids.get('checkout-method-editor').hidden,true)
+})
+
+
+test('switching alias, cash and Mercado Pago clears the previous payment instructions',async()=>{
+  const app=browser()
+  app.response={paymentMethod:'bank_transfer',amountMinor:1000000}
+  app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1000000}})
+  await flush()
+  assert.equal(app.ids.get('checkout-transfer-alias').hidden,false)
+  app.response={paymentMethod:'on_site',registrationCard:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis'}}
+  app.windowEvents.get('focus')();await flush()
+  assert.equal(app.ids.get('payment-next').hidden,true)
+  assert.equal(app.ids.get('checkout-transfer-alias').hidden,true)
+  assert.equal(app.ids.get('checkout-proof').hidden,true)
+  app.response={paymentMethod:'mercado_pago',registrationCard:null}
+  app.windowEvents.get('focus')();await flush()
+  assert.equal(app.ids.get('payment-next').hidden,false)
+  assert.equal(app.ids.get('checkout-pay').hidden,false)
+  assert.equal(app.ids.get('checkout-transfer-alias').hidden,true)
+})
+
+test('an existing proof explains why a second checkout is blocked instead of silently switching the selected method',async()=>{
+  const app=browser()
+  app.response={paymentMethod:'bank_transfer',canChangeMethod:false,proofSubmitted:true}
+  await app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',requestedPayment:'mercado_pago',resumed:true,paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43)}})
+  await flush()
+  assert.equal(app.ids.get('payment-next-title').textContent,'Comprobante recibido')
+  assert.equal(app.ids.get('checkout-method-warning').hidden,false)
+  assert.match(app.ids.get('checkout-method-warning').textContent,/pago duplicado/)
+  assert.equal(app.ids.get('checkout-transfer-alias').hidden,true)
+  assert.ok(!app.calls.some(c=>c.path.endsWith('/checkout')))
+})
+
+test('email recovery restores private payment access without a second enrollment',async()=>{
+  const app=browser()
+  app.events.get('workshop:recovered')({detail:{reference:'TestReference123',accessToken:'a'.repeat(43)}})
+  await flush()
+  assert.equal(app.calls[0].path,'/api/taller/pagos/estado')
+  assert.ok(!app.calls.some(c=>c.path.endsWith('/inscripciones')))
+  assert.ok(!app.location.href.includes('a'.repeat(43)))
 })

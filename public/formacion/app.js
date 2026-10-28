@@ -46,8 +46,18 @@ function todayIso() {
 function prepareRegistrationForm() {
   const birthDate = document.querySelector('#registration [name="fechaNacimiento"]');
   if (birthDate) birthDate.max = todayIso();
+  updateCountryFields();
   document.dispatchEvent(new Event('workshop:form-ready'));
 }
+function updateCountryFields() {
+  const country=document.querySelector('#registration [name="pais"]'); if(!country) return;
+  const foreign=country.value==='otro';
+  for(const [id,visible] of [['argentina-province',!foreign],['foreign-location',foreign]]) {
+    const block=document.getElementById(id);block.hidden=!visible;
+    for(const input of block.querySelectorAll('input,select')) { input.disabled=!visible;input.required=visible; }
+  }
+}
+document.addEventListener('change',event=>{if(event.target.name==='pais')updateCountryFields();});
 prepareRegistrationForm();
 document.addEventListener('input', event => {
   const form = event.target.closest?.('#registration');
@@ -155,6 +165,9 @@ document.addEventListener('submit', async event => {
       body: JSON.stringify({
         firstName: data.get('nombre'), lastName: data.get('apellido'), documentNumber: data.get('documento'), birthDate: data.get('fechaNacimiento'),
         nickname: data.get('apodo') || '', resumeReceipts,
+        country: data.get('pais')==='otro' ? data.get('otroPais') : 'Argentina',
+        province: data.get('pais')==='otro' ? data.get('provinciaExtranjera') : data.get('provincia'),
+        locality: data.get('pais')==='otro' ? data.get('localidad') : '',
         phone: data.get('telefono'), email: data.get('correo'), prayerGroup: data.get('grupo'),
         movement: data.get('mov'), ecclesialState: data.get('estado'), occupation: data.get('ocupacion'),
         paymentDifficulty: data.get('tieneInconveniente') === 'si',
@@ -172,7 +185,7 @@ document.addEventListener('submit', async event => {
   } finally { button.disabled = false; }
 });
 // Cada URL conserva su HTML completo. La navegación interna reutiliza los recursos.
-const routes = new Set(['/formacion', ...['pablo-martinez','inscripcion','contacto','recursos','preguntas-frecuentes'].map(r => '/formacion/'+r)]);
+const routes = new Set(['/formacion', ...['pablo-martinez','inscripcion','comprobante','contacto','recursos','preguntas-frecuentes'].map(r => '/formacion/'+r)]);
 function updateDirections() {
   const link = document.getElementById('workshop-directions');
   if (!link) return;

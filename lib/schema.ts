@@ -13,7 +13,7 @@ export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assi
 export const accreditationDelivery = pgEnum('accreditation_delivery', ['screen', 'download', 'print', 'email'])
 export const admissionScanResult = pgEnum('admission_scan_result', ['admitted', 'already_admitted', 'not_eligible', 'revoked', 'expired', 'unknown'])
 export const promotionKind = pgEnum('promotion_kind', ['bundle', 'group_fixed'])
-export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted'])
+export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted', 'registration_access'])
 export const emailStatus = pgEnum('email_status', ['queued', 'sending', 'sent', 'failed', 'cancelled'])
 const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
 
@@ -120,6 +120,9 @@ export const registrationIntakes = pgTable('registration_intakes', {
   lastName: text('last_name').notNull(),
   documentNumber: text('document_number'),
   nickname: text('nickname'),
+  country: text('country'),
+  province: text('province'),
+  locality: text('locality'),
   birthDate: date('birth_date', { mode: 'string' }).notNull(),
   prayerGroup: text('prayer_group'),
   movement: text('movement'),
@@ -468,6 +471,19 @@ export const admissionScans = pgTable('admission_scans', {
   entryPoint: text('entry_point'),
 }, (table) => [index('admission_scans_by_time').on(table.scannedAt)])
 
+export const registrationRecoveries = pgTable('registration_recoveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  registrationId: uuid('registration_id').notNull().references(() => registrations.id),
+  codeHash: text('code_hash').notNull(),
+  codeEncrypted: text('code_encrypted').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('recoveries_by_registration').on(table.registrationId, table.createdAt),
+  check('recovery_attempts_range', sql`${table.attempts} BETWEEN 0 AND 5`),
+])
+
 export const emailOutbox = pgTable('email_outbox', {
   id: uuid('id').primaryKey().defaultRandom(),
   dedupeKey: text('dedupe_key').notNull().unique(),
@@ -477,6 +493,7 @@ export const emailOutbox = pgTable('email_outbox', {
   registrationId: uuid('registration_id').references(() => registrations.id),
   paymentAttemptId: uuid('payment_attempt_id').references(() => paymentAttempts.id),
   paymentProofId: uuid('payment_proof_id').references(() => paymentProofs.id),
+  recoveryId: uuid('recovery_id').references(() => registrationRecoveries.id),
   credentialId: uuid('credential_id').references(() => accreditationCredentials.id),
   settlementReminderId: uuid('settlement_reminder_id').references(() => settlementReminders.id),
   attemptCount: integer('attempt_count').notNull().default(0),

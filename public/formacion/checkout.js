@@ -1,7 +1,15 @@
 (() => {
   'use strict';
   let current=null, preparing=null, checking=null, timer=0, checks=0;
-  let lastState=null, savingMethod=false, baseAmountMinor=null, onlineFeeMinor=null, onlineCheckoutReady=false;
+  let lastState=null, savingMethod=false, baseAmountMinor=null, onlineFeeMinor=null, onlineCheckoutReady=false, testMode=false;
+  const whatsappIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2.5A13.4 13.4 0 0 0 4.4 22.6L2.5 29.5l7.1-1.9A13.5 13.5 0 1 0 16 2.5Z"/><path fill="#fff" d="M22.7 19.1c-.4-.2-2.2-1.1-2.6-1.2-.3-.1-.6-.2-.8.2l-1.1 1.3c-.2.2-.4.3-.8.1-2.2-1.1-3.6-2.1-4.8-4.3-.4-.6.4-.6 1.1-1.9.1-.2.1-.5 0-.7l-1.2-2.8c-.3-.7-.6-.6-.8-.6h-.8c-.3 0-.7.1-1 .5-1 1.1-1.3 2.2-1.1 3.6.3 1.8 1.7 3.8 3.3 5.4 2.3 2.3 5.3 3.8 7.8 4.1 1.3.2 2.5-.4 3.1-1.2.4-.6.6-1.7.5-1.9-.2-.3-.5-.4-.8-.6Z"/></svg>';
+  function helpUrl(result={}) {
+    const fallback='https://wa.me/5493704258770';
+    let url; try { url=new URL(result.supportWhatsappUrl || result.transfer?.whatsappUrl || fallback); } catch { url=new URL(fallback); }
+    if(url.protocol!=='https:' || url.hostname!=='wa.me') url=new URL(fallback);
+    url.searchParams.set('text','Tengo un problema con el comprobante de pago.'+(current?.reference?' Mi número de gestión es '+current.reference+'.':''));
+    return url.toString();
+  }
   const opensInNewTab=location.protocol!=='https:';
   const money=minor => '$'+(minor/100).toLocaleString('es-AR');
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -12,7 +20,7 @@
     return result;
   }
   function remember(receipt) {
-    current={reference:receipt.reference,accessToken:receipt.paymentAccessToken,payment:receipt.payment,transferMode:receipt.transferMode||'alias'};
+    current={reference:receipt.reference,accessToken:receipt.paymentAccessToken,payment:receipt.payment,transferMode:receipt.transferMode||'alias',testMode:receipt.testMode===true};
     try { sessionStorage.setItem('vas-workshop-payment:'+receipt.reference,JSON.stringify(current)); } catch { /* Current tab remains usable. */ }
     const url=new URL(location.href); url.searchParams.set('reference',receipt.reference);
     history.replaceState({...history.state},'',url);
@@ -34,25 +42,28 @@
       const retry=document.createElement('button'); retry.id='checkout-retry'; retry.type='button'; retry.className='button'; retry.textContent='Preparar pago'; retry.addEventListener('click',preparePayment);
       const edit=document.createElement('button'); edit.id='checkout-edit'; edit.type='button'; edit.className='checkout-edit'; edit.textContent='Elegir otro método de pago'; edit.addEventListener('click',openMethodEditor);
       const alias=document.createElement('div'); alias.id='checkout-transfer-alias'; alias.className='checkout-transfer-option'; alias.hidden=true;
-      const aliasTitle=document.createElement('strong'); aliasTitle.textContent='Transferencia por alias';
-      const aliasDetails=document.createElement('p'); aliasDetails.id='checkout-alias-details'; alias.append(aliasTitle,aliasDetails);
+      alias.innerHTML='<p class="alias-label">Alias para transferir</p><strong id="checkout-alias-value"></strong><button type="button" id="copy-transfer-alias" class="checkout-edit">Copiar alias</button><span id="copy-alias-feedback" role="status"></span><dl id="checkout-alias-details"><div><dt>Billetera</dt><dd id="checkout-alias-provider"></dd></div><div><dt>Titular</dt><dd id="checkout-alias-holder"></dd></div><div id="checkout-alias-document-row"><dt>DNI del titular</dt><dd id="checkout-alias-document"></dd></div></dl>';
+      alias.querySelector('#copy-transfer-alias').addEventListener('click',async()=>{try { await navigator.clipboard.writeText(document.getElementById('checkout-alias-value').textContent);document.getElementById('copy-alias-feedback').textContent='Alias copiado'; } catch { document.getElementById('copy-alias-feedback').textContent='Podés seleccionar el alias y copiarlo.'; } });
       const proof=document.createElement('form'); proof.id='checkout-proof'; proof.className='checkout-proof'; proof.hidden=true;
-      const proofLabel=document.createElement('label'); proofLabel.htmlFor='checkout-proof-file'; proofLabel.textContent='Adjuntá tu comprobante';
+      const proofLabel=document.createElement('label'); proofLabel.htmlFor='checkout-proof-file'; proofLabel.textContent='¿Ya hiciste el pago? Subí tu comprobante acá';
+      const proofNote=document.createElement('p'); proofNote.className='proof-payment-note'; proofNote.textContent='Asegurate de no pagar dos veces. Una vez que pagaste, adjuntá el comprobante para que podamos verificarlo.';
       const proofInput=document.createElement('input'); proofInput.id='checkout-proof-file'; proofInput.type='file'; proofInput.name='comprobante'; proofInput.accept='image/png,image/jpeg,image/webp,application/pdf'; proofInput.required=true;
       const proofButton=document.createElement('button'); proofButton.type='submit'; proofButton.className='button gold'; proofButton.textContent='Subir comprobante';
       const proofFeedback=document.createElement('p'); proofFeedback.id='checkout-proof-feedback'; proofFeedback.setAttribute('role','status');
-      proof.append(proofLabel,proofInput,proofButton,proofFeedback); proof.addEventListener('submit',uploadProof);
-      const help=document.createElement('a'); help.id='checkout-help'; help.textContent='?'; help.title='Ayuda por WhatsApp si no podés subir el comprobante'; help.setAttribute('aria-label','Pedir ayuda por WhatsApp para subir el comprobante'); help.target='_blank'; help.rel='noopener noreferrer'; help.hidden=true;
+      proof.append(proofLabel,proofNote,proofInput,proofButton,proofFeedback); proof.addEventListener('submit',uploadProof);
+      const help=document.createElement('a'); help.id='checkout-help'; help.className='whatsapp-help'; help.innerHTML=whatsappIcon+'<span><strong>¿Tenés inconvenientes para enviar el comprobante?</strong><small>Consultanos por WhatsApp</small></span>'; help.target='_blank'; help.rel='noopener noreferrer'; help.hidden=true;
       const transferQr=document.createElement('div'); transferQr.id='checkout-transfer-qr'; transferQr.hidden=true;
       const transferQrTitle=document.createElement('p'); transferQrTitle.textContent='Pago con QR · Escaneá con tu billetera';
       const transferQrImage=document.createElement('img'); transferQrImage.id='checkout-transfer-qr-image'; transferQrImage.alt='QR para pagar el taller con una billetera virtual'; transferQrImage.width=280; transferQrImage.height=302; transferQrImage.loading='lazy';
       transferQr.append(transferQrTitle,transferQrImage);
       const status=document.createElement('p'); status.id='checkout-status'; status.setAttribute('role','status');
+      const notice=document.createElement('p'); notice.id='checkout-test-notice'; notice.className='checkout-test-notice'; notice.textContent='Mercado Pago en modo de prueba. Usá únicamente cuentas y tarjetas de prueba; no hay cargos reales.';notice.hidden=true;
+      const methodWarning=document.createElement('p'); methodWarning.id='checkout-method-warning';methodWarning.setAttribute('role','alert');methodWarning.hidden=true;
       const editor=document.createElement('form'); editor.id='checkout-method-editor'; editor.className='checkout-method-editor'; editor.hidden=true;
       editor.innerHTML='<fieldset><legend>¿Cómo preferís completar el pago?</legend><label><input id="payment-choice-mercado_pago" type="radio" name="new-payment-method" value="mercado_pago" required><span>Mercado Pago<small>Tarjeta o dinero en cuenta · Con gastos de servicio</small></span></label><label><input id="payment-choice-bank_transfer_alias" type="radio" name="new-payment-method" value="bank_transfer_alias"><span>Transferencia por alias<small>Sin gastos de servicio · Adjuntá el comprobante acá</small></span></label><label><input id="payment-choice-bank_transfer_qr" type="radio" name="new-payment-method" value="bank_transfer_qr"><span>Pago con QR<small>Sin gastos de servicio · Adjuntá el comprobante acá</small></span></label><label><input id="payment-choice-on_site" type="radio" name="new-payment-method" value="on_site"><span>Pago en efectivo en el taller<small>Precio de ventanilla a definir · Sin promociones</small></span></label></fieldset><p class="method-editor-note">Conservás tu inscripción y todos tus datos.</p><div class="method-editor-actions"><button id="payment-method-save" type="submit" class="button gold">Guardar método de pago</button><button id="payment-method-cancel" type="button" class="checkout-edit">Cancelar</button></div><p id="payment-method-error" role="status"></p>';
       editor.addEventListener('submit',saveMethod);
       editor.querySelector('#payment-method-cancel').addEventListener('click',() => { editor.hidden=true; if(lastState) renderState(lastState); });
-      container.append(price,link,retry,alias,transferQr,proof,help,edit,status,editor); host.append(container);
+      container.append(methodWarning,notice,price,link,retry,alias,transferQr,proof,help,edit,status,editor); host.append(container);
     }
     return {host,title:document.getElementById('payment-next-title'),description:document.getElementById('payment-next-description'),
       price:document.getElementById('checkout-breakdown'),link:document.getElementById('checkout-pay'),retry:document.getElementById('checkout-retry'),edit:document.getElementById('checkout-edit'),proof:document.getElementById('checkout-proof'),help:document.getElementById('checkout-help'),alias:document.getElementById('checkout-transfer-alias'),transferQr:document.getElementById('checkout-transfer-qr'),editor:document.getElementById('checkout-method-editor'),status:document.getElementById('checkout-status')};
@@ -156,7 +167,8 @@
       +'<p class="pass-caption">También podés presentar el QR desde tu celular.</p></div>'
       +'<div class="pass-stage"><article class="workshop-pass" aria-label="Tu acreditación al taller de Pablo Martínez">'
       +'<div class="workshop-pass__art"><img class="workshop-pass__logo" src="/formacion/assets/logo-dorado.png" alt="Vamos al Santísimo" width="900" height="686"><span class="workshop-pass__edition">FORMOSA · 2026</span><span class="workshop-pass__type">TALLER DE FORMACIÓN</span><h3>Formación<br><em>católica.</em></h3><p class="workshop-pass__speaker">Pablo Martínez</p></div>'
-      +'<div class="workshop-pass__body"><p class="workshop-pass__date" id="pass-date"></p><p class="workshop-pass__venue" id="pass-venue"></p><p class="workshop-pass__nickname" id="pass-nickname" hidden></p><div class="workshop-pass__qr"><img id="pass-qr" width="192" height="192" alt="QR personal para acreditarte en el taller" hidden><p id="pass-qr-pending" role="status">Preparando tu QR…</p></div><p class="workshop-pass__admission" id="pass-admission">TU ACREDITACIÓN PERSONAL</p><p class="workshop-pass__payment" id="pass-payment" hidden></p><p class="workshop-pass__reference" id="pass-reference"></p></article></div>';
+      +'<div class="workshop-pass__body"><p class="workshop-pass__test" id="pass-test" hidden>PRUEBA · Sin validez para el evento</p><p class="workshop-pass__date" id="pass-date"></p><p class="workshop-pass__venue" id="pass-venue"></p><p class="workshop-pass__nickname" id="pass-nickname" hidden></p><div class="workshop-pass__qr"><img id="pass-qr" width="192" height="192" alt="QR personal para acreditarte en el taller" hidden><p id="pass-qr-pending" role="status">Preparando tu QR…</p></div><p class="workshop-pass__admission" id="pass-admission">TU ACREDITACIÓN PERSONAL</p><p class="workshop-pass__payment" id="pass-payment" hidden></p><p class="workshop-pass__reference" id="pass-reference"></p></article></div>';
+    const contact=document.createElement('a');contact.id='confirmation-help';contact.className='whatsapp-help';contact.target='_blank';contact.rel='noopener noreferrer';contact.innerHTML=whatsappIcon+'<span><strong>¿Tenés alguna duda sobre tu inscripción?</strong><small>Consultanos por WhatsApp</small></span>';section.querySelector('.confirmation-copy').append(contact);
     document.getElementById('registration-result').append(section);
     section.querySelector('#print-workshop-pass').addEventListener('click',() => { if (!section.querySelector('#pass-qr').hidden) window.print(); });
     section.querySelector('#pass-change-method').addEventListener('click',openMethodEditor);
@@ -178,6 +190,9 @@
     section.querySelector('.workshop-pass').setAttribute('aria-label',paid?'Tu acreditación al taller de Pablo Martínez':'Tu credencial de inscripción · Pago en el taller pendiente');
     root.dataset.state='confirmed'; section.hidden=false; document.getElementById('payment-next').hidden=true;
     root.dataset.payment=paid?'paid':'pending';
+    document.getElementById('pass-test').hidden=!(result.testMode || current?.testMode);
+    document.getElementById('confirmation-help').href=helpUrl(result);
+    for(const id of ['checkout-transfer-alias','checkout-transfer-qr','checkout-proof','checkout-help','checkout-pay','checkout-retry']) document.getElementById(id).hidden=true;
     document.getElementById('registration-result-title').textContent=paid?'Inscripción confirmada':'Inscripción registrada';
     root.querySelector('.result-intro').textContent='Tu inscripción ha sido registrada. '+(result.nickname?'¡Te esperamos, '+result.nickname+'!':'¡Te esperamos en el taller!');
     root.querySelector('.result-symbol').textContent='✓'; document.getElementById('registration-reference').hidden=true;
@@ -214,6 +229,7 @@
     if (typeof result.onlineCheckoutReady==='boolean') onlineCheckoutReady=result.onlineCheckoutReady;
     const method=result.paymentMethod || current.payment || 'mercado_pago';
     current.payment=method;
+    if(result.testMode) current.testMode=true;
     try { sessionStorage.setItem('vas-workshop-payment:'+current.reference,JSON.stringify(current)); } catch { /* Current tab remains usable. */ }
     if(method!=='on_site' || result.status==='approved') document.getElementById('checkout-controls').append(ui.editor);
     if (result.status==='approved' && result.registrationStatus==='confirmed') { ui.editor.hidden=true; return !renderConfirmation(result) || result.emailStatus!=='sent'; }
@@ -228,6 +244,8 @@
     document.getElementById('registration-result-title').textContent='Inscripción registrada';
     root.querySelector('.result-intro').textContent='Ya recibimos tu inscripción. Solo falta un paso para confirmar tu lugar.';
     document.getElementById('registration-reference').hidden=false;
+    const warning=document.getElementById('checkout-method-warning');warning.hidden=!current.methodNotice;warning.textContent=current.methodNotice||'';
+    document.getElementById('checkout-test-notice').hidden=!(method==='mercado_pago' && (testMode || current.testMode || result.testMode));
     ui.price.hidden=false;
     ui.price.textContent=method==='on_site' ? (result.amountMinor == null ? 'Pago en efectivo en el taller · Precio de ventanilla a definir · Sin promociones' : 'Pago en efectivo en el taller · Precio de ventanilla '+money(result.amountMinor)) : method==='mercado_pago'
       ? 'Taller '+money(result.baseAmountMinor)+' + gasto de plataforma '+money(result.feeMinor)
@@ -241,28 +259,25 @@
       ui.link.hidden=true; ui.retry.hidden=true;
       if(method==='bank_transfer') {
         const byQr=current.transferMode==='qr';
-        ui.title.textContent=byQr?'Pagá con QR':'Transferí por alias';
-        const details=result.transfer ? [
-          'Alias: '+result.transfer.alias, 'Billetera: '+result.transfer.provider,
-          ...(result.transfer.holder ? ['Titular: '+result.transfer.holder] : []),
-        ].join(' · ') : '';
+        ui.title.textContent=result.proofSubmitted?'Comprobante recibido':byQr?'Pagá con QR':'Transferí por alias';
         ui.description.textContent=result.transfer
           ? (result.proofSubmitted ? 'Recibimos tu comprobante. Tu pago está en proceso de confirmación.'
             : byQr ? 'Escaneá el QR con tu billetera. Después adjuntá el comprobante para que podamos confirmar tu pago.'
             : 'Transferí al alias indicado. Después adjuntá el comprobante para que podamos confirmar tu pago.')
           : 'Estamos consultando los datos para transferir.';
-        document.getElementById('checkout-alias-details').textContent=details;
+        document.getElementById('checkout-alias-value').textContent=result.transfer?.alias||'';
+        document.getElementById('checkout-alias-provider').textContent=result.transfer?.provider||'';
+        document.getElementById('checkout-alias-holder').textContent=result.transfer?.holder||'Consultá el titular en tu billetera antes de confirmar';
+        document.getElementById('checkout-alias-document').textContent=result.transfer?.document||'';
+        document.getElementById('checkout-alias-document-row').hidden=!result.transfer?.document;
         if(result.transfer && ui.editor.hidden) {
-          if(byQr) {
+          if(byQr && !result.proofSubmitted) {
             document.getElementById('checkout-transfer-qr-image').src='/2026/donaciones/qr-billeteras.png';
             ui.transferQr.hidden=false;
-          } else ui.alias.hidden=false;
+          } else if(!result.proofSubmitted) ui.alias.hidden=false;
           ui.proof.hidden=!!result.proofSubmitted;
         } else { document.getElementById('checkout-transfer-qr-image').removeAttribute('src'); }
-        if(result.transfer?.whatsappUrl && ui.editor.hidden) {
-          const url=new URL(result.transfer.whatsappUrl);
-          if(url.protocol==='https:' && url.hostname==='wa.me') { ui.help.href=url.href; ui.help.hidden=false; }
-        }
+        if(ui.editor.hidden) { ui.help.href=helpUrl(result); ui.help.hidden=false; }
       } else { ui.title.textContent='Pagá en efectivo al llegar al taller'; ui.description.textContent='Tu inscripción quedó registrada. El precio de ventanilla se informará antes de cobrar; no aplican lotes ni promociones.'; }
       ui.status.textContent=result.proofSubmitted ? 'Pago en proceso de confirmación. Te enviaremos un correo al verificarlo.'
         : 'Conservá tu referencia. La confirmación se actualizará automáticamente cuando se registre el pago.';
@@ -307,10 +322,11 @@
         baseAmountMinor=config.baseAmountMinor;
         onlineFeeMinor=config.feeMinor;
         onlineCheckoutReady=config.onlineCheckoutReady===true;
+        testMode=config.environment==='test';
         if (note) note.textContent='Valor del taller: '+money(baseAmountMinor)+' por alias o QR, sin gastos de servicio. Pago en efectivo en el taller: '+(config.onSitePriceMinor == null ? 'precio de ventanilla a definir' : money(config.onSitePriceMinor))+'; no aplican lotes ni promociones.';
         form.querySelectorAll('[name="formaPago"]').forEach(input => { input.disabled=!config.methods[input.value.startsWith('bank_transfer_')?'bank_transfer':input.value]; });
         const hint=document.getElementById('workshop-checkout-hint');
-        if (hint) hint.textContent=!config.registrationOpen ? 'Las inscripciones todavía no están habilitadas.'
+        if (hint) hint.textContent=!config.registrationOpen ? 'Las inscripciones todavía no están habilitadas.' : testMode ? 'Mercado Pago está en modo de prueba. Usá solamente cuentas y tarjetas de prueba.'
           : 'Vas a ver el importe final antes de confirmar el pago.';
         const label=document.getElementById('mercado-pago-option-label'); if (label) label.textContent='Mercado Pago · tarjeta, con gasto de plataforma'+(config.methods.mercado_pago ? '' : ' (no disponible)');
         updateOnlinePriceDescription();
@@ -347,6 +363,7 @@
         const access=current;
         const state=await json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken});
         if(current!==access) return;
+        if(!state.canChangeMethod) access.methodNotice=state.proofSubmitted ? 'Ya recibimos un comprobante para esta inscripción y está en revisión. No generamos otro cobro para evitar un pago duplicado. Consultanos por WhatsApp si necesitás cambiar el medio.' : 'Tu inscripción anterior no permite cambiar de medio de pago en este estado. Consultanos antes de pagar nuevamente.';
         const result=state.canChangeMethod ? await json('/api/taller/pagos/metodo',{reference:access.reference,accessToken:access.accessToken,attemptId:state.attemptId,method:receipt.requestedPayment}) : state;
         if(current!==access) return;
         renderState(result);
@@ -357,6 +374,10 @@
     if (renderState({...receipt,registrationStatus:receipt.status,status:receipt.paymentStatus})) {
       if (receipt.payment==='mercado_pago' && receipt.paymentStatus==='pending') preparePayment(); else refreshPayment();
     }
+  });
+  document.addEventListener('workshop:recovered',event=>{
+    clearTimeout(timer);current=null;lastState=null;
+    remember({reference:event.detail.reference,paymentAccessToken:event.detail.accessToken});checks=0;refreshPayment();
   });
   document.addEventListener('visibilitychange',() => { if (!document.hidden && current) { checks=0; refreshPayment(); } else clearTimeout(timer); });
   addEventListener('focus',() => { if (current) refreshPayment(); });

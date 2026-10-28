@@ -13,6 +13,9 @@ import {
 } from './schema'
 
 export type EnrollmentInput = {
+  country?: string
+  province?: string
+  locality?: string
   firstName: string
   lastName: string
   documentNumber: string
@@ -106,6 +109,9 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
           optional(intake?.movement ?? undefined) !== optional(input.movement) ||
           optional(intake?.occupation ?? undefined) !== optional(input.occupation) ||
           optional(intake?.nickname ?? undefined) !== optional(input.nickname) ||
+          optional(intake?.country ?? undefined) !== optional(input.country) ||
+          optional(intake?.province ?? undefined) !== optional(input.province) ||
+          optional(intake?.locality ?? undefined) !== optional(input.locality) ||
           optional(intake?.paymentDifficultyNotes ?? undefined) !== optional(input.paymentDifficultyNotes) ||
           (payment !== 'assistance' && attempt?.source !== payment) || (payment === 'assistance' && attempt)) {
         return { code: 409, body: { error: 'Esta solicitud ya fue usada con otros datos.' } }
@@ -132,6 +138,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       if (!attempt || !['mercado_pago','bank_transfer','on_site'].includes(attempt.source)) return { code: 409, body: { error: 'Tu inscripción requiere una revisión de la organización.' } }
       if (!intake.documentNumber) await tx.update(registrationIntakes).set({ documentNumber, updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
       if (input.nickname !== undefined) await tx.update(registrationIntakes).set({ nickname: optional(input.nickname), updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
+      if (input.country && input.province) await tx.update(registrationIntakes).set({ country: input.country, province: input.province, locality: optional(input.locality), updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
       return { code: 200, body: {
         reference: existing.reference, status: existing.status, payment: attempt.source as Success['payment'], paymentStatus: attempt.status === 'created' ? 'pending' : attempt.status as Success['paymentStatus'],
         amountMinor: attempt.amountMinor, baseAmountMinor: attempt.amountMinor === null ? undefined : attempt.amountMinor-attempt.providerFeeMinor, feeMinor: attempt.providerFeeMinor,
@@ -161,6 +168,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       registrationId: created.id, firstName: input.firstName.trim(), lastName: input.lastName.trim(), documentNumber,
       birthDate: input.birthDate, prayerGroup: optional(input.prayerGroup), movement: optional(input.movement),
       nickname: optional(input.nickname),
+      country: optional(input.country), province: optional(input.province), locality: optional(input.locality),
       ecclesialState: input.ecclesialState, occupation: optional(input.occupation),
       paymentDifficulty: input.paymentDifficulty,
       paymentDifficultyNotes: input.paymentDifficulty ? optional(input.paymentDifficultyNotes) : null,

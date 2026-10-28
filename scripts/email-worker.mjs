@@ -4,24 +4,38 @@ import QRCode from 'qrcode'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditation-token.ts'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, paymentProofReviewEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { decryptRecoveryCode } from '../lib/recovery-code.ts'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
 async function claim(pool) {
+  // A local preview may restrict delivery to jobs created during that preview;
+  // production always processes the full durable outbox.
+  const since=process.env.NODE_ENV==='development' && process.env.MP_ENVIRONMENT==='test' && process.env.WORKSHOP_LOCAL_TEST_MODE==='1'
+    && process.env.EMAIL_LOCAL_START_AT && Number.isFinite(Date.parse(process.env.EMAIL_LOCAL_START_AT)) ? process.env.EMAIL_LOCAL_START_AT : null
   const result = await pool.query(`
     WITH selected AS (
       SELECT id FROM email_outbox
       WHERE status IN ('queued','failed','sending') AND next_attempt_at <= now()
         AND attempt_count < 10
+        AND ($1::timestamptz IS NULL OR created_at >= $1::timestamptz)
       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
     )
     UPDATE email_outbox e SET status='sending', attempt_count=e.attempt_count+1,
       next_attempt_at=now()+interval '15 minutes'
     FROM selected WHERE e.id=selected.id RETURNING e.*
-  `)
+  `,[since])
   return result.rows[0] ?? null
 }
 
 async function render(pool, job) {
+  if(job.kind==='registration_access') {
+    const result=await pool.query(`SELECT c.id,c.code_encrypted,c.expires_at,c.consumed_at,r.email,i.first_name
+      FROM registration_recoveries c JOIN registrations r ON r.id=c.registration_id
+      JOIN registration_intakes i ON i.registration_id=r.id WHERE c.id=$1 AND r.id=$2`,[job.recovery_id,job.registration_id])
+    const row=result.rows[0]
+    if(!row || row.consumed_at || new Date(row.expires_at)<=new Date() || row.email.toLowerCase()!==job.to_email.toLowerCase()) return null
+    return registrationAccessEmail({firstName:row.first_name,code:decryptRecoveryCode(row.id,row.code_encrypted)})
+  }
   if (job.kind === 'settlement_reminder') {
     const result = await pool.query(
       'SELECT switch_at,target_available_at,recommended_release_days,acknowledged_at,cancelled_at FROM settlement_reminders WHERE id=$1',

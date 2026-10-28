@@ -64,7 +64,7 @@ test('registration validates typed fields and submits only to the gated workshop
   const script = await readFile(path.join(formation, 'app.js'), 'utf8')
   assert.match(html, /name="fechaNacimiento" type="date" autocomplete="bday" min="1900-01-01" required/)
   assert.match(html, /name="documento"[^>]*required/)
-  assert.match(html, /<label>D\.N\.I<input name="documento"[^>]*><\/label><label>Apodo \(opcional\)/)
+  assert.match(html, /<label>DNI \/ documento \*<input name="documento"[^>]*required[^>]*><\/label><label>Apodo \(opcional\)/)
   assert.match(script, /documentNumber: data\.get\('documento'\)/)
   assert.doesNotMatch(html, /name="edad"/)
   assert.match(html, /name="telefono" type="tel"[^>]*placeholder="Ej\.: 370 4123456"/)

@@ -24,7 +24,7 @@ export function brandedEmailHtml(text: string, qrCid?: string): string {
 
 export function proofWhatsappUrl(phoneE164: string, reference: string): string {
   if (!/^\d{10,15}$/.test(phoneE164)) throw new Error('Invalid WhatsApp destination')
-  const message = `Hola, necesito ayuda para subir el comprobante de mi inscripción al taller. Referencia: ${reference}.`
+  const message = `Tengo un problema con el comprobante de pago. Mi número de gestión es ${reference}.`
   return `https://wa.me/${phoneE164}?text=${encodeURIComponent(message)}`
 }
 
@@ -62,11 +62,12 @@ export function registrationEmail(input: {
     if (input.transferProvider) lines.push(`Billetera: ${input.transferProvider}.`)
     if (input.transferHolder) lines.push(`Titular: ${input.transferHolder}.`)
     if (input.transferDocument) lines.push(`DNI del titular: ${input.transferDocument}.`)
-    lines.push('Después de pagar, ingresá con el mismo navegador a tu inscripción y adjuntá el comprobante. Te avisaremos cuando una persona de la organización lo confirme.')
+    lines.push('Una vez que hiciste el pago, no pagues dos veces: subí el comprobante para que podamos verificarlo. Podés volver desde la opción «Enviar comprobante» de la página del taller, con tu DNI o número de gestión y el código que enviamos a tu correo.')
     if (input.proofWhatsappE164) lines.push('Si tenés dificultades para subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.reference))
   } else if (input.choice === 'on_site') {
-    lines.push('Elegiste pagar en efectivo en el taller, sin gastos de servicio. Tu pago queda PENDIENTE hasta que la organización lo registre el día del taller. No aplican los precios de los lotes ni las promociones.')
+    lines.push('Registramos tu inscripción con pago en efectivo en el taller. Abonarás a precio de ventanilla el día del encuentro; tu pago todavía está PENDIENTE. No aplican los precios de los lotes ni las promociones.')
     lines.push(amount ? `Precio de ventanilla: ${amount}.` : 'Precio de ventanilla a definir.')
+    lines.push('Si tenés alguna duda, comunicate con los coordinadores que figuran al pie de este correo o por WhatsApp: https://wa.me/5493704258770')
   } else if (input.choice === 'mercado_pago') {
     // The checkout itself communicates its current status. Do not promise a
     // settlement or accreditation timeline that depends on merchant settings.
@@ -81,6 +82,13 @@ export function registrationEmail(input: {
   lines.push('', 'Vamos al Santísimo')
   const text = lines.join('\n')
   return { subject: `Inscripción registrada · ${input.reference}`, text, html: brandedEmailHtml(text) }
+}
+
+export function registrationAccessEmail(input:{firstName:string;code:string}) {
+  const text=[`Hola ${input.firstName.trim()}:`,'','Solicitaste volver a tu inscripción para enviar el comprobante o consultar tu pago.',
+    `Tu código de acceso es: ${input.code}`,'El código vence en 15 minutos y se puede utilizar una sola vez. No lo compartas.',
+    'Volvé a la sección «Enviar comprobante» del taller e ingresá el código. Si no lo solicitaste, podés ignorar este correo.'].join('\n')
+  return {subject:'Código para enviar tu comprobante · Vamos al Santísimo',text,html:brandedEmailHtml(text)}
 }
 
 export function groupPaymentEmail(input: {
