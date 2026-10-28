@@ -18,6 +18,7 @@
   <link rel="icon" href="/favicon-mark.png">
   <link rel="preload" as="image" href="/2026/adoracion/santisimo-portada.png">
   <link rel="stylesheet" href="/page-transition.css">
+  <link rel="stylesheet" href="/pagina%20principal%20con%20efecto/music-player.css">
   <script>try{const k='vas-page-transition',v=JSON.parse(sessionStorage.getItem(k)||'null');sessionStorage.removeItem(k);if(v&&Date.now()-v.at<10000&&v.path.replace(/\/$/,'')===location.pathname.replace(/\/$/,'')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.dataset.siteNavigation='entering';if(v.mode==='workshop')document.documentElement.dataset.siteTransition='workshop'}}catch{}</script>
   <script src="/page-transition.js" defer></script>
   <style>
@@ -139,6 +140,7 @@
       <header class="nav">
         <a class="brand footer-brand" href="/" aria-label="Vamos al Santísimo, página principal"><svg class="footer-ring" viewBox="0 0 110 110" aria-hidden="true"><circle class="ring-track" cx="55" cy="55" r="52" pathLength="1"/><circle class="ring-glint" cx="55" cy="55" r="52" pathLength="1"/></svg><img src="/2026/logo.webp" alt="Vamos al Santísimo" width="76" height="56"></a>
         <nav class="nav-links" aria-label="Navegación principal"><a href="#adoracion">El encuentro</a><a href="#formacion">Taller</a><a href="https://es.wikipedia.org/wiki/Pablo_Mart%C3%ADnez_(cantante)">Pablo Martínez</a></nav>
+        <div class="music-control" aria-label="Música del encuentro"><span class="music-control-copy"><small>Música del encuentro</small><strong id="music-control-status" aria-live="polite">Preparando reproductor</strong></span><button class="music-toggle" id="music-toggle" type="button" aria-label="Reproducir música" aria-pressed="false" title="Reproducir o pausar música" disabled><svg class="music-icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z"/></svg><svg class="music-icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button></div>
       </header>
       <div class="hero-scene" aria-hidden="true">
         <div class="halo"></div><div class="beams"></div>
@@ -239,6 +241,7 @@
       <img class="closing-photo" src="/2026/formacion/bosque-pablo-original.jpg" alt="Pablo Martínez con su guitarra, entre los árboles del bosque" width="2651" height="1768" loading="lazy"><div class="closing-shade" aria-hidden="true"></div>
       <div class="closing-intro"><span class="closing-overline">Nos encontramos en la fe</span><h2 id="footer-faq-title">Preguntas frecuentes</h2><p>Algunas respuestas para acompañarte<br>antes del encuentro.</p><a class="faq-button" href="#preguntas-frecuentes">Ver preguntas frecuentes <span aria-hidden="true">↓</span></a></div>
     </section>
+    <section class="music-section" id="musica" aria-labelledby="music-title"><div class="section-atmosphere" aria-hidden="true"><div class="halo"></div><svg viewBox="0 0 2000 900" preserveAspectRatio="none"><g fill="none" stroke="#bda26d"><path d="M-120 680 C520 290 1180 280 2110 85" stroke-width=".9" opacity=".3"/><path d="M-120 710 C520 320 1180 310 2110 115" stroke-width=".6" opacity=".15"/><path class="ribbon-glint" d="M-120 680 C520 290 1180 280 2110 85" pathLength="1000" stroke="#e4c58b"/></g></svg></div><div class="music-layout wrap"><div class="music-intro"><p class="eyebrow">Para acompañar el camino</p><h2 id="music-title">Música para <em>encontrarnos</em></h2><p>Dejá que estas canciones nos acerquen al encuentro. Podés reproducir o pausar desde el botón de arriba o desde el video.</p><a href="https://www.youtube.com/watch?v=kC2UNjs3xHE&amp;list=RDEMnKhIZKlwJfkBHGybZ85bLg&amp;start_radio=1" target="_blank" rel="noopener noreferrer">Abrir la lista en YouTube <span aria-hidden="true">↗</span></a></div><div class="music-frame"><div class="music-screen"><div id="music-video"></div><div class="music-video-placeholder" id="music-video-placeholder">Cargando video de YouTube…</div></div><p class="music-frame-caption" id="music-frame-status" aria-live="polite">El video empezará al terminar la animación de inicio, si tu navegador permite la reproducción automática.</p></div></div></section>
     <section class="faq" id="preguntas-frecuentes" aria-labelledby="footer-faq-title">
       <details class="question"><summary>¿La adoración tiene costo?<span aria-hidden="true">+</span></summary><p>La entrada a la adoración es libre y gratuita, como en años anteriores. No hace falta pagar el taller para participar. El taller de músicos es una actividad aparte y tiene un pequeño costo.</p></details>
       <details class="question"><summary>¿Puedo colaborar con un alimento no perecedero?<span aria-hidden="true">+</span></summary><p>Sí. Si está a tu alcance, te invitamos a traer un alimento no perecedero como donación. Lo compartiremos con personas y familias que más lo necesitan. En este tiempo de Navidad, un gesto sencillo puede llevar esperanza a otra mesa. Que el Señor te devuelva en bendiciones tu generosidad. Esta colaboración es voluntaria y no condiciona el ingreso.</p></details>
@@ -305,6 +308,7 @@
 <script src="/pagina%20principal%20con%20efecto/invitation.js" defer></script>
 <script src="/pagina%20principal%20con%20efecto/sponsor-feed.js" defer></script>
 <script src="/pagina%20principal%20con%20efecto/directions.js" defer></script>
+<script src="/pagina%20principal%20con%20efecto/music-player.js" defer></script>
 <script src="/pagina%20principal%20con%20efecto/vendor/gsap.min.js" defer></script>
 <script src="/pagina%20principal%20con%20efecto/vendor/ScrollTrigger.min.js" defer></script>
 <script src="/pagina%20principal%20con%20efecto/vendor/lenis.min.js" defer></script>
@@ -318,9 +322,15 @@
   const body = document.body;
   let media = null, context = null, lenis = null, ticker = null, firstRun = true;
   let introTimeline = null, resumeIntro = false;
+  let openingNotified = false;
   let clearSectionFocus = () => {};
   let restartDust = () => {}, stopDust = () => {};
   let lastRingEdge = null, ringFrame = 0;
+  function notifyOpeningComplete() {
+    if (openingNotified) return;
+    openingNotified = true;
+    document.dispatchEvent(new Event('vas:opening-complete'));
+  }
 
   // Replay the same drawn circle whenever a visitor returns to either end.
   function checkEdgeRings() {
@@ -329,14 +339,24 @@
     const atBottom = scrollY + innerHeight >= document.documentElement.scrollHeight - 24;
     const edge = atTop ? 'top' : atBottom ? 'bottom' : null;
     if (edge === 'top' && introTimeline && introTimeline.isActive()) return;
-    if (edge === lastRingEdge) return;
-    lastRingEdge = edge;
-    if (!edge || reduce.matches || document.hidden) return;
+    if (!edge) { lastRingEdge = null; return; }
+    if (edge === lastRingEdge || reduce.matches || document.hidden) return;
     const ring = $(edge === 'top' ? '.nav .footer-ring' : '.footer .footer-ring');
     if (!ring) return;
+    lastRingEdge = edge;
     ring.classList.remove('is-spinning');
     void ring.offsetWidth;
     ring.classList.add('is-spinning');
+    if (edge === 'top' && !openingNotified) {
+      const fallback = setTimeout(notifyOpeningComplete, 2000);
+      const finishOpening = event => {
+        if (event.target !== ring || event.animationName !== 'brand-ring-orbit') return;
+        ring.removeEventListener('animationend', finishOpening);
+        clearTimeout(fallback);
+        notifyOpeningComplete();
+      };
+      ring.addEventListener('animationend', finishOpening);
+    }
   }
   function scheduleEdgeRings() {
     if (!ringFrame) ringFrame = requestAnimationFrame(checkEdgeRings);
@@ -581,6 +601,7 @@
   document.addEventListener('visibilitychange',() => {
     body.classList.toggle('is-background',document.hidden);
     restartDust();
+    if (!document.hidden) scheduleEdgeRings();
     if (document.hidden && introTimeline && introTimeline.isActive()) { introTimeline.pause(); resumeIntro = true; }
     else if (!document.hidden && resumeIntro && introTimeline) { introTimeline.resume(); resumeIntro = false; }
   });
@@ -621,6 +642,7 @@
     }
   const ready = () => {
     applyPreference();
+    if (!introTimeline) queueMicrotask(notifyOpeningComplete);
     document.fonts.ready.then(() => { if (window.ScrollTrigger) ScrollTrigger.refresh(); });
     $$('img').forEach(img => { if (!img.complete) img.addEventListener('load',() => { if (window.ScrollTrigger) ScrollTrigger.refresh(); },{once:true}); });
     if (document.readyState === 'complete') restoreInitialAnchor();
