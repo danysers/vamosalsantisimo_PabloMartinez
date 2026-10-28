@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 type ScanResult = { result?: string; name?: string; reference?: string; error?: string; firstEntryAt?: string }
+type ProofRow = { id: string; uploaded_at: string; reference: string; name: string;
+  registration_status: string; payment_status: string; amount_minor: number; filename: string }
+const registrationLabel = (status: string) => status === 'confirmed' ? 'Confirmada' : status === 'pending' ? 'Registrada' : status
+const paymentLabel = (status: string) => status === 'approved' ? 'Pagado' : status === 'pending' ? 'Pendiente de confirmación' : status
 
-export default function AccreditationConsole({ canVerify, scanEnabled }: { canVerify: boolean; scanEnabled: boolean }) {
-  const [reference, setReference] = useState('')
+export default function AccreditationConsole({ canVerify, scanEnabled, initialReference }: { canVerify: boolean; scanEnabled: boolean; initialReference: string }) {
+  const [reference, setReference] = useState(initialReference)
   const [note, setNote] = useState('')
   const [manualReference, setManualReference] = useState('')
   const [paymentMessage, setPaymentMessage] = useState('')
   const [paymentBusy, setPaymentBusy] = useState(false)
+  const [proofs, setProofs] = useState<ProofRow[]>([])
+  const [proofsError, setProofsError] = useState('')
   const [qrValue, setQrValue] = useState('')
   const [entryPoint, setEntryPoint] = useState('Ingreso principal')
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
@@ -19,7 +25,19 @@ export default function AccreditationConsole({ canVerify, scanEnabled }: { canVe
   const controls = useRef<{ stop: () => void } | null>(null)
   const scanning = useRef(false)
 
-  useEffect(() => () => { controls.current?.stop() }, [])
+  useEffect(() => {
+    if (canVerify) void loadProofs()
+    return () => { controls.current?.stop() }
+  }, [canVerify])
+
+  async function loadProofs() {
+    try {
+      const response = await fetch('/api/admin/taller/comprobantes', { credentials: 'same-origin', cache: 'no-store' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'No pudimos cargar los comprobantes.')
+      setProofs(result.proofs || []); setProofsError('')
+    } catch { setProofsError('No pudimos cargar los comprobantes. Reintentá en unos instantes.') }
+  }
 
   async function post(url: string, body: object) {
     const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
@@ -35,6 +53,7 @@ export default function AccreditationConsole({ canVerify, scanEnabled }: { canVe
     try {
       const { ok, result } = await post('/api/admin/payments/verify', { reference: reference.trim(), note: note.trim(), manualReference: manualReference.trim() })
       setPaymentMessage(ok ? `Pago confirmado. Se acreditaron ${result.accreditedPeople} persona(s) y el QR quedó en cola de correo.` : result.error)
+      if (ok) void loadProofs()
     } catch { setPaymentMessage('No pudimos conectar. Consultá el estado antes de reintentar.') }
     finally { setPaymentBusy(false) }
   }
@@ -86,9 +105,22 @@ export default function AccreditationConsole({ canVerify, scanEnabled }: { canVe
   const printable = /^[A-Za-z0-9_-]{6,80}$/.test(reference.trim())
 
   return <>
+    {canVerify && <section className="admin-accreditation-block" aria-labelledby="proofs-title">
+      <h2 id="proofs-title">Comprobantes recibidos</h2>
+      <p>Revisá el archivo y el movimiento bancario antes de marcar el pago como confirmado. La inscripción y el pago se actualizan por separado en la base.</p>
+      <button className="button button-outline" type="button" onClick={() => void loadProofs()}>Actualizar lista</button>
+      {proofsError && <p role="alert">{proofsError}</p>}
+      {!proofsError && proofs.length === 0 && <p>No hay comprobantes cargados.</p>}
+      <div className="admin-proof-list">{proofs.map(proof => <article className="admin-proof-item" key={proof.id}>
+        <strong>{proof.name}</strong><span> · {proof.reference} · {new Date(proof.uploaded_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
+        <p>Inscripción: {registrationLabel(proof.registration_status)} · Pago: {paymentLabel(proof.payment_status)} · Importe: ${(proof.amount_minor / 100).toLocaleString('es-AR')}</p>
+        <a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">Ver comprobante</a>
+        {proof.payment_status === 'pending' && <button type="button" className="button button-outline" onClick={() => { setReference(proof.reference); setNote(''); document.getElementById('payment-title')?.scrollIntoView({ behavior: 'smooth' }) }}>Revisar pago</button>}
+      </article>)}</div>
+    </section>}
     {canVerify && <section className="admin-accreditation-block" aria-labelledby="payment-title">
       <h2 id="payment-title">Verificar pago y emitir volante</h2>
-      <p>Solo confirmá una transferencia o un pago en el lugar después de comprobarlo. La aprobación de una excepción emite el QR automáticamente.</p>
+      <p>Solo confirmá una transferencia después de verificarla, o efectivo después de cobrarlo en el taller. El efectivo usa el precio de ventanilla, no lotes ni promociones; si todavía está a definir, el sistema no permite marcarlo como pagado. La aprobación de una excepción emite el QR automáticamente.</p>
       <label>Referencia de inscripción<input value={reference} onChange={event => setReference(event.target.value)} maxLength={80} autoComplete="off" /></label>
       <label>Nota interna de verificación<textarea value={note} onChange={event => setNote(event.target.value)} rows={2} maxLength={1000} placeholder="Ej.: comprobante revisado o efectivo recibido" /></label>
       <label>Referencia bancaria o de caja (opcional)<input value={manualReference} onChange={event => setManualReference(event.target.value)} maxLength={120} /></label>

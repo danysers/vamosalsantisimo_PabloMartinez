@@ -18,8 +18,9 @@ function updatePaymentDescription() {
   if (!description) return;
   const method=document.querySelector('#registration [name="formaPago"]:checked')?.value;
   description.textContent=method==='mercado_pago' ? 'Aboná con tarjeta o con tu cuenta de Mercado Pago. Vas a ver el importe final, con gastos de servicio, antes de confirmar.'
-    : method==='bank_transfer' ? 'Al inscribirte te mostraremos los datos para transferir y enviar el comprobante a la organización.'
-    : method==='on_site' ? 'Registrá tu inscripción y aboná al llegar al taller.'
+    : method==='bank_transfer_alias' ? 'Transferí al alias indicado y después adjuntá el comprobante desde esta página. Sin gastos de servicio.'
+    : method==='bank_transfer_qr' ? 'Escaneá el QR con tu billetera y después adjuntá el comprobante desde esta página. Sin gastos de servicio.'
+    : method==='on_site' ? 'Pagá en efectivo al llegar al taller. Precio de ventanilla a definir; no aplican lotes ni promociones.'
     : 'Elegí una opción para ver cómo continuar.';
 }
 document.addEventListener('change', event => {
@@ -66,6 +67,10 @@ function validateRegistration(form) {
     input.setCustomValidity(input.value && (!namePattern.test(input.value) || input.value.length < 2)
       ? 'Ingresá al menos dos letras, sin números ni símbolos.' : '');
   }
+  const documentNumber = form.elements.namedItem('documento');
+  const normalizedDocument = documentNumber.value.toUpperCase().replace(/[.\s]/g, '');
+  documentNumber.setCustomValidity(documentNumber.value && !/^[A-Z0-9-]{5,20}$/.test(normalizedDocument)
+    ? 'Ingresá un D.N.I válido.' : '');
   const birthDate = form.elements.namedItem('fechaNacimiento');
   birthDate.max = todayIso();
   birthDate.setCustomValidity(birthDate.value && (birthDate.value < '1900-01-01' || birthDate.value > birthDate.max)
@@ -80,9 +85,9 @@ function validateRegistration(form) {
 function showRegistrationResult(form, receipt) {
   const result = document.getElementById('registration-result');
   result.querySelector('.result-intro').textContent=receipt.paymentStatus==='approved' ? 'Tu inscripción está confirmada. Conservá tu referencia para cualquier consulta.'
-    : receipt.payment==='mercado_pago' ? 'Ya registramos tus datos. Continuá con el pago online para confirmar tu lugar.'
-    : receipt.payment==='bank_transfer' ? 'Ya registramos tus datos. A continuación tenés la información para completar la transferencia.'
-    : receipt.payment==='on_site' ? 'Tu inscripción quedó registrada para abonar en el taller.'
+    : receipt.payment==='mercado_pago' ? (receipt.onlineCheckoutReady ? 'Ya registramos tus datos. Continuá con el pago online para confirmar tu lugar.' : 'Ya registramos tus datos. El cobro online todavía no está conectado.')
+    : receipt.payment==='bank_transfer' ? 'Ya registramos tus datos. A continuación podés pagar y adjuntar el comprobante.'
+    : receipt.payment==='on_site' ? 'Tu inscripción quedó registrada para pagar en efectivo en el taller. Precio a definir.'
     : 'Recibimos tu solicitud. La organización se comunicará con vos para acompañarte.';
   result.querySelector('#registration-reference').textContent = `Referencia: ${receipt.reference}. Guardala para cualquier consulta.`;
   const next = result.querySelector('#payment-next');
@@ -102,15 +107,13 @@ function showRegistrationResult(form, receipt) {
     description.textContent = 'No se aprobó la excepción de pago. Contactá a la organización para acordar cómo abonar.';
   } else if (receipt.payment === 'mercado_pago') {
     title.textContent = 'Pago pendiente';
-    description.textContent = 'Tu inscripción está registrada. Continuá con Mercado Pago para abonar el importe final.';
+    description.textContent = receipt.onlineCheckoutReady ? 'Tu inscripción está registrada. Continuá con Mercado Pago para abonar el importe final.' : 'Tu inscripción está registrada. Elegí otro medio de pago para completarla.';
   } else if (receipt.payment === 'bank_transfer') {
     title.textContent = 'Transferencia pendiente';
-    description.textContent = `Transferí $${(receipt.amountMinor / 100).toLocaleString('es-AR')} al alias ${receipt.transfer.alias} (${receipt.transfer.provider}). Tu pago quedará pendiente hasta que lo verifiquemos.`;
-    proof.href = receipt.transfer.whatsappUrl;
-    proof.hidden = false;
+    description.textContent = 'Preparando las instrucciones de pago…';
   } else if (receipt.payment === 'on_site') {
     title.textContent = 'Pago en el lugar pendiente';
-    description.textContent = `El importe previsto es $${(receipt.amountMinor / 100).toLocaleString('es-AR')}. El pago se registrará en el taller.`;
+    description.textContent = receipt.amountMinor == null ? 'Precio de ventanilla a definir. No aplican los precios de lotes ni promociones; pagarás en efectivo al llegar.' : `El precio de ventanilla es $${(receipt.amountMinor / 100).toLocaleString('es-AR')}. El pago en efectivo se registrará en el taller.`;
   } else {
     title.textContent = 'Solicitud recibida';
     description.textContent = 'Revisaremos tu situación. Por ahora no tenés que pagar; te avisaremos cuando se resuelva.';
@@ -150,24 +153,19 @@ document.addEventListener('submit', async event => {
     const response = await fetch('/api/taller/inscripciones', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': creationKey },
       body: JSON.stringify({
-        firstName: data.get('nombre'), lastName: data.get('apellido'), birthDate: data.get('fechaNacimiento'),
+        firstName: data.get('nombre'), lastName: data.get('apellido'), documentNumber: data.get('documento'), birthDate: data.get('fechaNacimiento'),
         nickname: data.get('apodo') || '', resumeReceipts,
         phone: data.get('telefono'), email: data.get('correo'), prayerGroup: data.get('grupo'),
         movement: data.get('mov'), ecclesialState: data.get('estado'), occupation: data.get('ocupacion'),
         paymentDifficulty: data.get('tieneInconveniente') === 'si',
         paymentDifficultyNotes: data.get('tieneInconveniente') === 'si' ? data.get('inconveniente') : '',
-        ...(data.get('tieneInconveniente') === 'no' ? { paymentMethod: data.get('formaPago') } : {}),
+        ...(data.get('tieneInconveniente') === 'no' ? { paymentMethod: String(data.get('formaPago')).startsWith('bank_transfer_') ? 'bank_transfer' : data.get('formaPago') } : {}),
       }),
     });
     const receipt = await response.json();
     if (!response.ok) throw new Error(receipt.error || 'No pudimos registrar tu inscripción. Intentá nuevamente.');
     showRegistrationResult(form, receipt);
-    if (receipt.localTest || receipt.testMode) {
-      const notice=document.createElement('p'); notice.className='registration-test-notice';
-      notice.textContent='Modo de prueba · Sin cargos reales';
-      document.getElementById('registration-result').append(notice);
-    }
-    document.dispatchEvent(new CustomEvent('workshop:registered',{detail:receipt}));
+    document.dispatchEvent(new CustomEvent('workshop:registered',{detail:{...receipt,transferMode:data.get('formaPago') === 'bank_transfer_qr' ? 'qr' : 'alias'}}));
   } catch (cause) {
     error.textContent = cause instanceof Error ? cause.message : 'No pudimos registrar tu inscripción. Intentá nuevamente.';
     error.hidden = false;

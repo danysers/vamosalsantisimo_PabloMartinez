@@ -46,3 +46,8 @@
 .admin-group-preview ul{padding-left:22px;line-height:1.7}
 .admin-group-search{padding:14px;margin:15px 0;border:1px solid #f4cb7540;border-radius:8px}
 .admin-group-search ul{padding-left:22px;line-height:1.8}.admin-group-search li{margin:8px 0}.admin-group-search li button{margin-left:10px}
+.admin-proof-list{display:grid;gap:12px;margin-top:18px}
+.admin-proof-item{padding:16px;border:1px solid #d7c8a8;border-radius:10px;background:#fffdf7}
+.admin-proof-item p{margin:7px 0}
+.admin-proof-item a{display:inline-block;margin-right:16px}
+.admin-proof-item button{display:inline-block}

@@ -2,7 +2,7 @@ import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { getDb } from './db'
-import { hasCheckoutAccess, MP_FIXED_SURCHARGE_MINOR } from './checkout-access'
+import { hasCheckoutAccess, localWorkshopTestMode } from './checkout-access'
 import { createCheckoutProOrder, fetchCheckoutProOrder, cancelCheckoutProOrder, checkoutConfigured, mercadoPagoConfig, assertOrderEnvironment } from './mercado-pago-client'
 import { inspectUnpaidCheckoutOrder } from './checkout-method-contract'
 import { proofWhatsappUrl } from './email-templates'
@@ -11,14 +11,14 @@ import { issueAccreditationAfterApproval } from './accreditation-workflow'
 import { decryptAccreditationQr, hashAccreditationQr } from './accreditation-token'
 import { createRegistrationQr } from './registration-qr'
 import QRCode from 'qrcode'
-import { accreditationCredentials, auditLog, emailOutbox, paymentAllocations, paymentAttempts, paymentTransactions, paymentRefunds, paymentChargebacks, registrations, reservations, webhookEvents, workshopPaymentSettings } from './schema'
+import { accreditationCredentials, auditLog, emailOutbox, paymentAllocations, paymentAttempts, paymentTransactions, paymentRefunds, paymentChargebacks, registrations, reservations, webhookEvents, workshopLots, workshopPaymentSettings } from './schema'
 
 type Db = ReturnType<typeof getDb>
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 type Access = { reference: string; accessToken: string }
 type Attempt = {
   id: string; registration_id: string; workshop_id: string; reference: string; creation_key: string;
-  source: string; status: string; registration_status: string; amount_minor: number; provider_fee_minor: number;
+  source: string; status: string; registration_status: string; amount_minor: number | null; provider_fee_minor: number;
   payer_email: string; external_reference: string; idempotency_key: string; provider_order_id: string | null;
   checkout_url: string | null; reconciled_at: Date | null; expires_at: Date | null;
   paid_amount_minor: number; payer_name: string | null;
@@ -42,7 +42,7 @@ export async function startWorkshopCheckout(access: Access, createOrder = create
   mercadoPagoConfig()
   return getDb().transaction(async tx => {
     const attempt = await authorizedAttempt(tx, access, true)
-    if (attempt.source !== 'mercado_pago' || attempt.status !== 'pending' || attempt.registration_status !== 'pending') throw new Error('Payment is not pending')
+    if (attempt.source !== 'mercado_pago' || attempt.amount_minor === null || attempt.status !== 'pending' || attempt.registration_status !== 'pending') throw new Error('Payment is not pending')
     if (!attempt.expires_at || new Date(attempt.expires_at).getTime() <= Date.now()) throw new Error('Checkout reservation expired')
     if (attempt.checkout_url) return { checkoutUrl: attempt.checkout_url, amountMinor: attempt.amount_minor }
     const origin = process.env.MP_PUBLIC_ORIGIN || process.env.SITE_ORIGIN
@@ -78,7 +78,7 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
     const workshopId = String(found.rows[0].workshop_id)
     await tx.execute(sql`SELECT id FROM workshops WHERE id=${workshopId} FOR UPDATE`)
     const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.id, String(found.rows[0].id))).for('update')
-    if (!attempt || (attempt.providerOrderId && attempt.providerOrderId !== orderId)) throw new Error('Mismatched provider order')
+    if (!attempt || attempt.amountMinor === null || (attempt.providerOrderId && attempt.providerOrderId !== orderId)) throw new Error('Mismatched provider order')
     const projection = projectMercadoPagoOrder(raw, { orderId, externalReference: attempt.externalReference!, amountMinor: attempt.amountMinor, sellerUserId: config.sellerUserId, applicationId: config.applicationId })
     if (attempt.providerUpdatedAt && projection.providerUpdatedAt && new Date(projection.providerUpdatedAt).getTime() < attempt.providerUpdatedAt.getTime()) return { status: attempt.status }
     const now = new Date()
@@ -164,6 +164,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
   }
   const delivery = await getDb().execute(sql`SELECT status FROM email_outbox WHERE registration_id=${attempt.registration_id}
     AND kind='accreditation_ready' ORDER BY created_at DESC LIMIT 1`)
+  const proof = await getDb().execute(sql`SELECT uploaded_at FROM payment_proofs WHERE payment_attempt_id=${attempt.id} ORDER BY uploaded_at DESC LIMIT 1`)
   const [settings] = await getDb().select().from(workshopPaymentSettings).where(eq(workshopPaymentSettings.workshopId, attempt.workshop_id)).limit(1)
   const eligibility = await getDb().execute(sql`SELECT
     (SELECT count(*)::int FROM payment_allocations WHERE attempt_id=${attempt.id}) AS members,
@@ -203,15 +204,18 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
     }
   }
   return { reference: attempt.reference, status: attempt.status, registrationStatus: attempt.registration_status,
-    attemptId: attempt.id, paymentMethod: attempt.source,
-    canChangeMethod: ['mercado_pago','bank_transfer','on_site'].includes(attempt.source) && attempt.registration_status === 'pending' && ['pending','created','rejected','cancelled'].includes(attempt.status) &&
+    attemptId: attempt.id, paymentMethod: attempt.source, proofSubmitted: !!proof.rows[0],
+    canChangeMethod: !proof.rows[0] && ['mercado_pago','bank_transfer','on_site'].includes(attempt.source) && attempt.registration_status === 'pending' && ['pending','created','rejected','cancelled'].includes(attempt.status) &&
       Number(eligibility.rows[0]?.members) === 1 && !eligibility.rows[0]?.other_active && attempt.paid_amount_minor === 0,
-    methods: { mercado_pago: !!settings?.mercadoPagoEnabled && checkoutConfigured(),
+    onlineCheckoutReady: !!settings?.mercadoPagoEnabled && checkoutConfigured(),
+    methods: { mercado_pago: !!settings && ((settings.mercadoPagoEnabled && checkoutConfigured()) || localWorkshopTestMode(process.env.SITE_ORIGIN ?? '')),
       bank_transfer: !!(settings?.transferEnabled && settings.transferAlias && settings.transferProvider && settings.proofWhatsappE164), on_site: !!settings?.onSiteEnabled },
     transfer: attempt.source === 'bank_transfer' && settings?.transferAlias && settings.transferProvider && settings.proofWhatsappE164 ? {
-      alias: settings.transferAlias, provider: settings.transferProvider, whatsappUrl: proofWhatsappUrl(settings.proofWhatsappE164, attempt.reference),
+      alias: settings.transferAlias, provider: settings.transferProvider,
+      holder: settings.transferHolder, document: settings.transferDocument,
+      whatsappUrl: proofWhatsappUrl(settings.proofWhatsappE164, attempt.reference),
     } : null,
-    amountMinor: attempt.amount_minor, feeMinor: attempt.provider_fee_minor, baseAmountMinor: attempt.amount_minor - attempt.provider_fee_minor,
+    amountMinor: attempt.amount_minor, feeMinor: attempt.provider_fee_minor, baseAmountMinor: attempt.amount_minor === null ? null : attempt.amount_minor - attempt.provider_fee_minor,
     emailStatus: delivery.rows[0]?.status ?? 'not_ready', accreditation, registrationCard,
     nickname: typeof profile.rows[0]?.nickname === 'string' ? profile.rows[0].nickname : null,
     testMode: process.env.MP_ENVIRONMENT === 'test',
@@ -234,6 +238,8 @@ export async function changeWorkshopPaymentMethod(
     if (!['mercado_pago','bank_transfer','on_site'].includes(attempt.source) || attempt.registration_status !== 'pending' || !['pending','created','rejected','cancelled'].includes(attempt.status) || attempt.paid_amount_minor !== 0) {
       throw new PaymentMethodChangeError('El pago ya fue confirmado o requiere revisión. No hace falta volver a pagar.')
     }
+    const uploadedProof = await tx.execute(sql`SELECT 1 FROM payment_proofs WHERE payment_attempt_id=${attempt.id} LIMIT 1`)
+    if (uploadedProof.rows.length) throw new PaymentMethodChangeError('El comprobante está en revisión. Contactá a la organización para cambiar el pago.')
     // A retried save must not create another attempt or undo a newer choice.
     if (attempt.id !== input.attemptId) {
       if (attempt.source === input.method) return
@@ -242,7 +248,7 @@ export async function changeWorkshopPaymentMethod(
     if (attempt.source === input.method) return
     if (!workshop?.registration_open || new Date(String(workshop.starts_at)).getTime() <= Date.now()) throw new PaymentMethodChangeError('No es posible cambiar el medio de pago en este momento.')
     const [settings] = await tx.select().from(workshopPaymentSettings).where(eq(workshopPaymentSettings.workshopId, attempt.workshop_id)).limit(1)
-    if (!settings || (input.method === 'mercado_pago' && (!settings.mercadoPagoEnabled || !checkoutConfigured())) ||
+    if (!settings || (input.method === 'mercado_pago' && !((settings.mercadoPagoEnabled && checkoutConfigured()) || localWorkshopTestMode(process.env.SITE_ORIGIN ?? ''))) ||
         (input.method === 'bank_transfer' && (!settings.transferEnabled || !settings.transferAlias || !settings.transferProvider || !settings.proofWhatsappE164)) ||
         (input.method === 'on_site' && !settings.onSiteEnabled)) throw new PaymentMethodChangeError('Ese medio de pago no está disponible.')
     const allocations = await tx.select().from(paymentAllocations).where(eq(paymentAllocations.attemptId, attempt.id))
@@ -257,6 +263,7 @@ export async function changeWorkshopPaymentMethod(
     if (workshop.capacity !== null && Number(occupied.rows[0]?.n) >= Number(workshop.capacity)) throw new PaymentMethodChangeError('El taller está completo. Contactá a la organización.')
     let canceledAt: Date | undefined
     if (attempt.source === 'mercado_pago' && attempt.provider_order_id) {
+      if (attempt.amount_minor === null) throw new PaymentMethodChangeError('El pago online no tiene un importe válido.')
       const config = mercadoPagoConfig(false)
       const expected = { orderId: attempt.provider_order_id, externalReference: attempt.external_reference!, amountMinor: attempt.amount_minor,
         sellerUserId: config.sellerUserId!, applicationId: config.applicationId!, liveMode: config.liveMode }
@@ -277,14 +284,19 @@ export async function changeWorkshopPaymentMethod(
     await tx.update(paymentAttempts).set({ status: 'cancelled', updatedAt: now,
       ...(canceledAt ? { providerStatus: 'canceled', providerStatusDetail: 'canceled_transaction', providerUpdatedAt: canceledAt, reconciledAt: now } : {}),
     }).where(eq(paymentAttempts.id, attempt.id))
-    const fee = input.method === 'mercado_pago' ? MP_FIXED_SURCHARGE_MINOR : 0
+    const fee = input.method === 'mercado_pago' ? settings.onlineServiceFeeMinor : 0
+    const [lot] = await tx.select({ amountMinor: workshopLots.amountMinor }).from(workshopLots).where(eq(workshopLots.id, allocation.lotId)).limit(1)
+    if (!lot) throw new PaymentMethodChangeError('No encontramos el precio del lote de tu inscripción.')
+    const baseAmount = input.method === 'on_site' ? settings.onSitePriceMinor
+      : attempt.source === 'on_site' ? lot.amountMinor : allocation.dueAmountMinor
+    if (input.method !== 'on_site' && baseAmount === null) throw new PaymentMethodChangeError('No pudimos calcular el importe. Contactá a la organización.')
     const [replacement] = await tx.insert(paymentAttempts).values({ registrationId: attempt.registration_id, replacesAttemptId: attempt.id, source: input.method,
-      status: 'created', amountMinor: allocation.dueAmountMinor+fee, providerFeeMinor: fee, idempotencyKey: randomUUID(),
+      status: 'created', amountMinor: baseAmount === null ? null : baseAmount+fee, providerFeeMinor: fee, idempotencyKey: randomUUID(),
       externalReference: input.method === 'mercado_pago' ? randomUUID() : null, payerName: attempt.payer_name, payerEmail: attempt.payer_email,
     }).returning({ id: paymentAttempts.id })
     await tx.insert(paymentAllocations).values({ attemptId: replacement.id, registrationId: allocation.registrationId,
       lotId: allocation.lotId, lotNumber: allocation.lotNumber, promotionId: allocation.promotionId, promotionCode: allocation.promotionCode,
-      baseAmountMinor: allocation.baseAmountMinor, discountMinor: allocation.discountMinor, dueAmountMinor: allocation.dueAmountMinor })
+      baseAmountMinor: baseAmount, discountMinor: 0, dueAmountMinor: baseAmount })
     await tx.update(paymentAttempts).set({ status: 'pending' }).where(eq(paymentAttempts.id, replacement.id))
     await tx.update(reservations).set({ expiresAt: input.method === 'mercado_pago'
       ? new Date(Math.min(Date.now()+30*60_000, new Date(String(workshop.starts_at)).getTime())) : new Date(String(workshop.starts_at)) })

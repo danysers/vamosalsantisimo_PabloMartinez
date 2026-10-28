@@ -34,18 +34,23 @@ test('on-site registration has a printable QR without approving payment; it admi
     await pool.query('INSERT INTO workshop_lots(workshop_id,number,amount_minor)VALUES($1,1,1000000)',[workshop.id])
     await pool.query('INSERT INTO workshop_payment_settings(workshop_id)VALUES($1)',[workshop.id])
     const operator=(await pool.query("INSERT INTO admin_users(email,role)VALUES($1,'registration_operator')RETURNING id",['card-'+randomUUID()+'@example.invalid'])).rows[0]
-    const input={firstName:'Daniela',lastName:'Prueba',nickname:'Dany',birthDate:'1990-01-01',phone:'3704000000',email:'card@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()}
+    const input={firstName:'Daniela',lastName:'Prueba',documentNumber:'12345678',nickname:'Dany',birthDate:'1990-01-01',phone:'3704000000',email:'card@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()}
     const {creationKey,...payload}=input
     assert.equal(individualRegistrationSchema.safeParse(payload).success,true)
     assert.equal(individualRegistrationSchema.safeParse({...payload,nickname:undefined}).success,true)
     assert.equal(individualRegistrationSchema.safeParse({...payload,nickname:'x'.repeat(81)}).success,false)
     const enrolled=await enrollWorkshop(input)
     assert.equal(enrolled.code,201)
+    assert.equal(enrolled.body.amountMinor,null,'cash registration has no invented price before the door price is defined')
     const access={reference:enrolled.body.reference,accessToken:enrolled.body.paymentAccessToken}
     const row=(await pool.query('SELECT id FROM registrations WHERE reference=$1',[access.reference])).rows[0]
     const value=createRegistrationQr(row.id,access.reference,creationKey)
     const state=await workshopPaymentStatus(access,false)
     assert.equal(state.status,'pending');assert.equal(state.registrationStatus,'pending')
+    assert.equal(state.amountMinor,null)
+    const pendingQuote=await pool.query(`SELECT p.amount_minor,a.base_amount_minor,a.due_amount_minor,a.promotion_id
+      FROM payment_attempts p JOIN payment_allocations a ON a.attempt_id=p.id WHERE p.id=$1`,[state.attemptId])
+    assert.deepEqual(pendingQuote.rows[0],{amount_minor:null,base_amount_minor:null,due_amount_minor:null,promotion_id:null})
     assert.equal(state.nickname,'Dany');assert.equal(state.accreditation,null)
     assert.match(state.registrationCard.qrDataUrl,/^data:image\/png;base64,iVBOR/)
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM accreditation_credentials WHERE registration_id=$1',[row.id])).rows[0].n,0)
@@ -61,9 +66,19 @@ test('on-site registration has a printable QR without approving payment; it admi
     assert.equal(resumed.code,200);assert.equal(resumed.body.resumed,true);assert.equal(resumed.body.reference,access.reference)
     assert.equal((await workshopPaymentStatus(access,false)).nickname,'Dani')
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM registrations WHERE workshop_id=$1',[workshop.id])).rows[0].n,1)
-    const paid=await verifyManualPayment(getDb(),{reference:access.reference,eventSlug:process.env.WORKSHOP_EVENT_SLUG,operatorId:operator.id,note:'Local test payment',manualReference:'TEST-ONLY'})
+    const approval={reference:access.reference,eventSlug:process.env.WORKSHOP_EVENT_SLUG,operatorId:operator.id,note:'Local test payment',manualReference:'TEST-ONLY'}
+    const unpriced=await verifyManualPayment(getDb(),approval)
+    assert.equal(unpriced.code,409,'an undefined cash price cannot produce paid accreditation')
+    await pool.query('UPDATE workshop_payment_settings SET on_site_price_minor=2000000 WHERE workshop_id=$1',[workshop.id])
+    const paid=await verifyManualPayment(getDb(),approval)
     assert.equal(paid.code,200)
     const final=await workshopPaymentStatus(access,false)
+    assert.equal(final.amountMinor,2_000_000)
+    const history=await pool.query(`SELECT status,amount_minor,replaces_attempt_id FROM payment_attempts WHERE registration_id=$1 ORDER BY created_at`,[row.id])
+    assert.equal(history.rows.length,2)
+    assert.equal(history.rows[0].status,'cancelled');assert.equal(history.rows[0].amount_minor,null)
+    assert.equal(history.rows[1].status,'approved');assert.equal(history.rows[1].amount_minor,2_000_000)
+    assert.equal(history.rows[1].replaces_attempt_id,state.attemptId)
     assert.equal(final.registrationCard,null);assert.equal(final.status,'approved');assert.ok(final.accreditation)
     assert.equal((await admitAccreditation(getDb(),scan)).body.result,'admitted')
     assert.equal((await admitAccreditation(getDb(),scan)).body.result,'already_admitted')

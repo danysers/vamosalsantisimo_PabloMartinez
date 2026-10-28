@@ -29,8 +29,9 @@ const messages = choices.map(([id, label]) => ({
     reference,
     choice: id,
     amountMinor: 1_000_000,
-    transferAlias: 'danielservin.mp',
-    transferProvider: 'Mercado Pago',
+    transferAlias: 'NO TRANSFERIR - SOLO PRUEBA',
+    transferProvider: 'Simulación (no transferir)',
+    transferHolder: 'Participante de prueba',
     proofWhatsappE164: '5493718632884',
   }),
 }))

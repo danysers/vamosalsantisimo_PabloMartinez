@@ -1,7 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-export const MP_FIXED_SURCHARGE_MINOR = 100_000
-
 export function checkoutAccessToken(registrationId: string, creationKey: string) {
   const key = process.env.WORKSHOP_CHECKOUT_TOKEN_KEY
   if (!key || key.length < 32) throw new Error('Checkout access unavailable')

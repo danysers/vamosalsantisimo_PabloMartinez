@@ -4,7 +4,7 @@ import { and, eq, ne, or, sql } from 'drizzle-orm'
 import { getDb } from './db'
 import { assistanceWhatsappUrl, proofWhatsappUrl } from './email-templates'
 import { normalizeIdentity } from './registration-policy'
-import { checkoutAccessToken, hasCheckoutAccess, MP_FIXED_SURCHARGE_MINOR } from './checkout-access'
+import { checkoutAccessToken, hasCheckoutAccess, localWorkshopTestMode } from './checkout-access'
 import { checkoutConfigured } from './mercado-pago-client'
 import {
   assistanceRequests, emailOutbox, events, paymentAllocations, paymentAttempts,
@@ -15,6 +15,7 @@ import {
 export type EnrollmentInput = {
   firstName: string
   lastName: string
+  documentNumber: string
   nickname?: string
   resumeReceipts?: { reference: string; accessToken: string }[]
   birthDate: string
@@ -39,11 +40,12 @@ type Success = {
   baseAmountMinor?: number
   feeMinor?: number
   paymentAccessToken?: string
-  transfer?: { alias: string; provider: string; whatsappUrl: string }
+  transfer?: { alias: string; provider: string; holder: string | null; document: string | null; whatsappUrl: string }
   assistanceWhatsappUrl?: string
   emailQueued: true
   resumed?: boolean
   requestedPayment?: 'bank_transfer' | 'on_site' | 'mercado_pago'
+  onlineCheckoutReady?: boolean
 }
 type Result = { code: number; body: Success | { error: string } }
 const unavailable: Result = { code: 503, body: { error: 'Las inscripciones todavía no están habilitadas.' } }
@@ -56,6 +58,8 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
   const payment = input.paymentDifficulty ? 'assistance' : input.paymentMethod
   if (!payment || (input.paymentDifficulty && input.paymentMethod)) return { code: 400, body: { error: 'Elegí una forma de pago válida.' } }
   const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`
+  const documentNumber = input.documentNumber.trim().toUpperCase().replace(/[.\s]/g, '')
+  if (!/^[A-Z0-9-]{5,20}$/.test(documentNumber)) return { code: 400, body: { error: 'Ingresá un D.N.I válido.' } }
   const identity = normalizeIdentity({ name: fullName, email: input.email, phone: input.phone })
   const db = getDb()
   return db.transaction(async tx => {
@@ -67,21 +71,23 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     const [workshop] = await tx.select().from(workshops).where(eq(workshops.id, target.id)).limit(1)
     const [settings] = await tx.select().from(workshopPaymentSettings).where(eq(workshopPaymentSettings.workshopId, target.id)).limit(1)
     if (!workshop?.registrationOpen || !settings) return unavailable
-    if (payment === 'mercado_pago' && (!settings.mercadoPagoEnabled || !checkoutConfigured())) return unavailable
+    const onlineCheckoutReady = settings.mercadoPagoEnabled && checkoutConfigured()
+    if (payment === 'mercado_pago' && !onlineCheckoutReady && !localWorkshopTestMode(process.env.SITE_ORIGIN ?? '')) return unavailable
     if (payment === 'bank_transfer' && (!settings.transferEnabled || !settings.transferAlias || !settings.transferProvider || !settings.proofWhatsappE164)) return unavailable
     if (payment === 'on_site' && !settings.onSiteEnabled) return unavailable
     if (payment === 'assistance' && (!settings.reminderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.reminderEmail) || !settings.proofWhatsappE164)) return unavailable
     const [lot] = await tx.select().from(workshopLots).where(and(eq(workshopLots.workshopId, target.id), eq(workshopLots.number, workshop.activeLot))).limit(1)
     if (!lot) return unavailable
 
-    const response = (reference: string, amountMinor: number | null, registrationStatus: Success['status'], paymentStatus: Success['paymentStatus'], registrationId?: string, feeMinor = MP_FIXED_SURCHARGE_MINOR): Success => ({
+    const response = (reference: string, amountMinor: number | null, registrationStatus: Success['status'], paymentStatus: Success['paymentStatus'], registrationId?: string, feeMinor = payment === 'mercado_pago' ? settings.onlineServiceFeeMinor : 0): Success => ({
       reference, status: registrationStatus, payment, paymentStatus, amountMinor,
       ...(payment !== 'assistance' && registrationId ? { paymentAccessToken: checkoutAccessToken(registrationId, input.creationKey) } : {}),
       ...(payment === 'mercado_pago' && registrationId ? {
-        baseAmountMinor: amountMinor! - feeMinor, feeMinor,
+        baseAmountMinor: amountMinor! - feeMinor, feeMinor, onlineCheckoutReady,
       } : {}),
       ...(payment === 'bank_transfer' ? { transfer: {
-        alias: settings.transferAlias!, provider: settings.transferProvider!,
+        alias: settings.transferAlias!, provider: settings.transferProvider!, holder: settings.transferHolder,
+        document: settings.transferDocument,
         whatsappUrl: proofWhatsappUrl(settings.proofWhatsappE164!, reference),
       } } : {}),
       ...(payment === 'assistance' ? { assistanceWhatsappUrl: assistanceWhatsappUrl(settings.proofWhatsappE164!, reference) } : {}),
@@ -94,6 +100,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       const [assistance] = await tx.select().from(assistanceRequests).where(eq(assistanceRequests.registrationId, replay.id)).limit(1)
       if (replay.workshopId !== target.id || replay.normalizedName !== identity.name || replay.normalizedEmail !== identity.email ||
           replay.normalizedPhone !== identity.phone || intake?.birthDate !== input.birthDate ||
+          (intake?.documentNumber != null && intake.documentNumber !== documentNumber) ||
           intake?.ecclesialState !== input.ecclesialState || intake?.paymentDifficulty !== input.paymentDifficulty ||
           optional(intake?.prayerGroup ?? undefined) !== optional(input.prayerGroup) ||
           optional(intake?.movement ?? undefined) !== optional(input.movement) ||
@@ -103,6 +110,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
           (payment !== 'assistance' && attempt?.source !== payment) || (payment === 'assistance' && attempt)) {
         return { code: 409, body: { error: 'Esta solicitud ya fue usada con otros datos.' } }
       }
+      if (intake && !intake.documentNumber) await tx.update(registrationIntakes).set({ documentNumber, updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, replay.id))
       const currentState = payment === 'assistance' ? (assistance?.status ?? 'requested') : attempt?.status
       const paymentStatus = currentState === 'created' ? 'pending' : currentState === 'cancelled' || currentState === 'rejected' || currentState === 'partially_refunded' ? 'review' : currentState
       return { code: 200, body: response(replay.reference, attempt?.amountMinor ?? null, replay.status, paymentStatus as Success['paymentStatus'], replay.id, attempt?.providerFeeMinor ?? 0) }
@@ -117,15 +125,21 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       const proof = input.resumeReceipts?.find(receipt => receipt.reference === existing.reference &&
         hasCheckoutAccess(receipt.accessToken, existing.id, existing.creationKey))
       if (!proof) return { code: 409, body: { error: 'Ya recibimos una inscripción con estos datos. Revisá tu correo o abrí la confirmación en el navegador donde te inscribiste.' } }
+      const [intake] = await tx.select().from(registrationIntakes).where(eq(registrationIntakes.registrationId, existing.id)).limit(1)
+      if (!intake) return { code: 409, body: { error: 'La inscripción existente requiere revisión de la organización.' } }
+      if (intake?.documentNumber && intake.documentNumber !== documentNumber) return { code: 409, body: { error: 'El documento no coincide con la inscripción existente.' } }
       const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.registrationId, existing.id)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
       if (!attempt || !['mercado_pago','bank_transfer','on_site'].includes(attempt.source)) return { code: 409, body: { error: 'Tu inscripción requiere una revisión de la organización.' } }
+      if (!intake.documentNumber) await tx.update(registrationIntakes).set({ documentNumber, updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
       if (input.nickname !== undefined) await tx.update(registrationIntakes).set({ nickname: optional(input.nickname), updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
       return { code: 200, body: {
         reference: existing.reference, status: existing.status, payment: attempt.source as Success['payment'], paymentStatus: attempt.status === 'created' ? 'pending' : attempt.status as Success['paymentStatus'],
-        amountMinor: attempt.amountMinor, baseAmountMinor: attempt.amountMinor-attempt.providerFeeMinor, feeMinor: attempt.providerFeeMinor,
+        amountMinor: attempt.amountMinor, baseAmountMinor: attempt.amountMinor === null ? undefined : attempt.amountMinor-attempt.providerFeeMinor, feeMinor: attempt.providerFeeMinor,
         paymentAccessToken: proof.accessToken, emailQueued: true, resumed: true,
         ...(payment !== 'assistance' ? { requestedPayment: payment } : {}),
-        ...(attempt.source === 'bank_transfer' ? { transfer: { alias: settings.transferAlias!, provider: settings.transferProvider!, whatsappUrl: proofWhatsappUrl(settings.proofWhatsappE164!, existing.reference) } } : {}),
+        ...(attempt.source === 'bank_transfer' ? { transfer: { alias: settings.transferAlias!, provider: settings.transferProvider!,
+          holder: settings.transferHolder, document: settings.transferDocument,
+          whatsappUrl: proofWhatsappUrl(settings.proofWhatsappE164!, existing.reference) } } : {}),
       } }
     }
     if (workshop.capacity !== null) {
@@ -144,7 +158,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       phone: input.phone.trim(), normalizedPhone: identity.phone,
     }).returning({ id: registrations.id })
     await tx.insert(registrationIntakes).values({
-      registrationId: created.id, firstName: input.firstName.trim(), lastName: input.lastName.trim(),
+      registrationId: created.id, firstName: input.firstName.trim(), lastName: input.lastName.trim(), documentNumber,
       birthDate: input.birthDate, prayerGroup: optional(input.prayerGroup), movement: optional(input.movement),
       nickname: optional(input.nickname),
       ecclesialState: input.ecclesialState, occupation: optional(input.occupation),
@@ -159,18 +173,18 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     if (payment === 'assistance') {
       await tx.insert(assistanceRequests).values({ registrationId: created.id })
     } else {
-      const amountMinor = lot.amountMinor + (payment === 'mercado_pago' ? MP_FIXED_SURCHARGE_MINOR : 0)
+      const amountMinor = payment === 'on_site' ? settings.onSitePriceMinor : lot.amountMinor + (payment === 'mercado_pago' ? settings.onlineServiceFeeMinor : 0)
       const [attempt] = await tx.insert(paymentAttempts).values({
         registrationId: created.id, source: payment, status: 'created',
         idempotencyKey: randomUUID(), amountMinor,
         externalReference: payment === 'mercado_pago' ? randomUUID() : null,
-        providerFeeMinor: payment === 'mercado_pago' ? MP_FIXED_SURCHARGE_MINOR : 0,
+        providerFeeMinor: payment === 'mercado_pago' ? settings.onlineServiceFeeMinor : 0,
         payerName: fullName, payerEmail: input.email.trim(),
       }).returning({ id: paymentAttempts.id })
       await tx.insert(paymentAllocations).values({
         attemptId: attempt.id, registrationId: created.id, lotId: lot.id,
-        lotNumber: lot.number, baseAmountMinor: lot.amountMinor,
-        discountMinor: 0, dueAmountMinor: lot.amountMinor,
+        lotNumber: lot.number, baseAmountMinor: payment === 'on_site' ? settings.onSitePriceMinor : lot.amountMinor,
+        discountMinor: 0, dueAmountMinor: payment === 'on_site' ? settings.onSitePriceMinor : lot.amountMinor,
       })
       await tx.update(paymentAttempts).set({ status: 'pending' }).where(eq(paymentAttempts.id, attempt.id))
     }
@@ -186,6 +200,6 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
         toEmail: settings.reminderEmail!.trim().toLowerCase(), registrationId: created.id,
       })
     }
-    return { code: 201, body: response(reference, payment === 'assistance' ? null : lot.amountMinor + (payment === 'mercado_pago' ? MP_FIXED_SURCHARGE_MINOR : 0), 'pending', payment === 'assistance' ? 'requested' : 'pending', created.id) }
+    return { code: 201, body: response(reference, payment === 'assistance' ? null : payment === 'on_site' ? settings.onSitePriceMinor : lot.amountMinor + (payment === 'mercado_pago' ? settings.onlineServiceFeeMinor : 0), 'pending', payment === 'assistance' ? 'requested' : 'pending', created.id) }
   })
 }

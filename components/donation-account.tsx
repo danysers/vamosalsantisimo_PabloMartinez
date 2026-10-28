@@ -13,8 +13,7 @@ export default function DonationAccount() {
   }
   return <div className={styles.account}>
     <p className={styles.overline}>Detalle de cuenta</p>
-    <h2>{donationAccount.platform}</h2>
-    <dl><div><dt>Alias</dt><dd className={styles.alias}>{donationAccount.alias}</dd></div><div><dt>Titular</dt><dd>{donationAccount.holder}</dd></div><div><dt>DNI</dt><dd>{donationAccount.dni}</dd></div></dl>
+    <dl><div><dt>Alias</dt><dd className={styles.alias}>{donationAccount.alias}</dd></div><div><dt>Titular</dt><dd>{donationAccount.holder}</dd></div></dl>
     <button className={styles.outlineButton} onClick={copyAlias}><Copy size={16} aria-hidden="true" />Copiar alias</button>
     <p className={styles.status} role="status">{status}</p>
   </div>

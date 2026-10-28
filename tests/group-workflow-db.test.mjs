@@ -39,16 +39,22 @@ test('admin pricing and group charges integrate with allocations, email and QR',
       VALUES ($1,'danielservin.mp','Mercado Pago','5493718632884')`, [workshopId])
     assert.equal((await admin.updateWorkshopPricing(db, { eventSlug: slug, operatorId,
       change: { type: 'lot', number: 1, amountMinor: 1_200_000 } })).code, 200)
+    assert.equal((await admin.updateWorkshopPricing(db, { eventSlug: slug, operatorId,
+      change: { type: 'online_fee', amountMinor: 125_000 } })).code, 200)
     const promo = { type: 'promotion', code: '3X2-TEST', kind: 'bundle', active: true,
       bundleSize: 3, payablePeople: 2, startsAt: null, endsAt: null }
     assert.equal((await admin.updateWorkshopPricing(db, { eventSlug: slug, operatorId, change: promo })).code, 200)
     const config = await admin.readWorkshopPricing(db, slug)
     assert.equal(config.lots.find(lot => lot.number === 1).amountMinor, 1_200_000)
+    assert.equal(config.serviceFeeMinor, 125_000)
+    assert.equal(config.lots.find(lot => lot.number === 1).onlineAmountMinor, 1_325_000)
     const promoId = config.promotions.find(value => value.code === promo.code).id
-    const people = ['Ana', 'Luis', 'Clara'].map((firstName, i) => ({ firstName, lastName: 'Prueba',
+    const people = ['Ana', 'Luis', 'Clara'].map((firstName, i) => ({ firstName, lastName: 'Prueba', documentNumber: `1234567${i}`,
       birthDate: '1990-04-15', phone: `37041234${i}0`, email: `person-${i}@example.invalid`, ecclesialState: 'laico' }))
     const draft = { mode: 'new', people, payerIndex: 0, paymentMethod: 'bank_transfer', promotionId: promoId,
       idempotencyKey: randomUUID(), eventSlug: slug, operatorId }
+    assert.equal((await admin.quoteOrCreateGroup(db,{...draft,paymentMethod:'on_site',promotionId:null},false)).code,409,
+      'cash groups cannot quote an undefined door price')
     const preview = await admin.quoteOrCreateGroup(db, draft, false)
     assert.equal(preview.code, 200, JSON.stringify(preview.body))
     assert.equal(preview.body.amountMinor, 2_400_000)
@@ -113,11 +119,14 @@ test('admin pricing and group charges integrate with allocations, email and QR',
     }
     const searchable = await admin.searchPendingIndividualRegistrations(db, slug, 'member-')
     assert.deepEqual(searchable.map(row => row.reference).sort(), [...existingRefs].sort())
+    await pool.query('UPDATE workshop_payment_settings SET on_site_price_minor=2000000 WHERE workshop_id=$1',[workshopId])
+    assert.equal((await admin.quoteOrCreateGroup(db,{...draft,paymentMethod:'on_site'},false)).code,409,
+      'cash groups never receive a promotion')
     const second = { mode: 'existing', references: existingRefs, payerReference: existingRefs[0],
       paymentMethod: 'on_site', idempotencyKey: randomUUID(), eventSlug: slug, operatorId }
     const secondQuote = await admin.quoteOrCreateGroup(db, second, false)
     assert.equal(secondQuote.code, 200, JSON.stringify(secondQuote.body))
-    assert.equal(secondQuote.body.amountMinor, 2_400_000)
+    assert.equal(secondQuote.body.amountMinor, 4_000_000)
     const regrouped = await admin.quoteOrCreateGroup(db, { ...second, expectedQuoteHash: secondQuote.body.quoteHash }, true)
     assert.equal(regrouped.code, 201, JSON.stringify(regrouped.body))
     const old = await pool.query(`SELECT status FROM payment_attempts WHERE registration_id IN

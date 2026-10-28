@@ -20,8 +20,8 @@ test('registration → one ARS 16000 checkout → verified payment and one QR �
   const workshop=await pool.query('INSERT INTO workshops(event_id,starts_at,registration_open) VALUES($1,$2,true) RETURNING id',[event.rows[0].id,'2026-12-19T18:00:00Z'])
   const workshopId=workshop.rows[0].id
   await pool.query('INSERT INTO workshop_lots(workshop_id,number,amount_minor) VALUES($1,1,1500000)',[workshopId])
-  await pool.query('INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled) VALUES($1,true)',[workshopId])
-  const input={firstName:'Prueba',lastName:'Pago',birthDate:'1990-01-01',phone:'370 4123456',email:'checkout-test@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago',creationKey:randomUUID()}
+  await pool.query('INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled,online_service_fee_minor) VALUES($1,true,100000)',[workshopId])
+  const input={firstName:'Prueba',lastName:'Pago',documentNumber:'12345678',birthDate:'1990-01-01',phone:'370 4123456',email:'checkout-test@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago',creationKey:randomUUID()}
   const enrolled=await enrollWorkshop(input)
   assert.equal(enrolled.code,201,JSON.stringify(enrolled.body))
   assert.equal(enrolled.body.amountMinor,1_600_000)
@@ -101,12 +101,12 @@ test('all three active lot prices reach the same Checkout integration and previo
     const event=await pool.query('INSERT INTO events(slug,title,starts_at)VALUES($1,$2,$3)RETURNING id',[slug,'Lot test','2026-12-19T18:00:00Z'])
     const workshop=await pool.query('INSERT INTO workshops(event_id,starts_at,registration_open)VALUES($1,$2,true)RETURNING id',[event.rows[0].id,'2026-12-19T18:00:00Z'])
     const id=workshop.rows[0].id
-    await pool.query('INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled)VALUES($1,true)',[id])
+    await pool.query('INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled,online_service_fee_minor)VALUES($1,true,100000)',[id])
     const paid=[]
     for(const [number,base] of [[1,1000000],[2,1500000],[3,2000000]]) {
       await pool.query('INSERT INTO workshop_lots(workshop_id,number,amount_minor)VALUES($1,$2,$3)',[id,number,base])
       await pool.query('UPDATE workshops SET active_lot=$1 WHERE id=$2',[number,id])
-      const receipt=await enrollWorkshop({firstName:'Persona',lastName:['Uno','Dos','Tres'][number-1],birthDate:'1990-01-01',phone:'3704123456',email:'lots@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago',creationKey:randomUUID()})
+      const receipt=await enrollWorkshop({firstName:'Persona',lastName:['Uno','Dos','Tres'][number-1],documentNumber:`1234567${number}`,birthDate:'1990-01-01',phone:'3704123456',email:'lots@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago',creationKey:randomUUID()})
       assert.equal(receipt.code,201)
       assert.equal(receipt.body.amountMinor,base+100000)
       assert.equal(receipt.body.baseAmountMinor,base)

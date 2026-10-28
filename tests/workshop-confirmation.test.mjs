@@ -13,7 +13,7 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
   let serial=0, now=0, printed=0, interrupted=false
   let releasePending
   const calls=[]
-  let response={reference:'TestReference123',status:'pending',registrationStatus:'pending',baseAmountMinor:1_000_000,amountMinor:1_100_000,testMode:true,emailStatus:'queued',checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id=ORDTST1234567890',paymentMethod:'mercado_pago',attemptId:'00000000-0000-4000-8000-000000000001',canChangeMethod:true,methods:{mercado_pago:true,bank_transfer:true,on_site:true},transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'}}
+  let response={reference:'TestReference123',status:'pending',registrationStatus:'pending',baseAmountMinor:1_000_000,amountMinor:1_100_000,onlineCheckoutReady:true,testMode:true,emailStatus:'queued',checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id=ORDTST1234567890',paymentMethod:'mercado_pago',attemptId:'00000000-0000-4000-8000-000000000001',canChangeMethod:true,methods:{mercado_pago:true,bank_transfer:true,on_site:true},transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'}}
   class Element {
     constructor(){this.hidden=false;this.dataset={};this.style={setProperty(){},removeProperty(){}};this.classList={add(){},remove(){}};this.handlers=new Map();this.isConnected=true}
     set id(value){this._id=value;ids.set(value,this)} get id(){return this._id}
@@ -54,7 +54,7 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
 
 test('registration starts polling without a click, keeps waiting beyond 100s, and updates to QR automatically',async()=>{
   const app=browser()
-  app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'mercado_pago',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),baseAmountMinor:1_000_000,amountMinor:1_100_000,localTest:true}})
+  app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'mercado_pago',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),baseAmountMinor:1_000_000,amountMinor:1_100_000,onlineCheckoutReady:true,localTest:true}})
   await flush()
   assert.equal(app.calls[0].path,'/api/taller/pagos/checkout')
   app.interrupt()
@@ -67,7 +67,7 @@ test('registration starts polling without a click, keeps waiting beyond 100s, an
   assert.equal(app.ids.get('payment-next').hidden,true)
   assert.equal(app.ids.get('pass-qr').hidden,false)
   assert.match(app.ids.get('pass-date').textContent,/15:00 h/)
-  assert.equal(app.ids.get('pass-test').hidden,false)
+  assert.equal(app.ids.has('pass-test'),false)
   app.ids.get('print-workshop-pass').handlers.get('click')()
   assert.equal(app.printed,1)
   app.response={status:'refunded',registrationStatus:'review',accreditation:null}
@@ -75,6 +75,18 @@ test('registration starts polling without a click, keeps waiting beyond 100s, an
   await flush()
   assert.equal(app.ids.get('registration-confirmed').hidden,true)
   assert.equal(app.ids.get('pass-qr').src,undefined)
+})
+
+test('local payment preview shows the Mercado Pago step without inventing an order or a charge',async()=>{
+  const app=browser()
+  app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'mercado_pago',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),baseAmountMinor:1_000_000,feeMinor:100_000,amountMinor:1_100_000,onlineCheckoutReady:false}})
+  await flush()
+  assert.equal(app.calls.some(call=>call.path.endsWith('/checkout')),false)
+  assert.equal(app.ids.get('checkout-pay').hidden,true)
+  assert.equal(app.ids.get('checkout-retry').hidden,true)
+  assert.equal(app.ids.get('checkout-edit').hidden,false)
+  assert.match(app.ids.get('payment-next-description').textContent,/elegir otro medio de pago/)
+  assert.match(app.ids.get('checkout-status').textContent,/no se realizó ningún cobro/)
 })
 
 test('reload recovers the private receipt, pauses in the background and refreshes on return',async()=>{
@@ -117,12 +129,12 @@ test('only the edit action is visible and another method is saved without repeat
   assert.equal(app.ids.get('checkout-method-editor').hidden,false)
   assert.equal(app.ids.get('checkout-pay').hidden,true)
   app.ids.get('payment-choice-mercado_pago').checked=false
-  app.ids.get('payment-choice-bank_transfer').checked=true
+  app.ids.get('payment-choice-bank_transfer_alias').checked=true
   await app.ids.get('checkout-method-editor').handlers.get('submit')({preventDefault(){}})
   assert.equal(app.ids.get('checkout-method-editor').hidden,true)
   assert.equal(app.ids.get('checkout-pay').hidden,true)
   assert.equal(app.ids.get('checkout-proof').hidden,false)
-  assert.match(app.ids.get('payment-next-description').textContent,/test.alias/)
+  assert.match(app.ids.get('checkout-alias-details').textContent,/test.alias/)
   assert.equal(JSON.parse(storage.get('vas-workshop-payment:'+reference)).payment,'bank_transfer')
   assert.equal(app.calls.filter(call=>call.path.endsWith('/metodo')).length,1)
   assert.ok(!app.calls.some(call=>call.path.endsWith('/inscripciones')))
@@ -131,15 +143,40 @@ test('only the edit action is visible and another method is saved without repeat
   assert.equal(app.calls.filter(call=>call.path.endsWith('/metodo')).length,1,'canceling the selector makes no payment change')
 })
 
+test('alias and QR render as separate choices; proof uses upload and WhatsApp is help only',async()=>{
+  const real=browser()
+  real.response={testMode:false,paymentMethod:'bank_transfer',amountMinor:1_000_000,feeMinor:0}
+  real.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1_000_000,transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'},localTest:false}})
+  await flush()
+  assert.equal(real.ids.get('checkout-transfer-alias').hidden,false)
+  assert.equal(real.ids.get('checkout-transfer-qr').hidden,true)
+  assert.equal(real.ids.get('checkout-proof').hidden,false)
+  assert.equal(real.ids.get('checkout-help').hidden,false)
+  const sandbox=browser()
+  sandbox.response={paymentMethod:'bank_transfer',amountMinor:1_000_000,feeMinor:0}
+  sandbox.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',transferMode:'qr',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1_000_000,transfer:{alias:'test.alias',provider:'Banco',whatsappUrl:'https://wa.me/5493704000000'},localTest:true}})
+  await flush()
+  assert.equal(sandbox.ids.get('checkout-transfer-qr').hidden,false)
+  assert.equal(sandbox.ids.get('checkout-transfer-alias').hidden,true)
+  assert.equal(sandbox.ids.get('checkout-transfer-qr-image').src,'/2026/donaciones/qr-billeteras.png')
+  assert.equal(sandbox.ids.has('checkout-transfer-qr-warning'),false)
+  sandbox.response={proofSubmitted:true}
+  await sandbox.tick()
+  assert.equal(sandbox.ids.get('checkout-proof').hidden,true)
+  assert.match(sandbox.ids.get('checkout-status').textContent,/proceso de confirmación/)
+})
+
 test('pay-at-workshop displays and prints a registration card while retaining a visible pending-payment label',async()=>{
   const app=browser()
-  app.response={paymentMethod:'on_site',amountMinor:1_000_000,nickname:'Dany',registrationCard:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis de Francia'}}
-  await app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'on_site',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1_000_000,localTest:true}})
+  app.response={paymentMethod:'on_site',amountMinor:null,nickname:'Dany',registrationCard:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis de Francia'}}
+  await app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'on_site',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:null,localTest:true}})
   await flush()
   assert.equal(app.ids.get('registration-result').dataset.payment,'pending')
   assert.equal(app.ids.get('registration-result-title').textContent,'Inscripción registrada')
   assert.equal(app.ids.get('pass-qr').hidden,false)
   assert.match(app.ids.get('pass-payment').textContent,/PENDIENTE/)
+  assert.match(app.ids.get('confirmation-payment-note').textContent,/Precio de ventanilla a definir/)
+  assert.doesNotMatch(app.ids.get('confirmation-payment-note').textContent,/\$0/)
   assert.equal(app.ids.get('pass-nickname').textContent,'Dany')
   app.ids.get('print-workshop-pass').handlers.get('click')()
   assert.equal(app.printed,1)

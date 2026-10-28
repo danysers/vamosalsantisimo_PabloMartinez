@@ -29,6 +29,8 @@ const promotion = z.object({ type: z.literal('promotion'), id: z.uuid().optional
 const change = z.union([
   z.object({ type: z.literal('lot'), number: z.number().int().min(1).max(3), amountMinor: money }).strict(),
   z.object({ type: z.literal('active_lot'), number: z.number().int().min(1).max(3) }).strict(),
+  z.object({ type: z.literal('online_fee'), amountMinor: z.number().int().min(0).max(20_000_000) }).strict(),
+  z.object({ type: z.literal('on_site_price'), amountMinor: money.nullable() }).strict(),
   promotion,
 ])
 

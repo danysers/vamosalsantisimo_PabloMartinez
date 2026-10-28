@@ -7,9 +7,9 @@ type Lot = { id: string; number: number; amountMinor: number; serviceFeeMinor: n
 type Promo = { id: string; code: string; kind: 'bundle' | 'group_fixed'; active: boolean;
   bundleSize: number | null; payablePeople: number | null; minPeople: number | null; maxPeople: number | null;
   groupTotalMinor: number | null; startsAt: string | null; endsAt: string | null; updatedAt: string }
-type Config = { activeLot: number; registrationOpen: boolean; emailReady: boolean; capacity: number | null;
+type Config = { activeLot: number; registrationOpen: boolean; emailReady: boolean; capacity: number | null; serviceFeeMinor: number; onSitePriceMinor: number | null;
   lots: Lot[]; promotions: Promo[]; paymentMethods: { bankTransfer: boolean; onSite: boolean } }
-type Person = { firstName: string; lastName: string; birthDate: string; phone: string; email: string;
+type Person = { firstName: string; lastName: string; documentNumber: string; birthDate: string; phone: string; email: string;
   ecclesialState: string; prayerGroup: string; movement: string; occupation: string }
 type Quote = { amountMinor: number; subtotalMinor: number; discountMinor: number;
   quoteHash: string;
@@ -17,7 +17,7 @@ type Quote = { amountMinor: number; subtotalMinor: number; discountMinor: number
     discountMinor: number; dueAmountMinor: number }>; payerReference?: string; references?: string[];
   status?: string; replayed?: boolean; emailQueued?: number }
 
-const blankPerson = (): Person => ({ firstName: '', lastName: '', birthDate: '', phone: '', email: '',
+const blankPerson = (): Person => ({ firstName: '', lastName: '', documentNumber: '', birthDate: '', phone: '', email: '',
   ecclesialState: 'laico', prayerGroup: '', movement: '', occupation: '' })
 const formatMoney = (minor: number) => (minor / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })
 function pesosToMinor(value: string) {
@@ -93,13 +93,15 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
   const [config, setConfig] = useState<Config | null>(null)
   const [loadError, setLoadError] = useState('')
   const [lotAmounts, setLotAmounts] = useState<Record<number, string>>({})
+  const [onlineFee, setOnlineFee] = useState('')
+  const [onSitePrice, setOnSitePrice] = useState('')
   const [configMessage, setConfigMessage] = useState('')
   const [configBusy, setConfigBusy] = useState(false)
   const [mode, setMode] = useState<'new' | 'existing'>('new')
   const [people, setPeople] = useState<Person[]>([blankPerson(), blankPerson()])
   const [references, setReferences] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState<Array<{ reference: string; name: string; email: string; lotNumber: number; amountMinor: number }>>([])
+  const [searchResults, setSearchResults] = useState<Array<{ reference: string; name: string; email: string; lotNumber: number; amountMinor: number | null }>>([])
   const [searchMessage, setSearchMessage] = useState('')
   const [payerIndex, setPayerIndex] = useState(0)
   const [payerReference, setPayerReference] = useState('')
@@ -116,6 +118,8 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
     if (!response.ok) throw new Error(data.error || 'No se pudo cargar el taller.')
     setConfig(data)
     setLotAmounts(Object.fromEntries((data.lots as Lot[]).map(lot => [lot.number, String(lot.amountMinor / 100)])))
+    setOnlineFee(String(data.serviceFeeMinor / 100))
+    setOnSitePrice(data.onSitePriceMinor == null ? '' : String(data.onSitePriceMinor / 100))
   }
   useEffect(() => {
     let cancelled = false
@@ -129,6 +133,8 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
         if (cancelled) return
         setConfig(data)
         setLotAmounts(Object.fromEntries(data.lots.map(lot => [lot.number, String(lot.amountMinor / 100)])))
+        setOnlineFee(String(data.serviceFeeMinor / 100))
+        setOnSitePrice(data.onSitePriceMinor == null ? '' : String(data.onSitePriceMinor / 100))
       })
       .catch(error => { if (!cancelled) setLoadError(error.message) })
     return () => { cancelled = true }
@@ -191,7 +197,23 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
     <section className="admin-accreditation-block">
       <h2>Lotes</h2>
       <p>Lote activo: <strong>{config.activeLot}</strong>. {config.registrationOpen ? 'Inscripción abierta en la base.' : 'Inscripción cerrada en la base.'}</p>
-      <p>El pago online usa el precio del lote activo más gastos de servicio. Cada inscripción conserva el importe con el que se registró; cambiar el lote afecta solo a las nuevas.</p>
+      <p>Alias y QR usan el precio del lote, sin gastos de servicio. El pago en efectivo en el taller tiene precio de ventanilla separado, sin promociones; mientras no se defina, queda pendiente sin importe. Mercado Pago permite tarjeta y suma el gasto configurado.</p>
+      <div className="admin-lot-row"><label>Precio de ventanilla · efectivo en el taller · ARS
+        <input inputMode="decimal" disabled={!canConfigure} value={onSitePrice} onChange={e => setOnSitePrice(e.target.value)} placeholder="A definir" />
+        <small>Dejá vacío para mantenerlo sin definir. No se aplican lotes ni promociones. Los importes ya cotizados no cambian.</small>
+      </label>{canConfigure && <button className="button button-outline" disabled={configBusy} onClick={() => {
+        const amountMinor = onSitePrice.trim() ? pesosToMinor(onSitePrice) : null
+        if (onSitePrice.trim() && (amountMinor == null || amountMinor > 200_000_000)) { setConfigMessage('Revisá el precio de ventanilla.'); return }
+        void saveConfig({ type: 'on_site_price', amountMinor })
+      }}>Guardar precio de ventanilla</button>}</div>
+      <div className="admin-lot-row"><label>Gasto de servicio de Mercado Pago · ARS
+        <input inputMode="decimal" disabled={!canConfigure} value={onlineFee} onChange={e => setOnlineFee(e.target.value)} />
+        <small>Se suma una vez al precio de cada inscripción online. No se aplica a alias, QR ni pago en efectivo en el taller.</small>
+      </label>{canConfigure && <button className="button button-outline" disabled={configBusy} onClick={() => {
+        const amountMinor = pesosToMinor(onlineFee)
+        if (amountMinor == null || amountMinor > 20_000_000) { setConfigMessage('Revisá el gasto de servicio en pesos.'); return }
+        void saveConfig({ type: 'online_fee', amountMinor })
+      }}>Guardar gasto</button>}</div>
       <div className="admin-lot-list">{config.lots.map(lot => <div key={lot.id} className="admin-lot-row">
         <label>Lote {lot.number} · ARS<input inputMode="decimal" disabled={!canConfigure} value={lotAmounts[lot.number] ?? ''}
           onChange={e => setLotAmounts(current => ({ ...current, [lot.number]: e.target.value }))} />
@@ -226,7 +248,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
           <button className="button button-outline" onClick={searchRegistrations}>Buscar</button>
           <p role="status">{searchMessage}</p>
           {searchResults.length > 0 && <ul>{searchResults.map(person => <li key={person.reference}>
-            {person.name} · {person.reference} · lote {person.lotNumber} · {formatMoney(person.amountMinor)}
+            {person.name} · {person.reference} · lote {person.lotNumber} · {person.amountMinor == null ? 'precio a definir' : formatMoney(person.amountMinor)}
             <button className="button button-outline" onClick={() => {
               if (existingRefs.includes(person.reference)) return
               setReferences(current => `${current.trim()}${current.trim() ? '\n' : ''}${person.reference}`)
@@ -241,7 +263,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
       </> : <>
         {people.map((person, i) => <fieldset className="admin-person-card" key={i}><legend>Persona {i + 1}</legend>
           <div className="admin-form-grid">
-            {([['firstName','Nombre'],['lastName','Apellido'],['birthDate','Fecha de nacimiento'],['phone','Teléfono'],
+            {([['firstName','Nombre'],['lastName','Apellido'],['documentNumber','D.N.I'],['birthDate','Fecha de nacimiento'],['phone','Teléfono'],
               ['email','Correo electrónico'],['prayerGroup','Grupo de oración (opcional)'],['movement','Movimiento (opcional)'],
               ['occupation','Ocupación (opcional)']] as const).map(([field,label]) => <label key={field}>{label}
               <input type={field === 'birthDate' ? 'date' : field === 'email' ? 'email' : 'text'} value={person[field]}
@@ -261,7 +283,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
       <div className="admin-form-grid">
         <label>Forma de pago<select value={paymentMethod} onChange={e => { setPaymentMethod(e.target.value as typeof paymentMethod); changed() }}>
           <option value="bank_transfer" disabled={!config.paymentMethods.bankTransfer}>Transferencia</option>
-          <option value="on_site" disabled={!config.paymentMethods.onSite}>Pago en el lugar</option>
+          <option value="on_site" disabled={!config.paymentMethods.onSite || config.onSitePriceMinor == null}>Efectivo en el taller · {config.onSitePriceMinor == null ? 'precio a definir' : formatMoney(config.onSitePriceMinor)}</option>
         </select></label>
         <label>Promoción<select value={promotionId} onChange={e => { setPromotionId(e.target.value); changed() }}><option value="">Sin promoción</option>
           {availablePromos.map(promo => <option key={promo.id} value={promo.id}>{promo.code}</option>)}</select></label>

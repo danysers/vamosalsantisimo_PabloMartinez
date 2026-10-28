@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 export async function renderProductionCompose() {
-  const base = await fs.readFile(new URL('./production-backups.compose.yml', import.meta.url), 'utf8')
-  const source = (await fs.readFile(new URL('./production-release-watcher.mjs', import.meta.url), 'utf8')).replaceAll('$', '$$')
+  const base = (await fs.readFile(new URL('./production-backups.compose.yml', import.meta.url), 'utf8')).replace(/\r\n/g, '\n')
+  const source = (await fs.readFile(new URL('./production-release-watcher.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n').replaceAll('$', '$$')
   const service = [
     '  release:',
     '    image: node:22-alpine',

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { boolean, check, date, foreignKey, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, customType, date, foreignKey, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { user as authUser } from './auth-schema'
 
 export const registrationStatus = pgEnum('registration_status', ['pending', 'waiting', 'confirmed', 'cancelled', 'review'])
@@ -13,8 +13,9 @@ export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assi
 export const accreditationDelivery = pgEnum('accreditation_delivery', ['screen', 'download', 'print', 'email'])
 export const admissionScanResult = pgEnum('admission_scan_result', ['admitted', 'already_admitted', 'not_eligible', 'revoked', 'expired', 'unknown'])
 export const promotionKind = pgEnum('promotion_kind', ['bundle', 'group_fixed'])
-export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined'])
+export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted'])
 export const emailStatus = pgEnum('email_status', ['queued', 'sending', 'sent', 'failed', 'cancelled'])
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
 
 export const events = pgTable('events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -117,6 +118,7 @@ export const registrationIntakes = pgTable('registration_intakes', {
   registrationId: uuid('registration_id').primaryKey().references(() => registrations.id),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
+  documentNumber: text('document_number'),
   nickname: text('nickname'),
   birthDate: date('birth_date', { mode: 'string' }).notNull(),
   prayerGroup: text('prayer_group'),
@@ -130,6 +132,7 @@ export const registrationIntakes = pgTable('registration_intakes', {
 }, (table) => [
   check('intake_first_name_present', sql`length(trim(${table.firstName})) > 0`),
   check('intake_last_name_present', sql`length(trim(${table.lastName})) > 0`),
+  check('intake_document_format', sql`${table.documentNumber} IS NULL OR ${table.documentNumber} ~ '^[A-Z0-9-]{5,20}$'`),
   check('intake_nickname_length', sql`${table.nickname} IS NULL OR length(trim(${table.nickname})) BETWEEN 1 AND 80`),
   check('intake_difficulty_notes_only_if_requested', sql`${table.paymentDifficulty} OR ${table.paymentDifficultyNotes} IS NULL`),
 ])
@@ -155,7 +158,7 @@ export const paymentAttempts = pgTable('payment_attempts', {
   groupRequestHash: text('group_request_hash'),
   source: paymentSource('source').notNull(),
   status: paymentStatus('status').notNull().default('created'),
-  amountMinor: integer('amount_minor').notNull(),
+  amountMinor: integer('amount_minor'),
   paidAmountMinor: integer('paid_amount_minor').notNull().default(0),
   providerFeeMinor: integer('provider_fee_minor').notNull().default(0),
   checkoutUrl: text('checkout_url'),
@@ -181,9 +184,9 @@ export const paymentAttempts = pgTable('payment_attempts', {
 }, (table) => [
   index('attempts_by_registration').on(table.registrationId, table.createdAt),
   foreignKey({ name: 'payment_attempts_replaces_attempt_id_fkey', columns: [table.replacesAttemptId], foreignColumns: [table.id] }),
-  check('payment_attempts_amount_positive', sql`${table.amountMinor} > 0`),
+  check('payment_attempts_amount_positive', sql`${table.amountMinor} > 0 OR (${table.source} = 'on_site' AND ${table.amountMinor} IS NULL AND ${table.status} <> 'approved')`),
   check('payment_attempts_paid_nonnegative', sql`${table.paidAmountMinor} >= 0`),
-  check('payment_provider_fee_valid', sql`${table.providerFeeMinor} >= 0 AND ${table.providerFeeMinor} < ${table.amountMinor} AND (${table.source} = 'mercado_pago' OR ${table.providerFeeMinor} = 0)`),
+  check('payment_provider_fee_valid', sql`(${table.source} = 'mercado_pago' AND ${table.providerFeeMinor} >= 0 AND ${table.providerFeeMinor} < ${table.amountMinor}) OR (${table.source} <> 'mercado_pago' AND ${table.providerFeeMinor} = 0)`),
   check('payment_attempts_ars', sql`${table.currency} = 'ARS'`),
   check('group_request_hash_length', sql`${table.groupRequestHash} IS NULL OR length(${table.groupRequestHash}) = 64`),
   check('approved_mp_evidence', sql`${table.source} <> 'mercado_pago' OR ${table.status} <> 'approved' OR (
@@ -196,17 +199,47 @@ export const paymentAttempts = pgTable('payment_attempts', {
   )`),
   check('approved_manual_evidence', sql`${table.source} = 'mercado_pago' OR ${table.status} <> 'approved' OR (
     ${table.manualVerifiedBy} IS NOT NULL AND ${table.manualVerifiedAt} IS NOT NULL
-    AND ${table.paidAmountMinor} >= ${table.amountMinor}
+    AND ${table.amountMinor} IS NOT NULL AND ${table.paidAmountMinor} >= ${table.amountMinor}
   )`),
+])
+
+// Private evidence lives in PostgreSQL, not in public/ or a container's ephemeral filesystem.
+export const paymentProofs = pgTable('payment_proofs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  paymentAttemptId: uuid('payment_attempt_id').notNull().references(() => paymentAttempts.id),
+  registrationId: uuid('registration_id').notNull().references(() => registrations.id),
+  filename: text('filename').notNull(),
+  documentNumber: text('document_number'),
+  driveFileName: text('drive_file_name'),
+  driveFileId: text('drive_file_id').unique(),
+  driveSyncedAt: timestamp('drive_synced_at', { withTimezone: true }),
+  driveAttemptCount: integer('drive_attempt_count').notNull().default(0),
+  driveNextAttemptAt: timestamp('drive_next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+  driveLastError: text('drive_last_error'),
+  contentType: text('content_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  sha256: text('sha256').notNull(),
+  data: bytea('data').notNull(),
+  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  index('payment_proofs_by_attempt').on(table.paymentAttemptId, table.uploadedAt),
+  check('payment_proofs_size_limit', sql`${table.sizeBytes} BETWEEN 1 AND 5242880`),
+  check('payment_proofs_sha256_length', sql`length(${table.sha256}) = 64`),
+  check('payment_proofs_document_format', sql`${table.documentNumber} IS NULL OR ${table.documentNumber} ~ '^[A-Z0-9-]{5,20}$'`),
+  check('payment_proofs_drive_attempts_nonnegative', sql`${table.driveAttemptCount} >= 0`),
 ])
 
 export const workshopPaymentSettings = pgTable('workshop_payment_settings', {
   workshopId: uuid('workshop_id').primaryKey().references(() => workshops.id),
   mercadoPagoEnabled: boolean('mercado_pago_enabled').notNull().default(false),
+  onlineServiceFeeMinor: integer('online_service_fee_minor').notNull().default(18_849),
   transferEnabled: boolean('transfer_enabled').notNull().default(true),
   onSiteEnabled: boolean('on_site_enabled').notNull().default(true),
+  onSitePriceMinor: integer('on_site_price_minor'),
   transferAlias: text('transfer_alias'),
   transferProvider: text('transfer_provider'),
+  transferHolder: text('transfer_holder'),
+  transferDocument: text('transfer_document'),
   proofWhatsappE164: text('proof_whatsapp_e164'),
   fundsNeededDaysBefore: integer('funds_needed_days_before').notNull().default(3),
   reminderEmail: text('reminder_email'),
@@ -214,6 +247,8 @@ export const workshopPaymentSettings = pgTable('workshop_payment_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   check('funds_needed_days_range', sql`${table.fundsNeededDaysBefore} BETWEEN 1 AND 90`),
+  check('online_service_fee_range', sql`${table.onlineServiceFeeMinor} BETWEEN 0 AND 20000000`),
+  check('on_site_price_range', sql`${table.onSitePriceMinor} IS NULL OR ${table.onSitePriceMinor} BETWEEN 100 AND 200000000`),
   check('reminder_lead_days_range', sql`${table.reminderLeadDays} BETWEEN 0 AND 30`),
 ])
 
@@ -263,17 +298,17 @@ export const paymentAllocations = pgTable('payment_allocations', {
   lotNumber: integer('lot_number').notNull(),
   promotionId: uuid('promotion_id').references(() => workshopPromotions.id),
   promotionCode: text('promotion_code'),
-  baseAmountMinor: integer('base_amount_minor').notNull(),
+  baseAmountMinor: integer('base_amount_minor'),
   discountMinor: integer('discount_minor').notNull().default(0),
-  dueAmountMinor: integer('due_amount_minor').notNull(),
+  dueAmountMinor: integer('due_amount_minor'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex('allocations_attempt_registration_unique').on(table.attemptId, table.registrationId),
   index('allocations_by_registration').on(table.registrationId),
   check('allocations_lot_number_range', sql`${table.lotNumber} BETWEEN 1 AND 3`),
-  check('allocations_base_positive', sql`${table.baseAmountMinor} > 0`),
-  check('allocations_discount_range', sql`${table.discountMinor} >= 0 AND ${table.discountMinor} <= ${table.baseAmountMinor}`),
-  check('allocations_balance', sql`${table.dueAmountMinor} = ${table.baseAmountMinor} - ${table.discountMinor}`),
+  check('allocations_base_positive', sql`${table.baseAmountMinor} IS NULL OR ${table.baseAmountMinor} > 0`),
+  check('allocations_discount_range', sql`(${table.baseAmountMinor} IS NULL AND ${table.discountMinor} = 0) OR (${table.discountMinor} >= 0 AND ${table.discountMinor} <= ${table.baseAmountMinor})`),
+  check('allocations_balance', sql`(${table.baseAmountMinor} IS NULL AND ${table.dueAmountMinor} IS NULL) OR (${table.baseAmountMinor} IS NOT NULL AND ${table.dueAmountMinor} = ${table.baseAmountMinor} - ${table.discountMinor})`),
 ])
 
 // Select only reconciliation/accounting fields from GET /v1/orders/{id}.
@@ -441,6 +476,7 @@ export const emailOutbox = pgTable('email_outbox', {
   toEmail: text('to_email').notNull(),
   registrationId: uuid('registration_id').references(() => registrations.id),
   paymentAttemptId: uuid('payment_attempt_id').references(() => paymentAttempts.id),
+  paymentProofId: uuid('payment_proof_id').references(() => paymentProofs.id),
   credentialId: uuid('credential_id').references(() => accreditationCredentials.id),
   settlementReminderId: uuid('settlement_reminder_id').references(() => settlementReminders.id),
   attemptCount: integer('attempt_count').notNull().default(0),

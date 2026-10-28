@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditation-token.ts'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, paymentProofReviewEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
 async function claim(pool) {
   const result = await pool.query(`
@@ -37,7 +37,8 @@ async function render(pool, job) {
   }
   const result = await pool.query(`
     SELECT r.email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,
-      p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.proof_whatsapp_e164,s.reminder_email,
+      p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.transfer_holder,s.transfer_document,
+      s.proof_whatsapp_e164,s.reminder_email,
       registration_has_approved_payment(r.id) AS paid,
       a.status AS assistance_status, (fw.registration_id IS NOT NULL) AS waived
     FROM registrations r JOIN registration_intakes i ON i.registration_id=r.id
@@ -61,6 +62,22 @@ async function render(pool, job) {
       email: registration.email, phone: registration.phone,
     })
   }
+  if (job.kind === 'payment_proof_submitted') {
+    if (job.to_email.toLowerCase() !== 'danysers@gmail.com' || !job.payment_proof_id || !job.payment_attempt_id) return null
+    const proofResult = await pool.query(`
+      SELECT proof.id,p.amount_minor,p.status FROM payment_proofs proof
+      JOIN payment_attempts p ON p.id=proof.payment_attempt_id
+      WHERE proof.id=$1 AND proof.payment_attempt_id=$2 AND proof.registration_id=$3
+    `, [job.payment_proof_id, job.payment_attempt_id, job.registration_id])
+    const proof = proofResult.rows[0]
+    if (!proof || proof.status !== 'pending') return null
+    const panelOrigin = process.env.PANEL_ORIGIN || process.env.BETTER_AUTH_URL || 'https://paneltaller2026.vamosalsantisimo.com'
+    const origin = new URL(panelOrigin)
+    if (origin.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(origin.hostname)) throw new Error('Invalid panel origin')
+    return paymentProofReviewEmail({ fullName: registration.name, reference: registration.reference,
+      amountMinor: proof.amount_minor, proofUrl: `${origin.origin}/api/admin/taller/comprobantes/${proof.id}`,
+      panelUrl: `${origin.origin}/admin/acreditacion?reference=${encodeURIComponent(registration.reference)}` })
+  }
   if (registration.email.toLowerCase() !== job.to_email.toLowerCase()) return null
   if (job.kind === 'group_payment_notice') {
     if (!job.payment_attempt_id) return null
@@ -82,6 +99,7 @@ async function render(pool, job) {
       isPayer: group.payer_id === job.registration_id, memberCount: group.member_count,
       amountMinor: group.amount_minor, status: group.status, source: group.source,
       transferAlias: registration.transfer_alias, transferProvider: registration.transfer_provider,
+      transferHolder: registration.transfer_holder, transferDocument: registration.transfer_document,
       proofWhatsappE164: registration.proof_whatsapp_e164 })
   }
   if (job.kind === 'assistance_approved') {
@@ -112,6 +130,8 @@ async function render(pool, job) {
       amountMinor: registration.amount_minor,
       transferAlias: registration.transfer_alias,
       transferProvider: registration.transfer_provider,
+      transferHolder: registration.transfer_holder,
+      transferDocument: registration.transfer_document,
       proofWhatsappE164: registration.proof_whatsapp_e164,
     })
   }
@@ -130,7 +150,8 @@ async function render(pool, job) {
       tokenAuthTag: credential.token_auth_tag,
     }, process.env.ACCREDITATION_TOKEN_KEY, job.registration_id, credential.version)
     if (hashAccreditationQr(qrValue) !== credential.token_hash) throw new Error('accreditation_hash_mismatch')
-    const email = accreditationEmail({ firstName: registration.first_name, reference: registration.reference })
+    const email = accreditationEmail({ firstName: registration.first_name, reference: registration.reference,
+      paymentConfirmed: registration.paid })
     const png = await QRCode.toBuffer(qrValue, { width: 480, margin: 2, errorCorrectionLevel: 'M' })
     return { ...email, attachments: [{ filename: 'acreditacion.png', content: png, cid: 'acreditacion', contentType: 'image/png' }] }
   }
@@ -153,6 +174,9 @@ export async function processEmailJob(pool, transport, job, from) {
     const sent = await transport.sendMail({ from, to: job.to_email, ...message, messageId: `<${job.id}@vamosalsantisimo.com>` })
     if (!sent.accepted?.some(address => address.toLowerCase() === job.to_email.toLowerCase())) throw new Error('smtp_not_accepted')
     await pool.query("UPDATE email_outbox SET status='sent',sent_at=now(),last_error_code=NULL WHERE id=$1", [job.id])
+    if (job.kind === 'payment_proof_submitted' && job.payment_attempt_id) {
+      await pool.query('UPDATE payment_attempts SET proof_notified_at=now() WHERE id=$1', [job.payment_attempt_id])
+    }
     if (job.kind === 'settlement_reminder') await pool.query('UPDATE settlement_reminders SET sent_at=now() WHERE id=$1', [job.settlement_reminder_id])
     console.log(`Email accepted kind=${job.kind} id=${job.id}`)
     return 'sent'

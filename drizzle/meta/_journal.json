@@ -162,6 +162,55 @@
       "when": 1793159000000,
       "tag": "0022_registration_nickname",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793193081784,
+      "tag": "0023_transfer-recipient",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793196659459,
+      "tag": "0024_online-service-fee",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793198370831,
+      "tag": "0025_faithful_polaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793199096480,
+      "tag": "0026_late_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793199496884,
+      "tag": "0027_puzzling_blonde_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793200583816,
+      "tag": "0028_familiar_sunfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793201348566,
+      "tag": "0029_checkout_fee_simulator",
+      "breakpoints": true
     }
   ]
 }

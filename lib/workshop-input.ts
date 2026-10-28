@@ -2,10 +2,14 @@ import { z } from 'zod'
 
 const personName = z.string().trim().min(2).max(80).regex(/^[\p{L}\p{M}]+(?:[ '-][\p{L}\p{M}]+)*$/u)
 const optionalText = (limit: number) => z.string().trim().max(limit).optional()
+export const documentNumberSchema = z.string().trim().min(5).max(24)
+  .regex(/^[A-Za-z0-9.\s-]+$/).transform(value => value.toUpperCase().replace(/[.\s]/g, ''))
+  .refine(value => /^[A-Z0-9-]{5,20}$/.test(value))
 
 export const workshopPersonSchema = z.object({
   firstName: personName,
   lastName: personName,
+  documentNumber: documentNumberSchema,
   birthDate: z.iso.date().refine(value => {
     const date = new Date(`${value}T12:00:00Z`)
     return value >= '1900-01-01' && value <= new Date().toISOString().slice(0, 10) &&

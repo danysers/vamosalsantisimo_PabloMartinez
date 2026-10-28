@@ -7,7 +7,7 @@
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://vamosalsantisimo.com/">
   <title>Vamos al Santísimo · Una invitación al encuentro</title>
-  <meta name="description" content="Vamos al Santísimo con Pablo Martínez. Sábado 19 de diciembre de 2026, Anfiteatro de la Juventud. Convocatoria 19:00, misa 20:00 y adoración 21:00. Entrada gratuita.">
+  <meta name="description" content="Vamos al Santísimo con Pablo Martínez. Sábado 19 de diciembre de 2026, Anfiteatro de la Juventud. Convocatoria 19:00, misa 20:00 y adoración 21:00. Entrada libre y gratuita.">
   <meta property="og:title" content="Vamos al Santísimo · Pablo Martínez · 19 de diciembre de 2026">
   <meta property="og:description" content="Una noche de fe, música y adoración. Desde las 19:00 h en Formosa. Si llueve, nos encontramos en María Auxiliadora.">
   <meta property="og:type" content="website">
@@ -104,6 +104,25 @@
     @keyframes brand-ring-glint{0%,100%{opacity:0}15%,80%{opacity:1}}
     @keyframes brand-ring-visibility{0%{opacity:0}4%,91%{opacity:1}100%{opacity:0}}
     @media(max-width:760px){.nav .footer-brand{width:68px;height:68px}.nav .footer-brand img{width:52px;height:42px}}
+    /* Keep the stage photo visible while shading only the workshop copy. */
+    .formation-copy{position:relative;isolation:isolate}
+    .formation-copy::before{content:"";position:absolute;inset:-28px -48px -22px -50px;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 38% 46%,#000e 0%,#000c 42%,#0007 66%,transparent 88%);filter:blur(17px)}
+    .formation-copy .heading,.formation-copy .event-date,.formation-copy .lead{text-shadow:0 2px 16px #000b}
+    .hero-meta{gap:clamp(26px,3vw,52px)}
+    .hero-meta small{font-size:clamp(10px,.8vw,12px);line-height:1.3}
+    .hero-meta span{font-size:clamp(15px,1.15vw,18px);line-height:1.35}
+    .hero-meta .hero-meta-note{font-size:clamp(11px,.82vw,13px);max-width:36ch;line-height:1.45}
+    @media(max-width:760px){
+      .hero{min-height:1100px}
+      .custodia{bottom:190px}
+      .hero-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}
+      .hero-meta .meta-place{grid-column:1/-1;max-width:none}
+      .hero-meta small{font-size:10px}
+      .hero-meta span{font-size:13px}
+      .hero-meta .hero-meta-note{font-size:11px}
+      .formation-copy::before{inset:-20px -18px -18px -22px;background:radial-gradient(ellipse at 42% 48%,#000e 0%,#000b 55%,transparent 91%)}
+    }
+    @media(max-width:400px){.hero{min-height:1140px}.hero-meta span{font-size:12px}}
   </style>
   <link rel="stylesheet" href="/pagina%20principal%20con%20efecto/invitation.css">
   <link rel="stylesheet" href="/pagina%20principal%20con%20efecto/footer-socials.css">
@@ -134,7 +153,7 @@
         <p class="hero-date"><time datetime="2026-12-19">Sábado 19 de diciembre de 2026</time></p>
         <div class="actions"><a class="btn" href="#adoracion">Ver el encuentro <span class="arrow" aria-hidden="true">↗</span></a><a class="btn btn-outline" href="#formacion">Taller de músicos</a></div>
       </div>
-      <div class="hero-bottom"><div class="hero-meta"><div><small>Adoración</small><span>21:00 h · Entrada gratuita</span></div><div><small>Taller de músicos</small><span>17:00 h</span></div><div class="meta-place"><small>Nos encontramos</small><span data-event-venue-label>Anfiteatro de la Juventud</span></div></div><a class="scroll-link" href="#adoracion">Descubrí el encuentro <span aria-hidden="true">↓</span></a></div>
+      <div class="hero-bottom"><div class="hero-meta"><div><small>Adoración</small><span>21:00 h · Entrada libre y gratuita</span><span class="hero-meta-note">Colaboración voluntaria: un alimento no perecedero</span></div><div><small>Taller de músicos</small><span>15:00 h</span></div><div class="meta-place"><small>Nos encontramos</small><span data-event-venue-label>Anfiteatro de la Juventud</span></div></div><a class="scroll-link" href="#adoracion">Descubrí el encuentro <span aria-hidden="true">↓</span></a></div>
     </section>
 
     <section class="encounter" id="adoracion" aria-labelledby="adoration-title">
@@ -146,7 +165,7 @@
         <h2 id="adoration-title" class="heading split">Adoración <em>eucarística</em></h2>
         <p class="lead reveal">Una noche de oración, música y adoración a Jesús en el Santísimo Sacramento, junto a Pablo Martínez.</p>
         <p class="event-date reveal"><time datetime="2026-12-19T19:00:00-03:00">19 de diciembre · Desde las 19:00 h</time></p>
-        <p class="event-location reveal"><span data-event-venue-label>Anfiteatro de la Juventud</span> · Entrada gratuita<br>19:00 convocatoria · 20:00 misa central · 21:00 adoración</p>
+        <p class="event-location reveal"><span data-event-venue-label>Anfiteatro de la Juventud</span> · Entrada libre y gratuita<br>19:00 convocatoria · 20:00 misa central · 21:00 adoración<br>Colaboración voluntaria: un alimento no perecedero</p>
         <div class="pin-progress" aria-hidden="true"><i></i></div>
       </div></div>
     </section>
@@ -155,10 +174,12 @@
       <img class="forest" src="/2026/footer/escenario-original-alta.jpg" alt="Pablo Martínez cantando en el escenario junto a los músicos y el público" width="4032" height="2268" loading="lazy" decoding="async">
       <div class="forest-shade" aria-hidden="true"></div>
       <div class="wrap"><div class="formation-card">
+        <div class="formation-copy">
         <p class="eyebrow reveal">19 de diciembre · Taller de músicos</p>
-        <h2 class="heading split" id="formation-title">Formación <em>católica</em></h2>
-        <p class="event-date reveal"><time datetime="2026-12-19T17:00:00-03:00">19 de diciembre · 17:00 h</time></p>
+        <h2 class="heading split" id="formation-title">Taller para <em>músicos</em></h2>
+        <p class="event-date reveal"><time datetime="2026-12-19T15:00:00-03:00">19 de diciembre · 15:00 h</time></p>
         <p class="lead reveal">Una tarde de formación católica para profundizar en la fe, la vida y la música como camino de encuentro con Dios.</p>
+        </div>
         <a class="btn reveal" href="/formacion">Ir al taller <span class="arrow" aria-hidden="true">↗</span></a>
         <p class="notice reveal">El taller tiene un pequeño costo. Te recomendamos inscribirte antes; también podés anotarte en el lugar el mismo día. Publicaremos el formulario previo cuando esté habilitado.</p>
       </div></div>
@@ -209,7 +230,7 @@
 
     <section class="sponsors" id="marcas" aria-labelledby="sponsors-title"><div class="section-atmosphere" aria-hidden="true"><div class="halo"></div><svg viewBox="0 0 2000 1100" preserveAspectRatio="none"><g fill="none" stroke="#bda26d"><path d="M-200 940 C380 510 1230 440 2180 170" stroke-width=".9" opacity=".28"/><path d="M-200 976 C380 546 1230 476 2180 206" stroke-width=".6" opacity=".14"/><path class="ribbon-glint" d="M-200 940 C380 510 1230 440 2180 170" pathLength="1000" stroke="#e4c58b"/></g></svg></div><div class="wrap">
       <header class="section-heading"><p class="eyebrow reveal">Vamos al Santísimo · 2026</p><h2 class="heading split" id="sponsors-title">Marcas que nos acompañan<br>en este encuentro</h2></header>
-      <div class="featured-sponsor reveal"><p>Mila Club · Presencia destacada</p><a class="sponsor featured sponsor-link" href="https://www.instagram.com/explore/search/keyword/?q=Mila%20Club" target="_blank" rel="noopener noreferrer" aria-label="Buscar Mila Club en Instagram" title="Buscar Mila Club en Instagram"><img src="/2026/sponsors/mila-blanco-sobre-negro.png" alt="Mila Club · Since 1994" width="866" height="219" loading="lazy"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></a></div>
+      <div class="featured-sponsor reveal"><p>Mila Club · Presencia destacada</p><a class="sponsor featured sponsor-link" href="https://www.instagram.com/milaclub.ar?vrfl=MXIyaW9kNTQ2NjBzYQ==" target="_blank" rel="noopener noreferrer" aria-label="Visitar el Instagram de Mila Club" title="Instagram · Mila Club"><img src="/2026/sponsors/mila-blanco-sobre-negro.png" alt="Mila Club · Since 1994" width="866" height="219" loading="lazy"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></a></div>
       <ul class="sponsors-grid" aria-label="Marcas que nos acompañan"><li class="sponsor-shell reveal"><a class="sponsor light sponsor-link" href="https://www.instagram.com/paseoalmaverde/" target="_blank" rel="noopener noreferrer" aria-label="Visitar el Instagram de Paseo Alma Verde" title="Instagram · Paseo Alma Verde"><img src="/2026/sponsors/alma-verde.png" alt="Alma Verde Paseo" width="240" height="160" loading="lazy"></a></li><li class="sponsor-shell reveal"><a class="sponsor sponsor-link" href="https://www.instagram.com/cabildocasualbar/" target="_blank" rel="noopener noreferrer" aria-label="Visitar el Instagram de Cabildo Casual Bar" title="Instagram · Cabildo Casual Bar"><img src="/2026/sponsors/cabildo.png" alt="Cabildo Casual Bar" width="240" height="160" loading="lazy"></a></li><li class="sponsor-shell reveal"><a class="sponsor sponsor-link" href="https://www.instagram.com/explore/search/keyword/?q=Las%20Kalas%20Rental%20Suites" target="_blank" rel="noopener noreferrer" aria-label="Buscar Las Kalas Rental Suites en Instagram" title="Buscar Las Kalas Rental Suites en Instagram"><img src="/2026/sponsors/las-kalas.png" alt="Las Kalas Rental Suites" width="240" height="160" loading="lazy"></a></li></ul>
       <p class="thanks reveal">Agradecemos a cada uno de ellos y que Dios siga multiplicando el 100x1.</p>
     </div></section>
@@ -219,7 +240,8 @@
       <div class="closing-intro"><span class="closing-overline">Nos encontramos en la fe</span><h2 id="footer-faq-title">Preguntas frecuentes</h2><p>Algunas respuestas para acompañarte<br>antes del encuentro.</p><a class="faq-button" href="#preguntas-frecuentes">Ver preguntas frecuentes <span aria-hidden="true">↓</span></a></div>
     </section>
     <section class="faq" id="preguntas-frecuentes" aria-labelledby="footer-faq-title">
-      <details class="question"><summary>¿La adoración tiene costo?<span aria-hidden="true">+</span></summary><p>La adoración es gratuita. El taller de músicos tiene un pequeño costo; te recomendamos inscribirte antes, aunque también podés anotarte en el lugar el mismo día. No hace falta pagar el taller para participar de la adoración.</p></details>
+      <details class="question"><summary>¿La adoración tiene costo?<span aria-hidden="true">+</span></summary><p>La entrada a la adoración es libre y gratuita, como en años anteriores. No hace falta pagar el taller para participar. El taller de músicos es una actividad aparte y tiene un pequeño costo.</p></details>
+      <details class="question"><summary>¿Puedo colaborar con un alimento no perecedero?<span aria-hidden="true">+</span></summary><p>Sí. Si está a tu alcance, te invitamos a traer un alimento no perecedero como donación. Lo compartiremos con personas y familias que más lo necesitan. En este tiempo de Navidad, un gesto sencillo puede llevar esperanza a otra mesa. Que el Señor te devuelva en bendiciones tu generosidad. Esta colaboración es voluntaria y no condiciona el ingreso.</p></details>
       <details class="question"><summary>¿Cuándo es el encuentro?<span aria-hidden="true">+</span></summary><p>El sábado 19 de diciembre de 2026. Nos encontramos en <span data-event-venue-label>Anfiteatro de la Juventud</span>. Convocatoria a las 19:00 h, misa central a las 20:00 h y adoración eucarística a las 21:00 h. Si llueve, nos reunimos en María Auxiliadora.</p></details>
       <details class="question"><summary>¿Cómo me inscribo al taller?<span aria-hidden="true">+</span></summary><p>Te recomendamos hacer la inscripción previa cuando se habilite el formulario. Si no llegás a anotarte antes, también vas a poder inscribirte en el lugar el mismo día del taller.</p></details><details class="question"><summary>¿Puedo llevar algo para estar más cómodo y alabar?<span aria-hidden="true">+</span></summary><p>Sí. Podés llevar una silleta, agua, un anotador, una pandereta u otros instrumentos para alabar al Señor; lo que te ayude a estar más cómodo.</p></details>
     </section>

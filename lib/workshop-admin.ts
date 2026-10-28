@@ -4,7 +4,6 @@ import { and, eq, sql } from 'drizzle-orm'
 import type { getDb } from './db'
 import { normalizeIdentity } from './registration-policy'
 import { quoteWorkshopPayment, type PricedMember, type Promotion } from './workshop-pricing'
-import { MP_FIXED_SURCHARGE_MINOR } from './checkout-access'
 import type { WorkshopPerson } from './workshop-input'
 import {
   auditLog, emailOutbox, paymentAllocations, paymentAttempts, registrationIntakes,
@@ -51,11 +50,13 @@ export async function readWorkshopPricing(db: Db, eventSlug: string) {
     db.select({ id: workshopLots.id, number: workshopLots.number, amountMinor: workshopLots.amountMinor,
       updatedAt: workshopLots.updatedAt }).from(workshopLots).where(eq(workshopLots.workshopId, workshop.id)).orderBy(workshopLots.number),
     db.select().from(workshopPromotions).where(eq(workshopPromotions.workshopId, workshop.id)).orderBy(workshopPromotions.code),
-    db.execute(sql`SELECT transfer_enabled,on_site_enabled FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`),
+    db.execute(sql`SELECT transfer_enabled,on_site_enabled,online_service_fee_minor,on_site_price_minor FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`),
   ])
+  const serviceFeeMinor = Number(settings.rows[0]?.online_service_fee_minor ?? 0)
   return { workshopId: workshop.id, activeLot: workshop.active_lot, registrationOpen: workshop.registration_open,
     capacity: workshop.capacity, emailReady: process.env.REGISTRATION_EMAIL_READY === '1',
-    lots: lots.map(lot => ({ ...lot, serviceFeeMinor: MP_FIXED_SURCHARGE_MINOR, onlineAmountMinor: lot.amountMinor + MP_FIXED_SURCHARGE_MINOR })),
+    serviceFeeMinor, onSitePriceMinor: settings.rows[0]?.on_site_price_minor == null ? null : Number(settings.rows[0].on_site_price_minor),
+    lots: lots.map(lot => ({ ...lot, serviceFeeMinor, onlineAmountMinor: lot.amountMinor + serviceFeeMinor })),
     promotions: promotions.map(p => ({ ...p, startsAt: p.startsAt?.toISOString() ?? null,
       endsAt: p.endsAt?.toISOString() ?? null, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() })),
     paymentMethods: { bankTransfer: settings.rows[0]?.transfer_enabled === true, onSite: settings.rows[0]?.on_site_enabled === true } }
@@ -79,13 +80,15 @@ export async function searchPendingIndividualRegistrations(db: Db, eventSlug: st
   `)
   return found.rows.map(row => ({ reference: row.reference as string, name: row.name as string,
     email: row.email as string, createdAt: new Date(String(row.created_at)).toISOString(),
-    lotNumber: Number(row.lot_number), amountMinor: Number(row.base_amount_minor) }))
+    lotNumber: Number(row.lot_number), amountMinor: row.base_amount_minor == null ? null : Number(row.base_amount_minor) }))
 }
 
 export async function updateWorkshopPricing(db: Db, input: {
   eventSlug: string; operatorId: string;
   change: { type: 'lot'; number: number; amountMinor: number }
     | { type: 'active_lot'; number: number }
+    | { type: 'online_fee'; amountMinor: number }
+    | { type: 'on_site_price'; amountMinor: number | null }
     | { type: 'promotion'; id?: string; code: string; kind: 'bundle' | 'group_fixed'; active: boolean;
       bundleSize?: number | null; payablePeople?: number | null; minPeople?: number | null; maxPeople?: number | null;
       groupTotalMinor?: number | null; startsAt?: string | null; endsAt?: string | null }
@@ -107,6 +110,18 @@ export async function updateWorkshopPricing(db: Db, input: {
       await tx.update(workshops).set({ activeLot: change.number }).where(eq(workshops.id, workshop.id))
       await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.active_lot_changed', subjectId: workshop.id,
         changes: { from: workshop.active_lot, to: change.number } })
+    } else if (change.type === 'online_fee') {
+      const [settings] = await tx.execute(sql`SELECT online_service_fee_minor FROM workshop_payment_settings WHERE workshop_id=${workshop.id} FOR UPDATE`).then(result => result.rows)
+      if (!settings) return invalid('Configuración de pago no encontrada.', 404)
+      await tx.execute(sql`UPDATE workshop_payment_settings SET online_service_fee_minor=${change.amountMinor},updated_at=now() WHERE workshop_id=${workshop.id}`)
+      await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.online_fee_updated', subjectId: workshop.id,
+        changes: { fromMinor: Number(settings.online_service_fee_minor), toMinor: change.amountMinor } })
+    } else if (change.type === 'on_site_price') {
+      const [settings] = await tx.execute(sql`SELECT on_site_price_minor FROM workshop_payment_settings WHERE workshop_id=${workshop.id} FOR UPDATE`).then(result => result.rows)
+      if (!settings) return invalid('Configuración de pago no encontrada.', 404)
+      await tx.execute(sql`UPDATE workshop_payment_settings SET on_site_price_minor=${change.amountMinor},updated_at=now() WHERE workshop_id=${workshop.id}`)
+      await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.on_site_price_updated', subjectId: workshop.id,
+        changes: { fromMinor: settings.on_site_price_minor == null ? null : Number(settings.on_site_price_minor), toMinor: change.amountMinor } })
     } else {
       const startsAt = toDate(change.startsAt)
       const endsAt = toDate(change.endsAt)
@@ -162,12 +177,14 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
     if (create && (!workshop.registration_open || process.env.REGISTRATION_EMAIL_READY !== '1')) {
       return invalid('Las inscripciones aún están cerradas.', 503)
     }
-    const settings = await tx.execute(sql`SELECT transfer_enabled,on_site_enabled,transfer_alias,transfer_provider,proof_whatsapp_e164
+    const settings = await tx.execute(sql`SELECT transfer_enabled,on_site_enabled,on_site_price_minor,transfer_alias,transfer_provider,proof_whatsapp_e164
       FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`)
-    const method = settings.rows[0] as { transfer_enabled: boolean; on_site_enabled: boolean; transfer_alias: string | null;
+    const method = settings.rows[0] as { transfer_enabled: boolean; on_site_enabled: boolean; on_site_price_minor: number | null; transfer_alias: string | null;
       transfer_provider: string | null; proof_whatsapp_e164: string | null } | undefined
     if (!method || (input.paymentMethod === 'bank_transfer' && (!method.transfer_enabled || !method.transfer_alias || !method.transfer_provider || !method.proof_whatsapp_e164)) ||
       (input.paymentMethod === 'on_site' && !method.on_site_enabled)) return invalid('La forma de pago no está habilitada.', 409)
+    if (input.paymentMethod === 'on_site' && method.on_site_price_minor == null) return invalid('El precio de ventanilla aún no está definido. Las inscripciones individuales pueden quedar pendientes; los grupos requieren un importe antes de cotizar.', 409)
+    if (input.paymentMethod === 'on_site' && input.promotionId) return invalid('El pago en efectivo en el taller no admite promociones.', 409)
     if (create && (!input.operatorId || !input.idempotencyKey)) return invalid('Falta identificar la operación.', 400)
     const hash = requestHash(input)
     if (create) {
@@ -236,9 +253,9 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
           lot_id: string; lot_number: number; base_amount_minor: number; current_lot_amount: number; member_count: number }
         if (payment.status !== 'pending' || !['bank_transfer', 'on_site'].includes(payment.source) ||
           payment.provider_order_id || Number(payment.member_count) !== 1) return invalid(`El pago de ${reference} ya está en otro proceso.`)
-        if (payment.base_amount_minor !== payment.current_lot_amount) return invalid(`El lote de ${reference} cambió de precio; no se puede recotizar automáticamente.`)
+        if (input.paymentMethod === 'bank_transfer' && payment.source === 'bank_transfer' && payment.base_amount_minor !== payment.current_lot_amount) return invalid(`El lote de ${reference} cambió de precio; no se puede recotizar automáticamente.`)
         members.push({ registrationId: row.id, reference, name: row.name, email: row.email,
-          lotId: payment.lot_id, lotNumber: payment.lot_number, baseAmountMinor: payment.base_amount_minor,
+          lotId: payment.lot_id, lotNumber: payment.lot_number, baseAmountMinor: input.paymentMethod === 'on_site' ? method.on_site_price_minor! : Number(payment.current_lot_amount),
           oldAttemptId: payment.id })
       }
     } else {
@@ -260,7 +277,7 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
         if (conflict.rows.length) return invalid(`${people[i].firstName} ${people[i].lastName} ya tiene una inscripción. Usá su referencia en un grupo existente.`)
         members.push({ registrationId: `draft-${i}`, reference: null,
           name: `${people[i].firstName.trim()} ${people[i].lastName.trim()}`, email: identities[i].email,
-          lotId: lot.id, lotNumber: lot.number, baseAmountMinor: lot.amountMinor })
+          lotId: lot.id, lotNumber: lot.number, baseAmountMinor: input.paymentMethod === 'on_site' ? method.on_site_price_minor! : lot.amountMinor })
       }
     }
     let promotion: Promotion | undefined
@@ -305,7 +322,7 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
         }).returning({ id: registrations.id, reference: registrations.reference })
         members[i].registrationId = created.id; members[i].reference = created.reference
         await tx.insert(registrationIntakes).values({ registrationId: created.id,
-          firstName: person.firstName.trim(), lastName: person.lastName.trim(), birthDate: person.birthDate,
+          firstName: person.firstName.trim(), lastName: person.lastName.trim(), documentNumber: person.documentNumber, birthDate: person.birthDate,
           prayerGroup: person.prayerGroup?.trim() || null, movement: person.movement?.trim() || null,
           ecclesialState: person.ecclesialState, occupation: person.occupation?.trim() || null, paymentDifficulty: false })
         await tx.insert(reservations).values({ registrationId: created.id, expiresAt: new Date(workshop.starts_at) })

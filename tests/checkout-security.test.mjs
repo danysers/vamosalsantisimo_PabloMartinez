@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { checkoutAccessToken, hasCheckoutAccess, MP_FIXED_SURCHARGE_MINOR } from '../lib/checkout-access.ts'
+import { checkoutAccessToken, hasCheckoutAccess } from '../lib/checkout-access.ts'
 import { verifyMercadoPagoSignature } from '../lib/mercado-pago-webhook.ts'
 import { individualRegistrationSchema } from '../lib/workshop-input.ts'
 
@@ -14,7 +14,6 @@ test('checkout access is secret-bound and unique to one registration and creatio
   assert.equal(hasCheckoutAccess(token,'registration-one','creation-two'),false)
   assert.equal(hasCheckoutAccess('x'.repeat(43),'registration-one','creation-one'),false)
   assert.equal(hasCheckoutAccess('short','registration-one','creation-one'),false)
-  assert.equal(MP_FIXED_SURCHARGE_MINOR,100_000)
 })
 
 test('order notifications require the genuine signature and canonical lowercase resource id', () => {
@@ -30,8 +29,10 @@ test('order notifications require the genuine signature and canonical lowercase 
 })
 
 test('the enrollment contract never accepts an amount or a Mercado Pago choice with an assistance request', () => {
-  const person={firstName:'Ana',lastName:'Prueba',birthDate:'1990-04-15',phone:'370 4123456',email:'ana@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago'}
+  const person={firstName:'Ana',lastName:'Prueba',documentNumber:'12345678',birthDate:'1990-04-15',phone:'370 4123456',email:'ana@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'mercado_pago'}
   assert.equal(individualRegistrationSchema.safeParse(person).success,true)
+  assert.equal(individualRegistrationSchema.safeParse({...person,documentNumber:'12.345.678'}).data.documentNumber,'12345678')
+  assert.equal(individualRegistrationSchema.safeParse({...person,documentNumber:''}).success,false)
   assert.equal(individualRegistrationSchema.safeParse({...person,amountMinor:1}).success,false)
   assert.equal(individualRegistrationSchema.safeParse({...person,paymentDifficulty:true}).success,false)
 })

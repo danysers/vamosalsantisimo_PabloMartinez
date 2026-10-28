@@ -27,16 +27,19 @@ async function loadRole(): Promise<'login' | 'denied' | 'unavailable' | 'configu
   }
 }
 
-export default async function AccreditationPage() {
+export default async function AccreditationPage({ searchParams }: { searchParams: Promise<{ reference?: string | string[] }> }) {
   if (process.env.APP_SURFACE !== 'panel') notFound()
   await headers()
   if (!process.env.BETTER_AUTH_URL || !process.env.BETTER_AUTH_SECRET || !process.env.DATABASE_URL) notFound()
   const role = await loadRole()
+  const rawReference = (await searchParams).reference
+  const reference = typeof rawReference === 'string' ? rawReference : ''
   if (role === 'login') redirect('/admin')
   if (role === 'denied') notFound()
   if (role === 'unavailable') return <main className="admin-shell"><h1>Panel no disponible</h1><p>Revisá la conexión con la base de datos.</p></main>
   return <main className="admin-shell"><p><a href="/admin">← Volver al panel</a></p><h1>Acreditación del taller</h1>
     <p>Los pagos y excepciones requieren verificación humana. El QR se emite solo al confirmar esa revisión; el ingreso queda registrado con fecha, hora y operador.</p>
-    <AccreditationConsole canVerify={role !== 'admission_operator'} scanEnabled={process.env.ADMISSION_SCAN_ENABLED === '1'} />
+    <AccreditationConsole initialReference={/^[A-Za-z0-9_-]{6,80}$/.test(reference) ? reference : ''}
+      canVerify={role !== 'admission_operator'} scanEnabled={process.env.ADMISSION_SCAN_ENABLED === '1'} />
   </main>
 }

@@ -1,11 +1,12 @@
 import 'server-only'
+import { randomUUID } from 'node:crypto'
 import { and, eq, sql } from 'drizzle-orm'
 import type { getDb } from './db'
 import { createAccreditationQr, encryptAccreditationQr, hashAccreditationQr } from './accreditation-token'
 import { registrationQrReference, verifyRegistrationQr } from './registration-qr'
 import {
   accreditationCredentials, admissionScans, auditLog, checkIns, emailOutbox,
-  paymentAttempts, registrations,
+  paymentAllocations, paymentAttempts, registrations,
 } from './schema'
 
 type Db = ReturnType<typeof getDb>
@@ -78,7 +79,7 @@ export function verifyManualPayment(db: Db, input: {
 }) {
   return db.transaction(async tx => {
     const found = await tx.execute(sql`
-      SELECT p.id,p.registration_id,p.source,p.status,p.amount_minor
+      SELECT p.id,p.registration_id,p.source,p.status,p.amount_minor,p.payer_name,p.payer_email
       FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
       WHERE e.slug=${input.eventSlug} AND p.status='pending' AND
@@ -88,11 +89,36 @@ export function verifyManualPayment(db: Db, input: {
         ))
       ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p
     `)
-    const attempt = found.rows[0] as { id: string; registration_id: string; source: string; status: string; amount_minor: number } | undefined
+    let attempt = found.rows[0] as { id: string; registration_id: string; source: string; status: string; amount_minor: number | null; payer_name: string | null; payer_email: string | null } | undefined
     if (!attempt) return { code: 404, body: { error: 'Pago pendiente no encontrado.' } }
     if (!['bank_transfer', 'on_site', 'manual'].includes(attempt.source) || attempt.status !== 'pending') {
       return { code: 409, body: { error: 'Este pago no está pendiente de verificación manual.' } }
     }
+    if (attempt.amount_minor === null) {
+      if (attempt.source !== 'on_site') return { code: 409, body: { error: 'Este pago todavía no tiene importe.' } }
+      const settings = await tx.execute(sql`SELECT s.on_site_price_minor FROM workshop_payment_settings s
+        JOIN registrations r ON r.workshop_id=s.workshop_id WHERE r.id=${attempt.registration_id} FOR UPDATE OF s`)
+      const price = settings.rows[0]?.on_site_price_minor
+      if (price == null) return { code: 409, body: { error: 'Primero definí el precio de ventanilla en la configuración del taller.' } }
+      const allocations = await tx.select().from(paymentAllocations).where(eq(paymentAllocations.attemptId, attempt.id))
+      if (allocations.length !== 1 || allocations[0].dueAmountMinor !== null || allocations[0].promotionId !== null) {
+        return { code: 409, body: { error: 'Esta inscripción requiere revisión antes de cobrar en el taller.' } }
+      }
+      const previousId = attempt.id
+      await tx.update(paymentAttempts).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(paymentAttempts.id, previousId))
+      const [priced] = await tx.insert(paymentAttempts).values({ registrationId: attempt.registration_id,
+        replacesAttemptId: previousId, source: 'on_site', status: 'created', amountMinor: Number(price),
+        idempotencyKey: randomUUID(), payerName: attempt.payer_name, payerEmail: attempt.payer_email,
+      }).returning({ id: paymentAttempts.id })
+      await tx.insert(paymentAllocations).values({ attemptId: priced.id, registrationId: attempt.registration_id,
+        lotId: allocations[0].lotId, lotNumber: allocations[0].lotNumber,
+        baseAmountMinor: Number(price), discountMinor: 0, dueAmountMinor: Number(price) })
+      await tx.update(paymentAttempts).set({ status: 'pending' }).where(eq(paymentAttempts.id, priced.id))
+      await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.on_site_quote_finalized', subjectId: priced.id,
+        changes: { previousAttemptId: previousId, amountMinor: Number(price) } })
+      attempt = { ...attempt, id: priced.id, amount_minor: Number(price) }
+    }
+    if (attempt.amount_minor === null) return { code: 409, body: { error: 'El precio de ventanilla aún no está definido.' } }
     const now = new Date()
     await tx.update(paymentAttempts).set({
       status: 'approved', paidAmountMinor: attempt.amount_minor,

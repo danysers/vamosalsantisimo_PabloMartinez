@@ -118,9 +118,11 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 /* Checkout del taller: importe desglosado y controles accesibles. */
 #workshop-price-note{font-size:15px;line-height:1.7;margin:0 0 12px}
 #workshop-checkout-hint{font-size:12px;line-height:1.7;margin:0 0 24px;color:#76614c}
-#payment-method-field .payment-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+#payment-method-field .payment-options{display:grid;grid-template-columns:1fr;gap:10px}
+#payment-method-field .payment-options label{min-width:0;min-height:46px;padding:10px 12px;border:1px solid #e6d8c5;border-radius:9px;color:var(--ink);background:#fffdfa;line-height:1.35}
+#payment-method-field .payment-options label:has(input:checked){border-color:var(--wine);background:#fff4f5}
 #payment-method-field input[type=radio]{flex-shrink:0}
-#payment-method-field input:disabled+span{opacity:.55;cursor:not-allowed}
+#payment-method-field .payment-options label:has(input:disabled){opacity:.55;cursor:not-allowed}
 #checkout-controls{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
 #checkout-breakdown,#checkout-status{width:100%;font-size:14px;line-height:1.7}
 #checkout-controls .button{font-size:13px;min-height:44px;padding:12px 18px}
@@ -137,12 +139,23 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .method-editor-actions{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
 .payment-next .method-editor-note,.payment-next #payment-method-error{font-size:13px}
 .payment-next #payment-method-error{color:var(--wine);margin:15px 0 0}
-#checkout-proof{align-self:center;font-size:14px;color:var(--wine);text-decoration:underline;text-underline-offset:4px}
+.checkout-transfer-option{width:100%;margin:16px 0 8px;padding:18px;border:1px solid #e9bc6c80;border-radius:18px;background:#fffaf0}
+.checkout-transfer-option strong{display:block;margin-bottom:10px}
+.checkout-transfer-option p{margin:0!important;overflow-wrap:anywhere}
+#checkout-proof{display:flex;flex-wrap:wrap;align-items:center;gap:12px;width:100%;padding:18px 0;border-top:1px solid #e9bc6c80}
+#checkout-proof label{width:100%;font-weight:600}
+#checkout-proof input{max-width:100%;font-size:14px}
+#checkout-proof-feedback{width:100%;margin:0!important;font-size:13px}
+#checkout-help{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--wine);font-weight:700;color:var(--wine);text-decoration:none}
+#checkout-help:hover,#checkout-help:focus-visible{background:var(--wine);color:#fff}
+#checkout-transfer-qr{margin:16px 0 22px;padding:18px;max-width:330px;border:1px solid #e9bc6c80;border-radius:18px;background:#fffaf0;text-align:center}
+#checkout-transfer-qr[hidden]{display:none}
+#checkout-transfer-qr p{margin:0 0 12px;font-weight:600;color:#3c281d}
+#checkout-transfer-qr img{display:block;width:min(100%,280px);height:auto;margin:auto;border-radius:10px}
 #registration-reference{font-size:12px;letter-spacing:.04em;color:var(--muted);margin:22px 0 0;overflow-wrap:anywhere}
-.registration-test-notice{font-size:12px;color:var(--wine);margin:24px 0 0}
 .registration-confirmed[hidden],.workshop-pass [hidden]{display:none!important}
 .registration-result[data-state=confirmed]{width:min(1120px,92%);display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,350px);column-gap:60px;align-items:start;padding:clamp(30px,4.4vw,60px);background:#fffdf8f7}
-.registration-result[data-state=confirmed]>.result-symbol,.registration-result[data-state=confirmed]>.eyebrow,.registration-result[data-state=confirmed]>h2,.registration-result[data-state=confirmed]>.result-intro,.registration-result[data-state=confirmed]>.registration-test-notice{grid-column:1}
+.registration-result[data-state=confirmed]>.result-symbol,.registration-result[data-state=confirmed]>.eyebrow,.registration-result[data-state=confirmed]>h2,.registration-result[data-state=confirmed]>.result-intro{grid-column:1}
 .registration-result[data-state=confirmed]>h2{font-size:clamp(43px,4.7vw,61px);max-width:9ch}
 .registration-result[data-state=confirmed]>.result-intro{font-size:19px;max-width:34ch;margin-bottom:24px}
 .registration-confirmed{display:contents}
@@ -183,7 +196,6 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .workshop-pass__qr p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
 .workshop-pass__admission{font-size:9px;letter-spacing:.17em;color:var(--wine);margin:0 0 6px}
 .workshop-pass__reference{font:11px var(--sans);letter-spacing:.09em;margin:0;color:var(--muted);overflow-wrap:anywhere}
-.workshop-pass__test{font-size:9px;letter-spacing:.06em;background:var(--wine);color:#fff;padding:7px 5px;border-radius:3px;margin:13px 0 0}
 .pass-stage:has(.workshop-pass__qr:hover) .workshop-pass{animation:none;transform:none}
 @keyframes workshop-pass-float{0%,100%{transform:translateY(0) rotateX(.8deg) rotateY(-3deg) rotateZ(-.7deg)}50%{transform:translateY(-8px) rotateX(-.8deg) rotateY(2.5deg) rotateZ(.7deg)}}
 @media(max-width:850px){

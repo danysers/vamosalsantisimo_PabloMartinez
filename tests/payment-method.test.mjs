@@ -29,23 +29,24 @@ test('payment method changes preserve one registration, quote and reference; can
   try {
     const event=(await pool.query('INSERT INTO events(slug,title,starts_at)VALUES($1,$2,$3)RETURNING id',[slug,'Method test','2026-12-19T18:00:00Z'])).rows[0]
     const workshop=(await pool.query('INSERT INTO workshops(event_id,starts_at,registration_open)VALUES($1,$2,true)RETURNING id',[event.id,'2026-12-19T18:00:00Z'])).rows[0]
-    await pool.query("INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled,transfer_enabled,on_site_enabled,transfer_alias,transfer_provider,proof_whatsapp_e164)VALUES($1,true,true,true,'test.alias','Banco de prueba','5493704000000')",[workshop.id])
+    await pool.query("INSERT INTO workshop_payment_settings(workshop_id,mercado_pago_enabled,online_service_fee_minor,transfer_enabled,on_site_enabled,transfer_alias,transfer_provider,proof_whatsapp_e164)VALUES($1,true,100000,true,true,'test.alias','Banco de prueba','5493704000000')",[workshop.id])
     await pool.query('INSERT INTO workshop_lots(workshop_id,number,amount_minor)VALUES($1,1,1000000)',[workshop.id])
-    const receipt=await enrollWorkshop({firstName:'Persona',lastName:'Prueba',birthDate:'1990-01-01',phone:'3704123456',email:'method@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()})
+    const receipt=await enrollWorkshop({firstName:'Persona',lastName:'Prueba',documentNumber:'12345678',birthDate:'1990-01-01',phone:'3704123456',email:'method@example.invalid',ecclesialState:'laico',paymentDifficulty:false,paymentMethod:'on_site',creationKey:randomUUID()})
     assert.equal(receipt.code,201)
     const access={reference:receipt.body.reference,accessToken:receipt.body.paymentAccessToken}
     assert.equal(access.accessToken.length,43)
     const original=await workshopPaymentStatus(access,false)
     assert.equal(original.paymentMethod,'on_site');assert.equal(original.canChangeMethod,true)
+    assert.equal(original.amountMinor,null)
     await pool.query('UPDATE workshop_lots SET amount_minor=2000000 WHERE workshop_id=$1',[workshop.id])
     const online=await changeWorkshopPaymentMethod({...access,attemptId:original.attemptId,method:'mercado_pago'})
-    assert.equal(online.amountMinor,1_100_000,'the original lot quote is preserved')
-    assert.equal(online.baseAmountMinor,1_000_000)
+    assert.equal(online.amountMinor,2_100_000,'switching away from unpriced cash uses the current lot rate')
+    assert.equal(online.baseAmountMinor,2_000_000)
     await assert.rejects(startWorkshopCheckout({...access,accessToken:'x'.repeat(43)}),/access denied/)
     const orderId='ORDTST'+randomBytes(12).toString('hex').toUpperCase()
     await startWorkshopCheckout(access,async()=>({id:orderId,checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id='+orderId}))
     const attempt=(await pool.query('SELECT external_reference FROM payment_attempts WHERE id=$1',[online.attemptId])).rows[0]
-    const raw={id:orderId,external_reference:attempt.external_reference,total_amount:'11000.00',currency:'ARS',country_code:'ARG',user_id:'111',integration_data:{application_id:'222'},status:'created'}
+    const raw={id:orderId,external_reference:attempt.external_reference,total_amount:'21000.00',currency:'ARS',country_code:'ARG',user_id:'111',integration_data:{application_id:'222'},status:'created'}
     let cancellations=0,reads=0,canceled=false,key
     const provider={load:async()=>{reads++;return{...raw,status:canceled?'canceled':'created'}},cancel:async(id,k)=>{assert.equal(id,orderId);key=k;cancellations++;canceled=true}}
     await assert.rejects(changeWorkshopPaymentMethod({...access,accessToken:'x'.repeat(43),attemptId:online.attemptId,method:'bank_transfer'},provider),/access denied/)
@@ -55,14 +56,14 @@ test('payment method changes preserve one registration, quote and reference; can
     const input={...access,attemptId:online.attemptId,method:'bank_transfer'}
     const [a,b]=await Promise.all([changeWorkshopPaymentMethod(input,provider),changeWorkshopPaymentMethod(input,provider)])
     assert.equal(a.attemptId,b.attemptId)
-    assert.equal(a.reference,access.reference);assert.equal(a.paymentMethod,'bank_transfer');assert.equal(a.amountMinor,1_000_000);assert.equal(a.feeMinor,0)
+    assert.equal(a.reference,access.reference);assert.equal(a.paymentMethod,'bank_transfer');assert.equal(a.amountMinor,2_000_000);assert.equal(a.feeMinor,0)
     assert.equal(a.transfer.alias,'test.alias');assert.match(a.transfer.whatsappUrl,/^https:\/\/wa.me\//)
     assert.equal(cancellations,1);assert.equal(reads,2);assert.match(key,/^[a-f0-9-]{36}$/)
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM registrations WHERE workshop_id=$1',[workshop.id])).rows[0].n,1)
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM payment_attempts WHERE registration_id=(SELECT id FROM registrations WHERE reference=$1) AND status='pending'",[access.reference])).rows[0].n,1)
     await assert.rejects(changeWorkshopPaymentMethod({...access,attemptId:online.attemptId,method:'on_site'},provider),/cambió/)
     const again=await changeWorkshopPaymentMethod({...access,attemptId:a.attemptId,method:'mercado_pago'})
-    assert.equal(again.amountMinor,1_100_000)
+    assert.equal(again.amountMinor,2_100_000)
     // A timeout may have canceled the old checkout remotely before rollback.
     // A retry reads its canceled state and must not submit another cancellation.
     const laterId='ORDTST'+randomBytes(12).toString('hex').toUpperCase()
@@ -75,13 +76,14 @@ test('payment method changes preserve one registration, quote and reference; can
     assert.equal((await workshopPaymentStatus(access,false)).attemptId,again.attemptId)
     const recovered=await changeWorkshopPaymentMethod(retry,interrupted)
     assert.equal(recovered.paymentMethod,'on_site');assert.equal(recovered.reference,access.reference)
+    assert.equal(recovered.amountMinor,null)
     await assert.rejects(pool.query('UPDATE payment_attempts SET replaces_attempt_id=NULL WHERE id=$1',[recovered.attemptId]),/predecessor is immutable/)
     const client=await pool.connect()
     try {
       await client.query('BEGIN')
       await client.query("UPDATE payment_attempts SET status='cancelled' WHERE id=$1",[recovered.attemptId])
       const fake=(await client.query("INSERT INTO payment_attempts(registration_id,replaces_attempt_id,source,amount_minor,idempotency_key)SELECT registration_id,id,'bank_transfer',999999,$2 FROM payment_attempts WHERE id=$1 RETURNING id",[recovered.attemptId,randomUUID()])).rows[0]
-      await assert.rejects(client.query('INSERT INTO payment_allocations(attempt_id,registration_id,lot_id,lot_number,base_amount_minor,discount_minor,due_amount_minor)SELECT $1,registration_id,lot_id,lot_number,999999,0,999999 FROM payment_allocations WHERE attempt_id=$2',[fake.id,recovered.attemptId]),/copy its original allocation exactly/)
+      await assert.rejects(client.query('INSERT INTO payment_allocations(attempt_id,registration_id,lot_id,lot_number,base_amount_minor,discount_minor,due_amount_minor)SELECT $1,registration_id,lot_id,lot_number,999999,0,999999 FROM payment_allocations WHERE attempt_id=$2',[fake.id,recovered.attemptId]),/workshop lot/)
     } finally {await client.query('ROLLBACK');client.release()}
     await pool.query("UPDATE payment_attempts SET status='review' WHERE id=$1",[recovered.attemptId])
     await assert.rejects(changeWorkshopPaymentMethod({...access,attemptId:recovered.attemptId,method:'bank_transfer'}),/revisión/)

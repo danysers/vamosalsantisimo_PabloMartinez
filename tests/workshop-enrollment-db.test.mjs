@@ -33,7 +33,7 @@ test('complete enrollment stores pending payment and one confirmation email per 
     assert.ok(ready)
     const key = randomUUID()
     const person = {
-      firstName: 'Ana', lastName: 'Pérez', birthDate: '1990-04-15',
+      firstName: 'Ana', lastName: 'Pérez', documentNumber: '12345678', birthDate: '1990-04-15',
       phone: '370 4123456', email: 'ana-test@example.invalid', prayerGroup: '', movement: '',
       ecclesialState: 'laico', occupation: '', paymentDifficulty: false,
       paymentDifficultyNotes: '', paymentMethod: 'bank_transfer',

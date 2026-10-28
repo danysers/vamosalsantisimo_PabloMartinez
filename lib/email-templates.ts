@@ -24,7 +24,7 @@ export function brandedEmailHtml(text: string, qrCid?: string): string {
 
 export function proofWhatsappUrl(phoneE164: string, reference: string): string {
   if (!/^\d{10,15}$/.test(phoneE164)) throw new Error('Invalid WhatsApp destination')
-  const message = `Hola, envío el comprobante de transferencia de mi inscripción al taller. Referencia: ${reference}. Voy a adjuntar la imagen del comprobante.`
+  const message = `Hola, necesito ayuda para subir el comprobante de mi inscripción al taller. Referencia: ${reference}.`
   return `https://wa.me/${phoneE164}?text=${encodeURIComponent(message)}`
 }
 
@@ -41,6 +41,8 @@ export function registrationEmail(input: {
   amountMinor?: number
   transferAlias?: string | null
   transferProvider?: string | null
+  transferHolder?: string | null
+  transferDocument?: string | null
   proofWhatsappE164?: string | null
 }) {
   const name = input.firstName.trim()
@@ -54,18 +56,17 @@ export function registrationEmail(input: {
     '',
   ]
   if (input.choice === 'bank_transfer') {
-    lines.push('Elegiste pagar por transferencia. Tu pago está PENDIENTE de verificación.')
+    lines.push('Elegiste pagar por alias o QR. No se agregan gastos de servicio y tu pago está PENDIENTE de verificación.')
     if (amount) lines.push(`Importe a transferir: ${amount}.`)
     if (input.transferAlias) lines.push(`Alias: ${input.transferAlias}.`)
-    if (input.transferProvider) lines.push(`Cuenta: ${input.transferProvider}.`)
-    if (input.proofWhatsappE164) {
-      lines.push('Después de transferir, abrí este enlace y adjuntá el comprobante en WhatsApp:')
-      lines.push(proofWhatsappUrl(input.proofWhatsappE164, input.reference))
-    }
-    lines.push('El botón de WhatsApp no adjunta ni verifica el comprobante automáticamente; una persona de la organización confirmará el pago.')
+    if (input.transferProvider) lines.push(`Billetera: ${input.transferProvider}.`)
+    if (input.transferHolder) lines.push(`Titular: ${input.transferHolder}.`)
+    if (input.transferDocument) lines.push(`DNI del titular: ${input.transferDocument}.`)
+    lines.push('Después de pagar, ingresá con el mismo navegador a tu inscripción y adjuntá el comprobante. Te avisaremos cuando una persona de la organización lo confirme.')
+    if (input.proofWhatsappE164) lines.push('Si tenés dificultades para subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.reference))
   } else if (input.choice === 'on_site') {
-    lines.push('Elegiste pagar en el lugar. Tu pago queda PENDIENTE hasta que la organización lo registre el día del taller.')
-    if (amount) lines.push(`Importe previsto: ${amount}.`)
+    lines.push('Elegiste pagar en efectivo en el taller, sin gastos de servicio. Tu pago queda PENDIENTE hasta que la organización lo registre el día del taller. No aplican los precios de los lotes ni las promociones.')
+    lines.push(amount ? `Precio de ventanilla: ${amount}.` : 'Precio de ventanilla a definir.')
   } else if (input.choice === 'mercado_pago') {
     // The checkout itself communicates its current status. Do not promise a
     // settlement or accreditation timeline that depends on merchant settings.
@@ -86,7 +87,8 @@ export function groupPaymentEmail(input: {
   firstName: string; reference: string; payerName: string; payerReference: string;
   isPayer: boolean; memberCount: number; amountMinor: number; status: 'pending' | 'approved';
   source: 'bank_transfer' | 'on_site'; transferAlias?: string | null;
-  transferProvider?: string | null; proofWhatsappE164?: string | null
+  transferProvider?: string | null; transferHolder?: string | null;
+  transferDocument?: string | null; proofWhatsappE164?: string | null
 }) {
   const lines = [
     `Hola ${input.firstName.trim()}:`, '',
@@ -101,9 +103,11 @@ export function groupPaymentEmail(input: {
     lines.push(`Sos la persona encargada de pagar el total del grupo: ${amount}. El pago está PENDIENTE de verificación.`)
     if (input.source === 'bank_transfer') {
       if (input.transferAlias) lines.push(`Alias: ${input.transferAlias}.`)
-      if (input.transferProvider) lines.push(`Cuenta: ${input.transferProvider}.`)
-      if (input.proofWhatsappE164) lines.push('Después de transferir, adjuntá el comprobante en WhatsApp:',
-        proofWhatsappUrl(input.proofWhatsappE164, input.payerReference))
+      if (input.transferProvider) lines.push(`Billetera: ${input.transferProvider}.`)
+      if (input.transferHolder) lines.push(`Titular: ${input.transferHolder}.`)
+      if (input.transferDocument) lines.push(`DNI del titular: ${input.transferDocument}.`)
+      lines.push('Después de pagar, adjuntá el comprobante desde tu inscripción en el mismo navegador.')
+      if (input.proofWhatsappE164) lines.push('Si no podés subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.payerReference))
       lines.push('El comprobante debe ser revisado por una persona de la organización.')
     } else lines.push('El pago se registra en el lugar el día del taller.')
   } else {
@@ -150,12 +154,13 @@ export function assistanceDeclinedEmail(input: { firstName: string; reference: s
   return { subject: `Respuesta a tu solicitud de ayuda · ${input.reference}`, text, html: brandedEmailHtml(text) }
 }
 
-export function accreditationEmail(input: { firstName: string; reference: string }) {
+export function accreditationEmail(input: { firstName: string; reference: string; paymentConfirmed?: boolean }) {
   const message = {
     subject: `Tu acreditación al taller · ${input.reference}`,
     text: [
       `Hola ${input.firstName.trim()}:`, '',
-      'Tu inscripción al taller quedó confirmada. Adjuntamos tu QR personal de acreditación.',
+      input.paymentConfirmed ? 'Tu pago fue registrado y tu inscripción quedó confirmada. ¡Te esperamos en el taller! Adjuntamos tu QR personal de acreditación.'
+        : 'Tu inscripción al taller quedó confirmada. Adjuntamos tu QR personal de acreditación.',
       `Referencia: ${input.reference}.`,
       'Presentá este mensaje o el volante impreso al ingresar. El QR identifica una sola inscripción y no debe compartirse.',
       'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
@@ -163,6 +168,22 @@ export function accreditationEmail(input: { firstName: string; reference: string
     ].join('\n'),
   }
   return { ...message, html: brandedEmailHtml(message.text, 'acreditacion') }
+}
+
+export function paymentProofReviewEmail(input: { fullName: string; reference: string; amountMinor: number; proofUrl: string; panelUrl: string }) {
+  const proofUrl = new URL(input.proofUrl)
+  const panelUrl = new URL(input.panelUrl)
+  if (!['https:', 'http:'].includes(proofUrl.protocol) || proofUrl.origin !== panelUrl.origin) throw new Error('Invalid panel origin')
+  const text = [
+    'Nuevo comprobante del taller para revisar.', '',
+    `Persona: ${input.fullName}.`, `Referencia: ${input.reference}.`,
+    `Importe esperado: $${(input.amountMinor / 100).toLocaleString('es-AR')}.`,
+    'El pago y la inscripción siguen pendientes hasta que verifiques el movimiento.', '',
+    `Ver comprobante: ${proofUrl.href}`, `Abrir panel: ${panelUrl.href}`,
+  ].join('\n')
+  let html = brandedEmailHtml(text)
+  for (const url of [proofUrl.href, panelUrl.href]) html = html.replace(escapeHtml(url), `<a href="${escapeHtml(url)}" style="color:#701c2d">${escapeHtml(url)}</a>`)
+  return { subject: `Comprobante para revisar · ${input.reference}`, text, html }
 }
 
 export function settlementReminderEmail(input: { switchDate: string; targetDate: string; releaseDays: number }) {

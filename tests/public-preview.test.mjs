@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 
-// Run after npm run build. The real HTTP surface must not use a database.
+// Run after pnpm build. The real HTTP surface must not use a database.
 test('animated homepage is served at the root and keeps legacy APIs closed', async () => {
   const port = 31581
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
@@ -25,7 +25,7 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.equal(home.status, 200)
     assert.equal((await fetch(`${base}/encuentro`)).status, 404, 'retired encounter page must not be served')
     const html = await home.text()
-    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '17:00 h', 'Entrada gratuita', 'Cada gesto de', 'directions-main']) {
+    for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '15:00 h', 'Entrada libre y gratuita', 'Colaboración voluntaria: un alimento no perecedero', 'Cada gesto de', 'directions-main']) {
       assert.ok(html.includes(text), `missing public text: ${text}`)
     }
     assert.ok(!html.includes('Daniel Poli'), 'archived performer leaked into new homepage')

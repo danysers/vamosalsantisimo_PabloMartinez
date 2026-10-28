@@ -36,8 +36,8 @@ try {
   await client.query(
     `INSERT INTO workshop_payment_settings
        (workshop_id,mercado_pago_enabled,transfer_enabled,on_site_enabled,transfer_alias,
-        transfer_provider,proof_whatsapp_e164,funds_needed_days_before,reminder_email,reminder_lead_days)
-     VALUES ($1,false,true,true,'danielservin.mp','Mercado Pago','5493718632884',3,'danysers@gmail.com',3)
+        transfer_provider,transfer_holder,transfer_document,proof_whatsapp_e164,funds_needed_days_before,reminder_email,reminder_lead_days)
+     VALUES ($1,false,true,true,'vamosalsantisimo','Personal Pay','Sergio Daniel Servin','39320953','5493718632884',3,'danysers@gmail.com',3)
      ON CONFLICT (workshop_id) DO NOTHING`, [workshopId],
   )
   // Suggestions only. Each tier must be verified against the merchant's own
