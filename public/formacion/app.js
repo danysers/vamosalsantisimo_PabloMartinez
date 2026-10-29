@@ -20,9 +20,28 @@ function updatePaymentDescription() {
   description.textContent=method==='mercado_pago' ? 'Aboná con tarjeta o con tu cuenta de Mercado Pago. Vas a ver el importe final, con gastos de servicio, antes de confirmar.'
     : method==='bank_transfer_alias' ? 'Transferí al alias indicado y después adjuntá el comprobante desde esta página. Sin gastos de servicio.'
     : method==='bank_transfer_qr' ? 'Escaneá el QR con tu billetera y después adjuntá el comprobante desde esta página. Sin gastos de servicio.'
-    : method==='on_site' ? 'Pagá en efectivo al llegar al taller. Precio de ventanilla a definir; no aplican lotes ni promociones.'
+    : method==='on_site' ? 'Pagá en efectivo al llegar al taller. Precio de ventanilla: $20.000 por persona. No aplica a promociones ni a precios por lote.'
     : 'Elegí una opción para ver cómo continuar.';
 }
+
+function showCashPaymentNotice() {
+  let dialog=document.getElementById('cash-payment-notice');
+  if (!dialog) {
+    dialog=document.createElement('dialog');
+    dialog.id='cash-payment-notice';
+    dialog.className='cash-payment-notice';
+    dialog.setAttribute('aria-labelledby','cash-payment-title');
+    dialog.setAttribute('aria-describedby','cash-payment-terms');
+    dialog.innerHTML='<form method="dialog"><span class="cash-payment-notice__icon" aria-hidden="true">$</span><p class="cash-payment-notice__eyebrow">Pago en efectivo</p><h2 id="cash-payment-title">Precio de ventanilla</h2><p class="cash-payment-notice__price">$20.000 <span>por persona</span></p><p id="cash-payment-terms">El pago en efectivo se realiza al llegar al taller y no aplica a promociones ni a precios por lote.</p><button class="button gold" autofocus>Entendido</button></form>';
+    document.body.append(dialog);
+    dialog.addEventListener('click',event => { if(event.target===dialog) { const bounds=dialog.getBoundingClientRect(); if(event.clientX<bounds.left || event.clientX>bounds.right || event.clientY<bounds.top || event.clientY>bounds.bottom) dialog.close(); } });
+  }
+  if (!dialog.open) dialog.showModal();
+}
+
+document.addEventListener('change',event => {
+  if (['formaPago','new-payment-method'].includes(event.target.name) && event.target.value==='on_site' && event.target.checked) showCashPaymentNotice();
+});
 document.addEventListener('change', event => {
   if(event.target.name === 'formaPago') { updatePaymentDescription(); return; }
   if(event.target.name === 'tieneInconveniente') updatePaymentDifficulty();
@@ -108,7 +127,7 @@ function showRegistrationResult(form, receipt) {
   result.querySelector('.result-intro').textContent=receipt.paymentStatus==='approved' ? 'Tu inscripción está confirmada. Conservá tu referencia para cualquier consulta.'
     : receipt.payment==='mercado_pago' ? (receipt.onlineCheckoutReady ? 'Ya registramos tus datos. Continuá con el pago online para confirmar tu lugar.' : 'Ya registramos tus datos. El cobro online todavía no está conectado.')
     : receipt.payment==='bank_transfer' ? 'Ya registramos tus datos. A continuación podés pagar y adjuntar el comprobante.'
-    : receipt.payment==='on_site' ? 'Tu inscripción quedó registrada para pagar en efectivo en el taller. Precio a definir.'
+    : receipt.payment==='on_site' ? 'Tu inscripción quedó registrada para pagar en efectivo en el taller, a precio de ventanilla y sin promociones ni precios por lote.'
     : 'Recibimos tu solicitud. La organización se comunicará con vos para acompañarte.';
   result.querySelector('#registration-reference').textContent = `Referencia: ${receipt.reference}. Guardala para cualquier consulta.`;
   const next = result.querySelector('#payment-next');

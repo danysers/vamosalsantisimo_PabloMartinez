@@ -9,7 +9,7 @@ test('the configured online surcharge is itemized; alias, QR and on-site have no
   const checkout = await read('public/formacion/checkout.js')
   assert.match(form, /Transferencia por alias · sin gastos de servicio/)
   assert.match(form, /Pago con QR · sin gastos de servicio/)
-  assert.match(form, /Pago en efectivo en el taller · precio de ventanilla a definir · sin promociones/)
+  assert.match(form, /Pago en efectivo en el taller · \$20\.000 · sin promociones ni precios por lote/)
   assert.match(checkout, /config\.onSitePriceMinor == null \? 'precio de ventanilla a definir'/)
   assert.match(checkout, /note\.textContent='Valor del taller: '\+money\(baseAmountMinor\)/)
   assert.match(checkout, /onlineFeeMinor=config\.feeMinor/)
