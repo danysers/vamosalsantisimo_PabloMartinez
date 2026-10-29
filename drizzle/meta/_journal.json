@@ -218,6 +218,13 @@
       "when": 1793214374716,
       "tag": "0030_registration_recovery_location",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793276050005,
+      "tag": "0031_workshop_live_cutover",
+      "breakpoints": true
     }
   ]
 }

@@ -29,11 +29,12 @@ async function claim(pool) {
 
 async function render(pool, job) {
   if(job.kind==='registration_access') {
-    const result=await pool.query(`SELECT c.id,c.code_encrypted,c.expires_at,c.consumed_at,r.email,i.first_name
+    const result=await pool.query(`SELECT c.id,c.code_encrypted,c.expires_at,c.consumed_at,r.email,i.first_name,
+      registration_is_current(r.id) AS current_registration
       FROM registration_recoveries c JOIN registrations r ON r.id=c.registration_id
       JOIN registration_intakes i ON i.registration_id=r.id WHERE c.id=$1 AND r.id=$2`,[job.recovery_id,job.registration_id])
     const row=result.rows[0]
-    if(!row || row.consumed_at || new Date(row.expires_at)<=new Date() || row.email.toLowerCase()!==job.to_email.toLowerCase()) return null
+    if(!row || row.current_registration===false || row.consumed_at || new Date(row.expires_at)<=new Date() || row.email.toLowerCase()!==job.to_email.toLowerCase()) return null
     return registrationAccessEmail({firstName:row.first_name,code:decryptRecoveryCode(row.id,row.code_encrypted)})
   }
   if (job.kind === 'settlement_reminder') {
@@ -51,6 +52,7 @@ async function render(pool, job) {
   }
   const result = await pool.query(`
     SELECT r.email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,
+      registration_is_current(r.id) AS current_registration,
       p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.transfer_holder,s.transfer_document,
       s.proof_whatsapp_e164,s.reminder_email,
       registration_has_approved_payment(r.id) AS paid,
@@ -67,7 +69,7 @@ async function render(pool, job) {
     WHERE r.id=$1
   `, [job.registration_id])
   const registration = result.rows[0]
-  if (!registration) return null
+  if (!registration || registration.current_registration === false) return null
   if (job.kind === 'assistance_review_request') {
     if (!registration.payment_difficulty || !registration.reminder_email ||
       registration.reminder_email.toLowerCase() !== job.to_email.toLowerCase()) return null
@@ -180,7 +182,10 @@ export async function processEmailJob(pool, transport, job, from) {
       await pool.query("UPDATE email_outbox SET status='cancelled',last_error_code='stale_or_ineligible' WHERE id=$1", [job.id])
       return 'cancelled'
     }
-    if (process.env.WORKSHOP_SANDBOX_REGISTRATIONS === '1' && process.env.MP_ENVIRONMENT === 'test') {
+    const recipientMode = job.registration_id
+      ? (await pool.query('SELECT is_test FROM registrations WHERE id=$1', [job.registration_id])).rows[0]
+      : null
+    if (recipientMode?.is_test !== false && process.env.WORKSHOP_SANDBOX_REGISTRATIONS === '1' && process.env.MP_ENVIRONMENT === 'test') {
       message.subject = `[PRUEBA] ${message.subject}`
       const notice = 'MODO DE PRUEBA: sin cargos reales. Este correo y su QR no son válidos para ingresar al evento.'
       message.text = `${notice}\n\n${message.text}`

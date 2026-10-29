@@ -226,6 +226,14 @@
   function renderState(result) {
     const root=shell(), ui=controls(); if (!ui || !root) return false;
     lastState=result;
+    if (result.historical) {
+      const confirmed=document.getElementById('registration-confirmed');if(confirmed)confirmed.hidden=true;
+      document.getElementById('registration-result-title').textContent='Registro del ensayo anterior';
+      root.querySelector('.result-intro').textContent='Conservamos este registro para consulta de la organización. Para participar en el taller, completá una inscripción nueva desde el formulario.';
+      document.getElementById('registration-reference').hidden=false;
+      ui.host.hidden=true;ui.editor.hidden=true;
+      return false;
+    }
     if (typeof result.onlineCheckoutReady==='boolean') onlineCheckoutReady=result.onlineCheckoutReady;
     const method=result.paymentMethod || current.payment || 'mercado_pago';
     current.payment=method;

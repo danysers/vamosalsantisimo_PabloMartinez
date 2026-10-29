@@ -18,8 +18,9 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
 const client = await pool.connect()
 try {
   await client.query('BEGIN')
-  const { rows } = await client.query('SELECT w.id FROM workshops w JOIN events e ON e.id=w.event_id WHERE e.slug=$1 FOR UPDATE', [process.env.WORKSHOP_EVENT_SLUG])
+  const { rows } = await client.query('SELECT w.id,w.live_started_at FROM workshops w JOIN events e ON e.id=w.event_id WHERE e.slug=$1 FOR UPDATE', [process.env.WORKSHOP_EVENT_SLUG])
   if (rows.length !== 1) throw new Error('Sandbox workshop is missing')
+  if (rows[0].live_started_at) throw new Error('A live workshop cannot return to sandbox')
   await client.query('UPDATE workshops SET registration_open=true WHERE id=$1', [rows[0].id])
   await client.query(`UPDATE workshop_payment_settings
     SET mercado_pago_enabled=true, transfer_enabled=true, on_site_enabled=true,

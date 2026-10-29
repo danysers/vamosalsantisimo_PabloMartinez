@@ -25,7 +25,7 @@ const sourceNames: Record<string, string> = {
 }
 type Row = { reference: string; name: string; email: string; document_number: string | null; registration_status: string;
   created_at: Date | string; payment_status: string | null; payment_source: string | null; amount_minor: number | null;
-  member_count: number | null }
+  member_count: number | null; historical: boolean }
 
 function label(value: string) { return statusNames[value] ?? value }
 function linkFor(page: number, q: string, status: string, payment: string) {
@@ -91,7 +91,7 @@ export default async function RegistrationsPage({ searchParams }: {
     const counts = await db.execute(sql`SELECT COUNT(*)::integer AS total ${from} WHERE ${criteria}`)
     total = Number(counts.rows[0]?.total ?? 0)
     currentPage = Math.min(page, Math.max(1, Math.ceil(total / 25)))
-    const result = await db.execute(sql`SELECT r.reference, r.name, r.email, i.document_number,
+    const result = await db.execute(sql`SELECT r.reference, r.name, r.email, i.document_number, NOT registration_is_current(r.id) AS historical,
       r.status AS registration_status, r.created_at, p.status AS payment_status,
       p.source AS payment_source, p.amount_minor, p.member_count ${from} WHERE ${criteria}
       ORDER BY r.created_at DESC, r.id DESC LIMIT 25 OFFSET ${(currentPage - 1) * 25}`)
@@ -117,7 +117,7 @@ export default async function RegistrationsPage({ searchParams }: {
     </form>
     <section className="admin-card" aria-label="Resultados de inscripciones"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Base del taller</p><h2>{total} {total === 1 ? 'inscripción' : 'inscripciones'}</h2></div><span>25 por página</span></div>
       {rows.length ? <div className="admin-table-wrap"><table className="admin-table admin-registration-table"><thead><tr><th>Persona</th><th>D.N.I</th><th>Inscripción</th><th>Pago</th><th>Importe</th><th>Fecha</th><th>Acción</th></tr></thead><tbody>
-        {rows.map(row => <tr key={row.reference}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.document_number ?? '—'}</td>
+        {rows.map(row => <tr key={row.reference}><td><strong>{row.name}</strong><small>{row.email}</small>{row.historical && <small>Ensayo anterior · conservado para consulta</small>}</td><td>{row.document_number ?? '—'}</td>
           <td><span className={`admin-status admin-status-${row.registration_status}`}>{label(row.registration_status)}</span></td>
           <td><span className={`admin-status admin-status-${row.payment_status ?? 'none'}`}>{label(row.payment_status ?? 'none')}</span><small>{row.payment_source ? `${sourceNames[row.payment_source] ?? row.payment_source}${Number(row.member_count) > 1 ? ' · Grupo' : ''}` : ''}</small></td>
           <td>{row.amount_minor == null ? 'A definir' : (row.amount_minor / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>

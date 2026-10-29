@@ -226,3 +226,14 @@ test('email recovery restores private payment access without a second enrollment
   assert.ok(!app.calls.some(c=>c.path.endsWith('/inscripciones')))
   assert.ok(!app.location.href.includes('a'.repeat(43)))
 })
+
+
+test('historical records remain read-only and never show a payable checkout',async()=>{
+  const app=browser()
+  app.response={historical:true,status:'approved',registrationStatus:'confirmed'}
+  app.events.get('workshop:recovered')({detail:{reference:'TestReference123',accessToken:'a'.repeat(43)}})
+  await flush()
+  assert.equal(app.ids.get('registration-result-title').textContent,'Registro del ensayo anterior')
+  assert.equal(app.ids.get('payment-next').hidden,true)
+  assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
+})

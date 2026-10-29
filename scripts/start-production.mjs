@@ -10,6 +10,7 @@ if (process.env.WORKSHOP_RUN_MIGRATIONS === '1') {
   prepare('scripts/migrate.mjs')
   prepare('scripts/seed-workshop.mjs')
   if (process.env.WORKSHOP_SANDBOX_REGISTRATIONS === '1') prepare('scripts/prepare-sandbox.mjs')
+  if (process.env.MP_ENVIRONMENT === 'production' && process.env.APP_SURFACE !== 'panel') prepare('scripts/prepare-live.mjs')
 }
 
 const children = new Set()

@@ -75,6 +75,8 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     const [workshop] = await tx.select().from(workshops).where(eq(workshops.id, target.id)).limit(1)
     const [settings] = await tx.select().from(workshopPaymentSettings).where(eq(workshopPaymentSettings.workshopId, target.id)).limit(1)
     if (!workshop?.registrationOpen || !settings) return unavailable
+    if (process.env.MP_ENVIRONMENT === 'production' && !workshop.liveStartedAt) return unavailable
+    if (process.env.MP_ENVIRONMENT !== 'production' && workshop.liveStartedAt) return unavailable
     const onlineCheckoutReady = settings.mercadoPagoEnabled && checkoutConfigured()
     if (payment === 'mercado_pago' && !onlineCheckoutReady && !localWorkshopTestMode(process.env.SITE_ORIGIN ?? '')) return unavailable
     if (payment === 'bank_transfer' && (!settings.transferEnabled || !settings.transferAlias || !settings.transferProvider || !settings.proofWhatsappE164)) return unavailable
@@ -99,6 +101,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     })
     const [replay] = await tx.select().from(registrations).where(eq(registrations.creationKey, input.creationKey)).limit(1)
     if (replay) {
+      if (workshop.liveStartedAt && (replay.isTest || replay.createdAt < workshop.liveStartedAt)) return { code: 409, body: { error: 'Ese registro pertenece al ensayo anterior. Volvé al formulario para realizar tu inscripción actual.' } }
       const [intake] = await tx.select().from(registrationIntakes).where(eq(registrationIntakes.registrationId, replay.id)).limit(1)
       const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.registrationId, replay.id)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
       const [assistance] = await tx.select().from(assistanceRequests).where(eq(assistanceRequests.registrationId, replay.id)).limit(1)
@@ -124,6 +127,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     }
     const conflicts = await tx.select().from(registrations).where(and(
       eq(registrations.workshopId, target.id), ne(registrations.status, 'cancelled'),
+      sql`registration_is_current(${registrations.id})`,
       eq(registrations.normalizedName, identity.name),
       or(eq(registrations.normalizedEmail, identity.email), eq(registrations.normalizedPhone, identity.phone)),
     )).limit(1)
@@ -153,13 +157,14 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     if (workshop.capacity !== null) {
       const occupied = await tx.execute(sql`
         SELECT count(*)::int AS count FROM ${reservations} h JOIN ${registrations} r ON r.id=h.registration_id
-        WHERE r.workshop_id=${target.id} AND (h.status='used' OR (h.status='held' AND h.expires_at>now()))
+        WHERE r.workshop_id=${target.id} AND registration_is_current(r.id) AND (h.status='used' OR (h.status='held' AND h.expires_at>now()))
       `)
       if (Number(occupied.rows[0]?.count) >= workshop.capacity) return { code: 409, body: { error: 'El taller está completo.' } }
     }
     const reference = randomBytes(12).toString('base64url')
     const [created] = await tx.insert(registrations).values({
       workshopId: target.id, reference, creationKey: input.creationKey,
+      isTest: !workshop.liveStartedAt,
       accessTokenHash: createHash('sha256').update(randomBytes(32)).digest('hex'),
       name: fullName, normalizedName: identity.name,
       email: input.email.trim(), normalizedEmail: identity.email,

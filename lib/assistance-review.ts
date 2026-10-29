@@ -19,6 +19,7 @@ export async function reviewAssistance(db: ReturnType<typeof getDb>, input: {
       JOIN workshops w ON w.id=r.workshop_id
       JOIN events e ON e.id=w.event_id
       WHERE a.registration_id=${input.registrationId} AND e.slug=${input.eventSlug}
+        AND registration_is_current(r.id)
       FOR UPDATE OF a
     `)
     const current = locked.rows[0] as { status: string } | undefined

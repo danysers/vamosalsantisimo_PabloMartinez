@@ -40,6 +40,7 @@ export async function submitPaymentProof(input: { reference: string; accessToken
       JOIN registration_intakes i ON i.registration_id=r.id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
       WHERE r.reference=${input.reference} AND e.slug=${process.env.WORKSHOP_EVENT_SLUG || ''}
+        AND registration_is_current(r.id)
       ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p,r
     `)
     const attempt = found.rows[0]

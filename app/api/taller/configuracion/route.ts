@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     if (!process.env.DATABASE_URL || !process.env.WORKSHOP_EVENT_SLUG) throw new Error('Unavailable')
     const [row] = await getDb().select({ open: workshops.registrationOpen, amountMinor: workshopLots.amountMinor,
+      liveStartedAt: workshops.liveStartedAt,
       mp: workshopPaymentSettings.mercadoPagoEnabled, feeMinor: workshopPaymentSettings.onlineServiceFeeMinor,
       onSitePriceMinor: workshopPaymentSettings.onSitePriceMinor,
       transfer: workshopPaymentSettings.transferEnabled, onSite: workshopPaymentSettings.onSiteEnabled })
@@ -22,7 +23,8 @@ export async function GET(request: NextRequest) {
       .where(eq(events.slug, process.env.WORKSHOP_EVENT_SLUG)).limit(1)
     if (!row) throw new Error('Unavailable')
     const localTest = localWorkshopTestMode(request.nextUrl.origin)
-    const registrationOpen = row.open && (localTest || process.env.REGISTRATION_EMAIL_READY === '1')
+    const modeReady = process.env.MP_ENVIRONMENT === 'production' ? !!row.liveStartedAt : !row.liveStartedAt
+    const registrationOpen = row.open && modeReady && (localTest || process.env.REGISTRATION_EMAIL_READY === '1')
     const onlineCheckoutReady = row.mp && checkoutConfigured()
     const localPaymentPreview = localTest && localWorkshopTestMode(process.env.SITE_ORIGIN ?? '')
     return Response.json({ registrationOpen, localTest, environment: process.env.MP_ENVIRONMENT === 'production' ? 'production' : 'test',

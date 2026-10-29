@@ -1,5 +1,15 @@
 # Configuración del taller 2026
 
+## Apertura real del 29/10/2026
+
+El servicio público pasa a `MP_ENVIRONMENT=production`, `WORKSHOP_LIVE_MODE=1`, `MP_CHECKOUT_ENABLED=1`, `REGISTRATION_EMAIL_READY=1`, `WORKSHOP_SANDBOX_REGISTRATIONS=0` y `WORKSHOP_LOCAL_TEST_MODE=0`. Usa la credencial de producción y la firma del webhook **Order (Mercado Pago)** de la aplicación del taller, guardadas solo en las variables privadas de Dokploy. La URL de notificaciones es `/api/mercado-pago/webhook` en el dominio actual `pablomartinez.vamosalsantisimo.com`; el cambio a `vamosalsantisimo.com/taller` queda pospuesto por pedido del organizador.
+
+El arranque valida la cuenta receptora y SMTP antes de abrir cobros reales. `scripts/prepare-live.mjs` fija una sola vez `workshops.live_started_at`, conserva los registros anteriores y habilita Mercado Pago sin modificar los precios, el destinatario de transferencia ni las claves QR/sesión. La migración `0031_workshop_live_cutover.sql` agrega esa fecha e `registrations.is_test`, con valor predeterminado de ensayo para proteger también escrituras de una versión anterior durante el cambio. Las nuevas inscripciones reales se guardan explícitamente fuera de ensayo. Los registros viejos no bloquean una nueva inscripción con los mismos datos, no reciben nuevos cobros ni correos y no sirven como acreditación real; continúan en la base y el panel, con sus estados y comprobantes conservados. No se vacía ni se recrea la base.
+
+Los correos y credenciales nuevos no llevan la marca de prueba. El trabajador consulta el modo de cada registro para que un proceso anterior tampoco agregue esa marca a una inscripción real durante un despliegue gradual. El servicio de desarrollo local conserva sus credenciales de prueba, en una base distinta. El lector de ingreso conserva su configuración independiente; activar cobros no abre automáticamente la admisión al evento.
+
+Las secciones de ensayo siguientes documentan la configuración histórica anterior a esta apertura.
+
 No guardar secretos en Git ni enviarlos por chat. `.env` local está ignorado. **La publicación del 28/10/2026 está configurada para ensayos con Mercado Pago TEST; el 28/10 se quitó el usuario y contraseña de acceso público en Dokploy por decisión del organizador. El sitio y el formulario quedaron accesibles sin esa clave. No habilita cobros reales por Mercado Pago, pero el alias y QR de transferencia sí pueden recibir dinero real.**
 
 ## Publicación de ensayo del 28/10/2026

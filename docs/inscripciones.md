@@ -1,5 +1,9 @@
 # Inscripciones del taller 2026
 
+## Apertura real del 29/10/2026
+
+La configuración de apertura y conservación del historial se detalla en `docs/configuracion.md`. La base se mantiene: los ensayos anteriores se distinguen mediante una fecha de apertura y un marcador de origen. Las nuevas inscripciones reciben mensajes normales y usan Mercado Pago de producción. Una identidad usada en los ensayos puede inscribirse de nuevo; sus cobros y QR anteriores no se reutilizan como pagos reales. El panel conserva los datos anteriores para consulta. Las verificaciones específicas comprueban la preservación del historial, el rechazo de cobros/ingresos antiguos y el correo normal para un registro nuevo.
+
 ## Revisión del 28/10/2026: comprobantes y ensayo protegido
 
 El despliegue protegido por usuario y contraseña permite ensayar inscripciones, Mercado Pago con cuentas y tarjetas de prueba, correos reales de prueba y credenciales marcadas sin validez para el evento. No equivale a habilitar cobros reales. Las referencias posteriores a cierre preventivo describen los valores iniciales del seed; la apertura de ensayo exige los interruptores explícitos de sandbox.

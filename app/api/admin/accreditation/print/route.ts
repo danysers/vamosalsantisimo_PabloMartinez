@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN assistance_requests a ON a.registration_id=r.id
       LEFT JOIN fee_waivers fw ON fw.registration_id=r.id AND fw.revoked_at IS NULL
       WHERE r.reference=${reference} AND e.slug=${operator.eventSlug}
+        AND registration_is_current(r.id)
         AND c.revoked_at IS NULL AND c.expires_at>now()
       ORDER BY c.version DESC LIMIT 1
     `)

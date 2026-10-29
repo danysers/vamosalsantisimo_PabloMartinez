@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 type ScanResult = { result?: string; name?: string; reference?: string; error?: string; firstEntryAt?: string }
 type ProofRow = { id: string; uploaded_at: string; reference: string; name: string;
-  registration_status: string; payment_status: string; amount_minor: number; filename: string }
+  registration_status: string; payment_status: string; amount_minor: number; filename: string; historical?: boolean }
 const registrationLabel = (status: string) => status === 'confirmed' ? 'Confirmada' : status === 'pending' ? 'Registrada' : status
 const paymentLabel = (status: string) => status === 'approved' ? 'Pagado' : status === 'pending' ? 'Pendiente de confirmación' : status
 
@@ -113,9 +113,10 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
       {!proofsError && proofs.length === 0 && <p>No hay comprobantes cargados.</p>}
       <div className="admin-proof-list">{proofs.map(proof => <article className="admin-proof-item" key={proof.id}>
         <strong>{proof.name}</strong><span> · {proof.reference} · {new Date(proof.uploaded_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
+        {proof.historical && <p><strong>Ensayo anterior · conservado para consulta</strong></p>}
         <p>Inscripción: {registrationLabel(proof.registration_status)} · Pago: {paymentLabel(proof.payment_status)} · Importe: ${(proof.amount_minor / 100).toLocaleString('es-AR')}</p>
         <a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">Ver comprobante</a>
-        {proof.payment_status === 'pending' && <button type="button" className="button button-outline" onClick={() => { setReference(proof.reference); setNote(''); document.getElementById('payment-title')?.scrollIntoView({ behavior: 'smooth' }) }}>Revisar pago</button>}
+        {proof.payment_status === 'pending' && !proof.historical && <button type="button" className="button button-outline" onClick={() => { setReference(proof.reference); setNote(''); document.getElementById('payment-title')?.scrollIntoView({ behavior: 'smooth' }) }}>Revisar pago</button>}
       </article>)}</div>
     </section>}
     {canVerify && <section className="admin-accreditation-block" id="pagos" aria-labelledby="payment-title">

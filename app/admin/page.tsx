@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { and, asc, count, desc, eq } from 'drizzle-orm'
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 import { user as authUser } from '../../lib/auth-schema'
 import { adminUsers, assistanceRequests, events, registrationIntakes, registrations, workshops } from '../../lib/schema'
 import { getDb } from '../../lib/db'
@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: 'Administración local', robots: { in
 type AdminState = { kind: 'login' } | { kind: 'denied' } | { kind: 'unavailable' } | {
   kind: 'dashboard'; events: number; registrations: number; confirmed: number; reviewEnabled: boolean;
   role: 'configuration' | 'registration_operator' | 'admission_operator' | 'unlinked';
-  recent: Array<{ reference: string; name: string; status: string; createdAt: string }>;
+  recent: Array<{ reference: string; name: string; status: string; createdAt: string; historical: boolean }>;
   requests: PendingAssistance[]
 }
 
@@ -46,10 +46,10 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
       ? await db.select({ total: count() }).from(registrations)
         .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
         .innerJoin(events, eq(events.id, workshops.eventId))
-        .where(and(eq(events.slug, eventSlug), eq(registrations.status, 'confirmed')))
+        .where(and(eq(events.slug, eventSlug), eq(registrations.status, 'confirmed'), sql`registration_is_current(${registrations.id})`))
       : [{ total: 0 }]
     const recent = eventSlug && role !== 'unlinked' ? await db.select({ reference: registrations.reference, name: registrations.name,
-      status: registrations.status, createdAt: registrations.createdAt }).from(registrations)
+      status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})` }).from(registrations)
       .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
       .innerJoin(events, eq(events.id, workshops.eventId)).where(eq(events.slug, eventSlug))
       .orderBy(desc(registrations.createdAt)).limit(8) : []
@@ -68,7 +68,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
         .innerJoin(registrationIntakes, eq(registrationIntakes.registrationId, registrations.id))
         .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
         .innerJoin(events, eq(events.id, workshops.eventId))
-        .where(and(eq(assistanceRequests.status, 'requested'), eq(events.slug, process.env.WORKSHOP_EVENT_SLUG!)))
+        .where(and(eq(assistanceRequests.status, 'requested'), eq(events.slug, process.env.WORKSHOP_EVENT_SLUG!), sql`registration_is_current(${registrations.id})`))
         .orderBy(asc(assistanceRequests.createdAt)).limit(50)
       requests = rows.map(row => ({ ...row, requestedAt: row.requestedAt.toISOString() }))
     }
@@ -98,7 +98,7 @@ export default async function AdminPage() {
     <AdminWorkspace title="Resumen" description="Seguimiento del taller y acceso a las tareas de la organización."
       section="overview" role={state.role} canManageWorkshop={state.reviewEnabled}>
       <dl className="admin-counts">
-        <div><dt>Inscripciones</dt><dd>{state.registrations}</dd><small>Registradas para el taller</small></div>
+        <div><dt>Inscripciones</dt><dd>{state.registrations}</dd><small>Incluye el histórico conservado</small></div>
         <div><dt>Confirmadas</dt><dd>{state.confirmed}</dd><small>Con acreditación aprobada</small></div>
         <div><dt>Ayudas pendientes</dt><dd>{state.reviewEnabled ? state.requests.length : '—'}</dd><small>Esperando revisión</small></div>
         <div><dt>Eventos</dt><dd>{state.events}</dd><small>En la organización</small></div>
@@ -106,7 +106,7 @@ export default async function AdminPage() {
       {state.role !== 'unlinked' && <div className="admin-dashboard-grid">
         <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Actividad reciente</p><h2>Últimas inscripciones</h2></div><a href="/admin/inscripciones">Ver todas →</a></div>
           {state.recent.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Persona</th><th>Referencia</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
-            {state.recent.map(item => <tr key={item.reference}><td>{item.name}</td><td><a href={`/admin/acreditacion?reference=${encodeURIComponent(item.reference)}`}>{item.reference}</a></td>
+            {state.recent.map(item => <tr key={item.reference}><td>{item.name}{item.historical && <small>Ensayo anterior</small>}</td><td><a href={`/admin/acreditacion?reference=${encodeURIComponent(item.reference)}`}>{item.reference}</a></td>
               <td>{new Date(item.createdAt).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</td><td><span className={`admin-status admin-status-${item.status}`}>{item.status === 'confirmed' ? 'Confirmada' : item.status === 'pending' ? 'Registrada' : item.status}</span></td></tr>)}</tbody></table></div>
             : <p className="admin-empty">Aún no hay inscripciones para este taller.</p>}
         </section>

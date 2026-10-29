@@ -25,6 +25,7 @@ export async function requestRegistrationRecovery(identifier: string) {
     JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
     JOIN registration_intakes i ON i.registration_id=r.id
     WHERE e.slug=${slug} AND r.status<>'cancelled'
+      AND registration_is_current(r.id)
       AND (r.reference=${identifier.trim()} OR i.document_number=${normalized})
     ORDER BY r.created_at DESC LIMIT 1`)
   const registration = found.rows[0]

@@ -37,6 +37,7 @@ export const workshops = pgTable('workshops', {
   capacity: integer('capacity'), // null means unlimited; never infer from a payment count.
   activeLot: integer('active_lot').notNull().default(1),
   registrationOpen: boolean('registration_open').notNull().default(false),
+  liveStartedAt: timestamp('live_started_at', { withTimezone: true }),
   waitlistEnabled: boolean('waitlist_enabled').notNull().default(false),
   reservationMinutes: integer('reservation_minutes').notNull().default(30),
 }, (table) => [
@@ -104,6 +105,7 @@ export const registrations = pgTable('registrations', {
   phone: text('phone').notNull(),
   normalizedPhone: text('normalized_phone').notNull(),
   status: registrationStatus('status').notNull().default('pending'),
+  isTest: boolean('is_test').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

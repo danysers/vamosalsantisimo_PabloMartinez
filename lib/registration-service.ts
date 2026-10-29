@@ -54,6 +54,7 @@ export async function register(input: RegistrationInput): Promise<Result> {
     const [replay] = await tx.select().from(registrations)
       .where(and(eq(registrations.workshopId, workshop.id), eq(registrations.accessTokenHash, tokenHash))).limit(1)
     if (replay) {
+      if (workshop.liveStartedAt && (replay.isTest || replay.createdAt < workshop.liveStartedAt)) return duplicate
       // A replay must reproduce the original operation, never silently accept
       // changed personal data under the same token and idempotency key.
       if (replay.creationKey !== input.creationKey || replay.normalizedName !== person.name ||
@@ -67,6 +68,7 @@ export async function register(input: RegistrationInput): Promise<Result> {
     }
     const conflicts = await tx.select({ id: registrations.id }).from(registrations).where(and(
       eq(registrations.workshopId, workshop.id),
+      sql`registration_is_current(${registrations.id})`,
       ne(registrations.status, 'cancelled'),
       eq(registrations.normalizedName, person.name),
       or(eq(registrations.normalizedEmail, person.email), eq(registrations.normalizedPhone, person.phone)),
@@ -77,7 +79,7 @@ export async function register(input: RegistrationInput): Promise<Result> {
       const occupied = await tx.execute(sql`
         SELECT count(*)::int AS count FROM ${reservations} r
         JOIN ${registrations} g ON g.id = r.registration_id
-        WHERE g.workshop_id = ${workshop.id}
+        WHERE g.workshop_id = ${workshop.id} AND registration_is_current(g.id)
           AND (r.status = 'used' OR (r.status = 'held' AND r.expires_at > now()))
       `)
       if (Number(occupied.rows[0]?.count) >= workshop.capacity) {
@@ -88,6 +90,7 @@ export async function register(input: RegistrationInput): Promise<Result> {
     const reference = randomBytes(12).toString('base64url')
     const [created] = await tx.insert(registrations).values({
       workshopId: workshop.id,
+      isTest: !workshop.liveStartedAt,
       reference,
       accessTokenHash: tokenHash,
       creationKey: input.creationKey,

@@ -31,12 +31,12 @@ const toDate = (value: string | null | undefined) => value ? new Date(value) : n
 
 async function lockWorkshop(tx: Tx, eventSlug: string) {
   const found = await tx.execute(sql`
-    SELECT w.id,w.active_lot,w.capacity,w.registration_open,w.starts_at
+    SELECT w.id,w.active_lot,w.capacity,w.registration_open,w.starts_at,w.live_started_at
     FROM workshops w JOIN events e ON e.id=w.event_id
     WHERE e.slug=${eventSlug} FOR UPDATE OF w
   `)
   return found.rows[0] as { id: string; active_lot: number; capacity: number | null;
-    registration_open: boolean; starts_at: Date } | undefined
+    registration_open: boolean; starts_at: Date; live_started_at: Date | null } | undefined
 }
 
 export async function readWorkshopPricing(db: Db, eventSlug: string) {
@@ -71,6 +71,7 @@ export async function searchPendingIndividualRegistrations(db: Db, eventSlug: st
     JOIN payment_allocations a ON a.registration_id=r.id
     JOIN payment_attempts p ON p.id=a.attempt_id
     WHERE e.slug=${eventSlug} AND r.status='pending' AND p.status='pending'
+      AND registration_is_current(r.id)
       AND p.source IN ('bank_transfer','on_site')
       AND NOT EXISTS (SELECT 1 FROM assistance_requests x WHERE x.registration_id=r.id)
       AND NOT EXISTS (SELECT 1 FROM accreditation_credentials c WHERE c.registration_id=r.id AND c.revoked_at IS NULL)
@@ -230,7 +231,7 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
           LEFT JOIN assistance_requests a ON a.registration_id=r.id
           LEFT JOIN fee_waivers fw ON fw.registration_id=r.id AND fw.revoked_at IS NULL
           LEFT JOIN accreditation_credentials c ON c.registration_id=r.id AND c.revoked_at IS NULL
-          WHERE r.reference=${reference} AND e.slug=${input.eventSlug} FOR UPDATE OF r
+          WHERE r.reference=${reference} AND e.slug=${input.eventSlug} AND registration_is_current(r.id) FOR UPDATE OF r
         `)
         const row = result.rows[0] as { id: string; reference: string; name: string; email: string; status: string;
           intake_id: string | null; assistance_status: string | null; waived: string | null;
@@ -265,14 +266,14 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
       if (!lot) return invalid('No hay un lote activo.', 409)
       if (workshop.capacity !== null) {
         const occupied = await tx.execute(sql`SELECT count(*)::int AS total FROM reservations h JOIN registrations r ON r.id=h.registration_id
-          WHERE r.workshop_id=${workshop.id} AND (h.status='used' OR (h.status='held' AND h.expires_at>now()))`)
+          WHERE r.workshop_id=${workshop.id} AND registration_is_current(r.id) AND (h.status='used' OR (h.status='held' AND h.expires_at>now()))`)
         if (Number(occupied.rows[0]?.total) + count > workshop.capacity) return invalid('No quedan lugares suficientes para el grupo.')
       }
       const identities = people.map(person => normalizeIdentity({ name: `${person.firstName} ${person.lastName}`, email: person.email, phone: person.phone }))
       for (let i = 0; i < count; i++) {
         if (identities.some((other, j) => j < i && other.name === identities[i].name &&
           (other.email === identities[i].email || other.phone === identities[i].phone))) return invalid('Hay una persona repetida dentro del grupo.')
-        const conflict = await tx.execute(sql`SELECT id FROM registrations WHERE workshop_id=${workshop.id} AND status<>'cancelled'
+        const conflict = await tx.execute(sql`SELECT id FROM registrations WHERE workshop_id=${workshop.id} AND registration_is_current(id) AND status<>'cancelled'
           AND normalized_name=${identities[i].name} AND (normalized_email=${identities[i].email} OR normalized_phone=${identities[i].phone}) LIMIT 1`)
         if (conflict.rows.length) return invalid(`${people[i].firstName} ${people[i].lastName} ya tiene una inscripción. Usá su referencia en un grupo existente.`)
         members.push({ registrationId: `draft-${i}`, reference: null,
@@ -314,7 +315,7 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
       for (let i = 0; i < count; i++) {
         const person = input.people![i]
         const identity = normalizeIdentity({ name: members[i].name, email: person.email, phone: person.phone })
-        const [created] = await tx.insert(registrations).values({ workshopId: workshop.id,
+        const [created] = await tx.insert(registrations).values({ workshopId: workshop.id,isTest:!workshop.live_started_at,
           reference: randomBytes(12).toString('base64url'), creationKey: randomUUID(),
           accessTokenHash: createHash('sha256').update(randomBytes(32)).digest('hex'),
           name: members[i].name, normalizedName: identity.name, email: person.email.trim(),
