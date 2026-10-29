@@ -116,6 +116,19 @@
 .admin-lot-automation .admin-form-grid small{display:block;color:#66758b;font-weight:400;margin-top:5px}
 .admin-lot-automation .admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .admin-lot-history{padding-left:20px;display:grid;gap:12px;line-height:1.6;overflow-wrap:anywhere}
+.admin-text-action{display:block;margin-top:8px;padding:0;border:0;background:none;color:#225ac3;font:inherit;font-size:12px;cursor:pointer;text-align:left}
+.admin-text-danger{color:#a5243d}
+.admin-text-action:disabled{opacity:.5;cursor:wait}
+.admin-delete-dialog{width:min(440px,calc(100vw - 32px));max-height:90vh;overflow:auto;margin:auto;padding:26px;border:1px solid #d8e0eb;border-radius:14px;background:white;color:#23334a;box-shadow:0 20px 80px #11243b33;line-height:1.6}
+.admin-delete-dialog::backdrop{background:#10203580}
+.admin-delete-dialog h2{margin:0 0 14px;font-size:22px}
+.admin-delete-dialog label{display:block;font-size:14px;font-weight:600}
+.admin-delete-dialog input{box-sizing:border-box;width:100%;padding:12px;margin:7px 0 16px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.admin-delete-word,.admin-delete-buttons{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.admin-delete-word{padding:12px;background:#f4f6fa;border-radius:9px;margin:18px 0}
+.admin-delete-word code{font-size:20px;font-weight:700;letter-spacing:1px;user-select:all}
+.admin-delete-confirm{background:#a5243d;color:white;border:1px solid #a5243d}
+.admin-delete-dialog [role=alert]{color:#a5243d;font-size:13px}
 .admin-promo-card,.admin-person-card,.admin-group-preview,.admin-group-search{margin:10px 0;padding:17px;border:1px solid #e3e9f0;border-radius:9px;background:#f9fbfd}
 .admin-person-card legend{padding:0 8px;color:#27456e;font-size:14px;font-weight:700}
 .admin-check,.admin-radio-row{display:flex!important;gap:14px;align-items:center;flex-wrap:wrap}

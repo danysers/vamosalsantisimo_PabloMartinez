@@ -50,6 +50,16 @@ La confirmación del pago cambia el lote y encola el aviso en la misma transacci
 
 `tests/lot-automation-db.test.mjs` verifica el conteo por persona con 2×1, exclusión de históricos y ventanilla, activación al confirmar, recuperación concurrente, conservación de cotizaciones y reintento del aviso con SMTP simulado. Usa exclusivamente una base descartable.
 
+## Eliminación recuperable de inscripciones
+
+En **Inscripciones → Acciones → Eliminar registro**, un operador de configuración o de inscripción confirma escribiendo `ELIMINAR`. La palabra se puede seleccionar o copiar con un botón. El servidor también exige la confirmación, la sesión autorizada y el mismo origen. La acción afecta únicamente al taller del operador y queda en auditoría.
+
+La eliminación guarda fecha y operador, oculta la inscripción del listado y del resumen, inhabilita el QR y bloquea nuevos pagos y comprobantes desde esa inscripción. No borra datos relacionados, no anula órdenes externas ni realiza devoluciones. Las notificaciones posteriores de Mercado Pago siguen actualizando la evidencia financiera, sin emitir acreditación mientras el registro esté eliminado. El resto de un grupo conserva su pago y su acreditación.
+
+La pestaña **Eliminadas** permite restaurar. Antes se comprueba que no haya una inscripción activa duplicada ni se supere la capacidad. Restaurar no convierte un ensayo histórico en una inscripción real. Si el pago se confirmó mientras estaba eliminada, se recupera la acreditación al restaurarla. No se elimina una persona que ya ingresó al encuentro, para conservar el control de asistencia. La migración `0033_recoverable_registration_deletion.sql` conserva todos los registros existentes; no elimina ninguno automáticamente.
+
+Las pruebas de eliminación usan una base descartable y verifican confirmación, aislamiento por taller, idempotencia, QR bloqueado, pagos conservados, restauración, duplicados, capacidad, grupos y confirmaciones tardías del proveedor.
+
 ## Pruebas
 
 Con una base PostgreSQL **descartable** y migrada, ejecutar `pnpm typecheck` y `pnpm test`. `tests/workshop-enrollment-db.test.mjs` comprueba alta completa, idempotencia y dos tareas de correo para solicitud de ayuda. `tests/email-worker-db.test.mjs` recorre recepción, aviso al organizador, aprobación, rechazo y cancelación de un correo obsoleto con un transporte SMTP simulado: **no envía correos reales**. `tests/accreditation-db.test.mjs` comprueba puertas de emisión y admisión una sola vez. `tests/group-workflow-db.test.mjs` se activa expresamente con `RUN_GROUP_WORKFLOW_DB_TEST=1` y el cargador de TypeScript de prueba; valida precio editado, 3×2, idempotencia, avisos grupales con transporte ficticio, reagrupamiento y QR. **Nunca se debe apuntar esta prueba a la base real o de desarrollo**, pues crea datos y depende de descartar la base completa. Sin `DATABASE_URL`, las pruebas de base aparecen omitidas. `scripts/migrate.mjs` aplica las migraciones en arranque de la app de Dokploy; `scripts/seed-workshop.mjs` siembra el taller cerrado. Ver `docs/despliegue-dokploy.md`.

@@ -24,11 +24,12 @@ type Attempt = {
   checkout_url: string | null; reconciled_at: Date | null; expires_at: Date | null;
   paid_amount_minor: number; payer_name: string | null;
   historical: boolean;
+  deleted_at: Date | null;
 }
 
 async function authorizedAttempt(db: Db | Tx, access: Access, lock = false): Promise<Attempt> {
   const result = await db.execute(sql`
-    SELECT p.*,r.id AS registration_id,r.workshop_id,r.reference,r.creation_key,r.status AS registration_status,h.expires_at,
+    SELECT p.*,r.id AS registration_id,r.workshop_id,r.reference,r.creation_key,r.status AS registration_status,h.expires_at,r.deleted_at,
       NOT registration_is_current(r.id) AS historical
     FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
     JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
@@ -45,6 +46,7 @@ export async function startWorkshopCheckout(access: Access, createOrder = create
   mercadoPagoConfig()
   return getDb().transaction(async tx => {
     const attempt = await authorizedAttempt(tx, access, true)
+    if (attempt.deleted_at) throw new Error('Deleted enrollment cannot create a checkout')
     if (attempt.historical) throw new Error('Historical enrollment cannot create a live checkout')
     if (attempt.source !== 'mercado_pago' || attempt.amount_minor === null || attempt.status !== 'pending' || attempt.registration_status !== 'pending') throw new Error('Payment is not pending')
     if (!attempt.expires_at || new Date(attempt.expires_at).getTime() <= Date.now()) throw new Error('Checkout reservation expired')
@@ -76,7 +78,7 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
       SELECT p.id,r.workshop_id FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
       WHERE p.external_reference=${data.external_reference as string} AND p.source='mercado_pago'
-        AND registration_is_current(r.id)
+        AND registration_is_live(r.id)
         AND e.slug=${process.env.WORKSHOP_EVENT_SLUG || ''} LIMIT 1
     `)
     if (!found.rows[0]) throw new Error('Unknown provider order')
@@ -125,10 +127,11 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
       providerUpdatedAt: projection.providerUpdatedAt ? new Date(projection.providerUpdatedAt) : now,
       reconciledAt: now, updatedAt: now,
     } }).where(eq(paymentAttempts.id, attempt.id))
-    const members = await tx.execute(sql`SELECT r.id,r.status,r.email,r.reference FROM registrations r
+    const members = await tx.execute(sql`SELECT r.id,r.status,r.email,r.reference,r.deleted_at FROM registrations r
       JOIN payment_allocations a ON a.registration_id=r.id WHERE a.attempt_id=${attempt.id} ORDER BY r.id FOR UPDATE OF r`)
     if (status === 'approved') {
       for (const member of members.rows) {
+        if (member.deleted_at) continue
         if (!['pending', 'confirmed'].includes(String(member.status))) continue
         const seat = await tx.execute(sql`SELECT status,expires_at FROM reservations WHERE registration_id=${String(member.id)} FOR UPDATE`)
         const held = seat.rows[0]
@@ -163,6 +166,9 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
 
 export async function workshopPaymentStatus(access: Access, refresh = true) {
   let attempt = await authorizedAttempt(getDb(), access)
+  if (attempt.deleted_at) return { reference: attempt.reference, deleted: true, historical: false,
+    status: attempt.status, registrationStatus: 'cancelled', canChangeMethod: false, checkoutUrl: null,
+    accreditation: null, registrationCard: null, testMode: false }
   let verification: 'verified' | 'pending' | 'unavailable' = 'pending'
   if (!attempt.historical && refresh && attempt.source === 'mercado_pago' && attempt.provider_order_id && (!attempt.reconciled_at || Date.now() - new Date(attempt.reconciled_at).getTime() > 10_000)) {
     try { await reconcileWorkshopOrder(attempt.provider_order_id); verification = 'verified' } catch { verification = 'unavailable' }
@@ -239,11 +245,13 @@ export async function changeWorkshopPaymentMethod(
   if (!['mercado_pago', 'bank_transfer', 'on_site'].includes(input.method)) throw new PaymentMethodChangeError('Elegí una forma de pago válida.')
   const db = getDb()
   const initial = await authorizedAttempt(db, input)
+  if (initial.deleted_at) throw new PaymentMethodChangeError('La organización eliminó esta inscripción. Contactanos si necesitás recuperarla.')
   if (initial.historical) throw new PaymentMethodChangeError('Este registro del ensayo anterior se conserva solo para consulta.')
   await db.transaction(async tx => {
     const workshopResult = await tx.execute(sql`SELECT id,registration_open,capacity,starts_at FROM workshops WHERE id=${initial.workshop_id} FOR UPDATE`)
     const workshop = workshopResult.rows[0]
     const attempt = await authorizedAttempt(tx, input, true)
+    if (attempt.deleted_at || attempt.historical) throw new PaymentMethodChangeError('Esta inscripción no está disponible para modificar el pago.')
     if (!['mercado_pago','bank_transfer','on_site'].includes(attempt.source) || attempt.registration_status !== 'pending' || !['pending','created','rejected','cancelled'].includes(attempt.status) || attempt.paid_amount_minor !== 0) {
       throw new PaymentMethodChangeError('El pago ya fue confirmado o requiere revisión. No hace falta volver a pagar.')
     }

@@ -40,7 +40,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
     const [registrationCount] = eventSlug
       ? await db.select({ total: count() }).from(registrations)
         .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
-        .innerJoin(events, eq(events.id, workshops.eventId)).where(eq(events.slug, eventSlug))
+        .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL`))
       : [{ total: 0 }]
     const [confirmedCount] = eventSlug
       ? await db.select({ total: count() }).from(registrations)
@@ -51,7 +51,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
     const recent = eventSlug && role !== 'unlinked' ? await db.select({ reference: registrations.reference, name: registrations.name,
       status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})` }).from(registrations)
       .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
-      .innerJoin(events, eq(events.id, workshops.eventId)).where(eq(events.slug, eventSlug))
+      .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL`))
       .orderBy(desc(registrations.createdAt)).limit(8) : []
     let requests: PendingAssistance[] = []
     if (reviewEnabled) {

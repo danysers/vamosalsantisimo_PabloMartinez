@@ -237,3 +237,13 @@ test('historical records remain read-only and never show a payable checkout',asy
   assert.equal(app.ids.get('payment-next').hidden,true)
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
 })
+
+test('deleted registration hides its credential and cannot open another checkout',async()=>{
+  const app=browser()
+  app.response={deleted:true,status:'approved',registrationStatus:'cancelled'}
+  app.events.get('workshop:recovered')({detail:{reference:'TestReference123',accessToken:'a'.repeat(43)}})
+  await flush()
+  assert.equal(app.ids.get('registration-result-title').textContent,'Inscripción eliminada')
+  assert.equal(app.ids.get('payment-next').hidden,true)
+  assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
+})

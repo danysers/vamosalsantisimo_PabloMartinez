@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       JOIN payment_attempts p ON p.id=proof.payment_attempt_id
       JOIN registrations r ON r.id=proof.registration_id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
-      WHERE e.slug=${operator.eventSlug}
+      WHERE e.slug=${operator.eventSlug} AND r.deleted_at IS NULL
       ORDER BY proof.uploaded_at DESC LIMIT 100
     `)
     return privateReply({ proofs: result.rows }, 200)

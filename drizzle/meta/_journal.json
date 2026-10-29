@@ -232,6 +232,13 @@
       "when": 1793281161368,
       "tag": "0032_automatic_lot_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793282855876,
+      "tag": "0033_recoverable_registration_deletion",
+      "breakpoints": true
     }
   ]
 }

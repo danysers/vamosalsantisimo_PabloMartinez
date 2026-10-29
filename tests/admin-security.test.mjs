@@ -75,6 +75,10 @@ test('configured admin remains private and denies public signup', { skip: !proce
       body: JSON.stringify({ registrationId: '00000000-0000-4000-8000-000000000000', decision: 'approved', note: '' }),
     })
     assert.equal(unauthenticatedReview.status, 401)
+    const deletion = await fetch(`${base}/api/admin/inscripciones/eliminacion`, { method: 'POST',
+      headers: { origin: base, 'content-type': 'application/json' },
+      body: JSON.stringify({ reference: 'TestReference123', operation: 'delete', confirmation: 'ELIMINAR' }) })
+    assert.equal(deletion.status, 401)
     assert.match(unauthenticatedReview.headers.get('cache-control') ?? '', /no-store/)
     const before = await pool.query('SELECT count(*)::int AS total FROM "user"')
     const response = await fetch(`${base}/api/auth/sign-up/email`, {
