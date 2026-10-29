@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { assertWritableFolder, existingCopy, uploadCopy } from '../scripts/drive-proof-worker.mjs'
+import { assertWritableFolder, existingCopy, uploadCopy, syncOne } from '../scripts/drive-proof-worker.mjs'
 
 function mockFetch(handlers, callback) {
   const original = globalThis.fetch
@@ -53,4 +53,54 @@ test('Drive proof upload sets private folder, stable idempotency key and request
     assert.equal(await existingCopy('folder123456', proof.id, 'token'), null)
     assert.equal((await uploadCopy('folder123456', proof, 'token')).id, 'drive-file')
   })
+})
+
+const pendingProof = { id: 'b7eb1915-61a4-497e-8be2-9ed7382d5a7d', drive_file_name: 'TEST-COMPROBANTE.png',
+  content_type: 'image/png', data: Buffer.from([1, 2, 3]) }
+
+function assertDestinationQuery(url) {
+  const q = new URL(url).searchParams.get('q')
+  assert.ok(q.includes("'folder123456' in parents"))
+  assert.ok(q.includes(`appProperties has { key='paymentProofId' and value='${pendingProof.id}' }`))
+  assert.ok(q.includes('trashed = false'))
+}
+
+test('Drive proof success requires folder membership even when parents is omitted', async () => {
+  const writes = []
+  const pool = { query: async (sql, values) => { assert.match(sql, /drive_synced_at=now\(\)/); writes.push(values) } }
+  await mockFetch([
+    url => { assertDestinationQuery(url); return json({ files: [] }) },
+    () => json({ id: 'new-copy', name: pendingProof.drive_file_name }),
+    url => { assertDestinationQuery(url); assert.equal(writes.length, 0)
+      return json({ files: [{ id: 'new-copy', name: pendingProof.drive_file_name }] }) },
+  ], () => syncOne(pool, 'folder123456', 'token', pendingProof))
+  assert.deepEqual(writes, [[pendingProof.id, 'new-copy']])
+})
+
+test('Drive proof outside the destination is never marked synced', async () => {
+  const pool = { query: async () => assert.fail('Unverified copy must not update the database') }
+  await mockFetch([
+    () => json({ files: [] }),
+    () => json({ id: 'new-copy', name: pendingProof.drive_file_name, parents: ['folder123456'] }),
+    url => { assertDestinationQuery(url); return json({ files: [] }) },
+  ], () => assert.rejects(syncOne(pool, 'folder123456', 'token', pendingProof), /destination could not be verified/))
+})
+
+test('Drive retry reuses a folder-verified copy without uploading again', async () => {
+  let writes = 0
+  const pool = { query: async (_sql, values) => { writes++; assert.deepEqual(values, [pendingProof.id, 'existing-copy']) } }
+  await mockFetch([
+    url => { assertDestinationQuery(url); return json({ files: [{ id: 'existing-copy', name: pendingProof.drive_file_name }] }) },
+  ], () => syncOne(pool, 'folder123456', 'token', pendingProof))
+  assert.equal(writes, 1)
+})
+
+test('Drive duplicate copies and changed filenames are not marked synced', async () => {
+  const pool = { query: async () => assert.fail('Unexpected Drive copies must not update the database') }
+  await mockFetch([
+    () => json({ files: [{ id: 'copy1' }, { id: 'copy2' }] }),
+  ], () => assert.rejects(syncOne(pool, 'folder123456', 'token', pendingProof), /Multiple Drive copies/))
+  await mockFetch([
+    () => json({ files: [{ id: 'copy1', name: 'unexpected.png' }] }),
+  ], () => assert.rejects(syncOne(pool, 'folder123456', 'token', pendingProof), /unexpected file/))
 })

@@ -19,7 +19,7 @@ DRIVE_OAUTH_CLIENT_SECRET=...
 DRIVE_OAUTH_REFRESH_TOKEN=...
 ```
 
-Las tres variables OAuth usan el mismo mecanismo que el trabajador de comprobantes, pero requieren una cuenta autorizada para leer esta carpeta y un token con alcance suficiente. La conexión de Google Drive de Codex no se transfiere a Dokploy. Las credenciales aún no estaban configuradas en el servicio público al revisar el despliegue; sin ellas, no se descargan nuevos logos. El caché predeterminado usa el directorio temporal del contenedor: se reconstruye tras un reinicio, y con más de una réplica habría que usar un volumen compartido. El servicio actual tiene una réplica.
+Las tres variables OAuth usan el mismo mecanismo que el trabajador de comprobantes, pero requieren una cuenta autorizada para leer esta carpeta y un token con alcance suficiente. La conexión de Google Drive de Codex no se transfiere a Dokploy. En el diagnóstico inicial del 29/10/2026 faltaban esas credenciales; la conexión y el procedimiento de activación se documentan en [integracion-drive-2026-10-29.md](integracion-drive-2026-10-29.md). El caché predeterminado usa el directorio temporal del contenedor: se reconstruye tras un reinicio, y con más de una réplica habría que usar un volumen compartido. El servicio actual tiene una réplica.
 
 ## Acceso público
 

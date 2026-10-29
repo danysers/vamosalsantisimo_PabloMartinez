@@ -1,6 +1,6 @@
 # Pendiente para publicar los auspiciantes automáticos
 
-Estado al 28/10/2026. **Este archivo no contiene credenciales.** La corrección visual y el sincronizador de Drive están implementados en el repositorio local, pero un commit por sí solo no actualiza la web pública.
+Documento histórico al 28/10/2026. **Este archivo no contiene credenciales.** La revisión y el procedimiento posteriores están en [integracion-drive-2026-10-29.md](integracion-drive-2026-10-29.md). La lista siguiente conserva los pendientes de aquella revisión.
 
 ## Antes de configurar credenciales
 

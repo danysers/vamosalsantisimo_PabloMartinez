@@ -100,9 +100,19 @@ async function claim(pool) {
   return result.rows[0] || null
 }
 
-async function syncOne(pool, folderId, token, proof) {
-  const copy = await existingCopy(folderId, proof.id, token) || await uploadCopy(folderId, proof, token)
-  if (!copy.id || copy.name !== proof.drive_file_name || !copy.parents?.includes(folderId)) {
+export async function syncOne(pool, folderId, token, proof) {
+  let copy = await existingCopy(folderId, proof.id, token)
+  if (!copy) {
+    const uploaded = await uploadCopy(folderId, proof, token)
+    if (!uploaded.id || uploaded.name !== proof.drive_file_name) throw new Error('Drive returned an unexpected file')
+    // Drive can omit parents with drive.file + drive.readonly. Confirm the
+    // destination through the folder-scoped query and stable proof property
+    // before recording success; the upload response alone is not sufficient.
+    copy = await existingCopy(folderId, proof.id, token)
+    if (copy?.id !== uploaded.id) throw new Error('Drive copy destination could not be verified')
+  }
+  if (!copy.id || copy.name !== proof.drive_file_name ||
+      (copy.parents !== undefined && (!Array.isArray(copy.parents) || !copy.parents.includes(folderId)))) {
     throw new Error('Drive returned an unexpected file')
   }
   await pool.query(`UPDATE payment_proofs SET drive_file_id=$2,drive_synced_at=now(),
