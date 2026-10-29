@@ -20,6 +20,8 @@ Alcance: repositorio vamosalsantisimo_PabloMartinez, portada estática, páginas
 - Navegador real: portada con YouTube y formulario del taller interactivo sin errores CSP registrados.
 - El caso de inscripción ahora genera su propia clave criptográfica descartable; antes dependía de una variable externa ausente y fallaba con 503 en una base nueva.
 - Los dominios activos comprobados antes de publicar son pablomartinez.vamosalsantisimo.com y paneltaller2026.vamosalsantisimo.com. www.vamosalsantisimo.com y su ruta /taller respondían 404; no pertenecen a los dominios vinculados a estas dos aplicaciones en Dokploy.
+- Después de integrar el cambio paralelo de eliminación recuperable de inscripciones, GitHub ejecutó 139 pruebas: 138 correctas, ninguna fallida y una omitida. TypeScript, ESLint y auditoría de producción también pasaron.
+- Publicado el código 7ba6628 en ambas aplicaciones Dokploy el 29/10/2026. Verificación real posterior: nueve páginas HTTP 200 con CSP y scripts autorizados; portada y taller incluyen hashes y las páginas React/panel nonces; el panel público y la autenticación pública devuelven 404, la API privada sin sesión devuelve 401 y autenticación rechaza cuerpos excesivos con 400. Ambos despliegues finalizaron correctamente.
 
 ## Controles revisados
 
