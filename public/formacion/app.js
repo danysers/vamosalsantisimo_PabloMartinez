@@ -196,7 +196,7 @@ document.addEventListener('submit', async event => {
   } finally { button.disabled = false; }
 });
 // Cada URL conserva su HTML completo. La navegación interna reutiliza los recursos.
-const routes = new Set(['/formacion', ...['pablo-martinez','inscripcion','comprobante','contacto','recursos','preguntas-frecuentes'].map(r => '/formacion/'+r)]);
+const routes = new Set(['/formacion', ...['inscripcion','comprobante','contacto','recursos','preguntas-frecuentes'].map(r => '/formacion/'+r)]);
 function updateDirections() {
   const link = document.getElementById('workshop-directions');
   if (!link) return;

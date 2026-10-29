@@ -9,12 +9,17 @@ const nextConfig = {
     qualities: [75, 90],
   },
   async redirects() {
-    return [{ source: '/formacion/el-taller', destination: '/formacion/inscripcion', permanent: true }]
+    return [
+      { source: '/formacion/el-taller', destination: '/formacion/inscripcion', permanent: true },
+      // Keep the unfinished biography in the repository, but out of public navigation for now.
+      { source: '/formacion/pablo-martinez', destination: '/formacion', permanent: false },
+      { source: '/formacion/pablo-martinez/index.html', destination: '/formacion', permanent: false },
+    ]
   },
   async rewrites() {
     return {
       beforeFiles: [{ source: '/', destination: '/pagina%20principal%20con%20efecto/index.html' }],
-      afterFiles: ['', 'pablo-martinez', 'inscripcion', 'pago', 'comprobante', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
+      afterFiles: ['', 'inscripcion', 'pago', 'comprobante', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
         source: page ? `/formacion/${page}` : '/formacion',
         destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',
       })),

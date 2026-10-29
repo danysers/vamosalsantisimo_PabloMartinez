@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="background" cx="50%" cy="42%" r="75%">
+      <stop stop-color="#632332"/>
+      <stop offset="1" stop-color="#260b13"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fff0aa"/>
+      <stop offset=".52" stop-color="#efbb42"/>
+      <stop offset="1" stop-color="#aa6720"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="url(#background)" stroke="#e5b457" stroke-width="1.5"/>
+  <g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-width="2.5">
+    <path d="M32 9v7M32 43v5M12 28h7M45 28h7M17.9 13.9l5 5M41.1 37.1l5 5M46.1 13.9l-5 5M22.9 37.1l-5 5"/>
+    <path d="M23.6 10.8l2.8 6.5M40.4 10.8l-2.8 6.5M11.8 19.6l6.5 2.8M52.2 19.6l-6.5 2.8M11.8 36.4l6.5-2.8M52.2 36.4l-6.5-2.8" stroke-width="1.8"/>
+  </g>
+  <circle cx="32" cy="28" r="15" fill="url(#gold)"/>
+  <circle cx="32" cy="28" r="11.5" fill="#5c1e2a"/>
+  <circle cx="32" cy="28" r="9" fill="#fff9e9" stroke="#f5d87f" stroke-width="1.5"/>
+  <path d="M32 22v12M28 26h8" fill="none" stroke="#d6a23f" stroke-linecap="round" stroke-width="1.5"/>
+  <path d="M32 43v12m-7 1h14" fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-width="3"/>
+</svg>

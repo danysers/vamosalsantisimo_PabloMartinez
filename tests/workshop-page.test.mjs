@@ -9,12 +9,30 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const formation = path.join(root, 'public', 'formacion')
 const pages = [
   'index.html',
+  'comprobante/index.html',
   'contacto/index.html',
   'inscripcion/index.html',
+  'pago/index.html',
   'pablo-martinez/index.html',
   'preguntas-frecuentes/index.html',
   'recursos/index.html',
 ]
+
+test('workshop hides the unfinished biography and has a distinct Santísimo favicon', async () => {
+  const iconPath = '/formacion/assets/favicon-santisimo.svg'
+  const icon = await readFile(path.join(formation, 'assets/favicon-santisimo.svg'), 'utf8')
+  assert.match(icon, /<svg[^>]+viewBox="0 0 64 64"/)
+  assert.match(icon, /<circle cx="32" cy="28" r="9"/)
+  for (const page of pages) {
+    const html = await readFile(path.join(formation, page), 'utf8')
+    assert.ok(html.includes(`<link rel="icon" type="image/svg+xml" href="${iconPath}">`), `${page} needs the workshop favicon`)
+    assert.doesNotMatch(html, /href="\/formacion\/pablo-martinez"/, `${page} must not advertise the unfinished biography`)
+  }
+  const config = await readFile(path.join(root, 'next.config.mjs'), 'utf8')
+  assert.match(config, /source: '\/formacion\/pablo-martinez', destination: '\/formacion', permanent: false/)
+  const script = await readFile(path.join(formation, 'app.js'), 'utf8')
+  assert.doesNotMatch(script, /const routes =[^\n]*pablo-martinez/)
+})
 
 test('workshop information names the venue and links to directions', async () => {
   const home = await readFile(path.join(formation, 'index.html'), 'utf8')
