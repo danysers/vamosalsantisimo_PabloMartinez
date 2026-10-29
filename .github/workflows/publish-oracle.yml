@@ -32,12 +32,28 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          load: true
+          push: false
           platforms: linux/arm64
           tags: |
             ghcr.io/danysers/vamosalsantisimo-pablomartinez:latest
             ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.4'
+      - name: Check the exact runtime image before publishing
+        run: node scripts/smoke-image.mjs ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
+      - name: Scan runtime packages and native binaries
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.74.0 image --image-src docker --scanners vuln
+          --severity HIGH,CRITICAL --exit-code 1
+          ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
+      - name: Publish verified image
+        run: |
+          docker push ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
+          docker push ghcr.io/danysers/vamosalsantisimo-pablomartinez:latest
       # Dokploy's private release watcher deploys a changed GHCR digest after
       # publication. GitHub runners do not need credentials for the control plane.

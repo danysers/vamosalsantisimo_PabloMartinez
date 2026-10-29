@@ -44,7 +44,15 @@ test('browser security covers static landing, workshop and isolated panel', asyn
           headers: { Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'x'.repeat(20000) }) })
         assert.equal(response.status, 400)
         assert.equal((await fetch(base + '/formacion')).status, 404)
-      } else assert.equal((await fetch(base + '/admin')).status, 404)
+      } else {
+        assert.equal((await fetch(base + '/admin')).status, 404)
+        for (const source of ['http://127.0.0.1:1/secret', 'http://169.254.169.254/latest/meta-data/', '/api/admin/taller/comprobantes/private', '/2026/logo.webp?secret=private']) {
+          const query = new URLSearchParams({ url:source, w:'128', q:'75' })
+          assert.equal((await fetch(base+'/_next/image?'+query)).status,400,'optimizer must reject unapproved origins and API paths')
+        }
+        const image = await fetch(base+'/_next/image?'+new URLSearchParams({url:'/2026/logo.webp',w:'128',q:'75'}))
+        assert.equal(image.status,200,'approved image optimization still works')
+      }
     } finally { server.kill() }
   }
 })

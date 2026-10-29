@@ -2,6 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, assistanceWhatsappUrl, paymentProofReviewEmail, proofWhatsappUrl, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
+test('untrusted names cannot inject HTML, event handlers or links into messages', () => {
+  const payload = '<img src=x onerror="alert(1)"><a href="javascript:alert(1)">attack</a>'
+  const message = registrationEmail({ firstName:payload, reference:'REF-123', choice:'assistance' })
+  assert.ok(message.text.includes(payload))
+  assert.ok(message.html.includes('&lt;img'))
+  assert.ok(!message.html.includes('<img src=x'))
+  assert.ok(!message.html.includes('<a href="javascript:'))
+})
+
 test('confirmation is receipt of request, not claim of confirmed payment', () => {
   const message = registrationEmail({ firstName: 'Ana', reference: 'REF-123', choice: 'bank_transfer', amountMinor: 1_000_000,
     transferAlias: 'alias.prueba', transferProvider: 'Personal Pay', transferHolder: 'Titular Ejemplo', transferDocument: '12345678', proofWhatsappE164: '5493718632884' })

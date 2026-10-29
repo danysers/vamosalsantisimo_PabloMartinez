@@ -8,6 +8,10 @@ const nextConfig = {
   ...(process.env.NEXT_BUILD_CPUS ? { experimental: { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } } : {}),
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
+    localPatterns: [{ pathname: '/2026/**', search: '' }, { pathname: '/_next/static/media/**', search: '' }],
+    remotePatterns: [],
+    maximumRedirects: 0,
+    dangerouslyAllowSVG: false,
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 90],
   },

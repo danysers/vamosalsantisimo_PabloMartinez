@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { boundedDownload } from '../lib/bounded-download.mjs'
 import { matchesImageSignature, maxSponsorBytes, maxSponsors, sponsorCacheDir, sponsorFolderId, sponsorFromDrive, sponsorOwnerEmails } from '../lib/sponsor-media.mjs'
 
 const api = 'https://www.googleapis.com/drive/v3'
@@ -63,8 +64,7 @@ async function downloadSponsor(file, token, root) {
   const response = await fetch(`${api}/files/${encodeURIComponent(file.id)}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) })
   if (!response.ok) throw new Error(`Sponsor download HTTP ${response.status}`)
-  if (Number(response.headers.get('content-length') || 0) > maxSponsorBytes) throw new Error('Sponsor image exceeds size limit')
-  const data = Buffer.from(await response.arrayBuffer())
+  const data = await boundedDownload(response, maxSponsorBytes)
   if (data.length !== file.size || data.length > maxSponsorBytes || !matchesImageSignature(data, file.mimeType) ||
       createHash('md5').update(data).digest('hex') !== file.filename.split('-').at(-1).split('.')[0]) {
     throw new Error(`Invalid sponsor image ${file.id}`)

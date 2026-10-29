@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
 import { z } from 'zod'
 import { readSmallJson } from '../../../../../lib/read-small-json'
 import { workshopPaymentStatus } from '../../../../../lib/workshop-payments'
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   let access: z.infer<typeof schema>
   try { access = schema.parse(await readSmallJson(request)) } catch { return reply({ error: 'Solicitud inválida.' }, 400) }
-  try { return reply(await workshopPaymentStatus(access), 200) }
+  try {
+    if (!await allowPublicOperation('payment-status')) return tooManyRequests()
+    return reply(await workshopPaymentStatus(access), 200)
+  }
   catch { return reply({ error: 'No pudimos consultar ese pago. Usá el mismo navegador en el que te inscribiste.' }, 404) }
 }

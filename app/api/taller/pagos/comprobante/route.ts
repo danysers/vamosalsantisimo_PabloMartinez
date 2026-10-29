@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
 import { MAX_MULTIPART_BYTES, MAX_PROOF_BYTES, submitPaymentProof } from '../../../../../lib/payment-proof'
 
 export const runtime = 'nodejs'
@@ -28,6 +29,9 @@ export async function POST(request: NextRequest) {
   if (request.headers.get('origin') !== (process.env.SITE_ORIGIN || request.nextUrl.origin)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('multipart/form-data;')) return reply({ error: 'Solicitud inválida.' }, 400)
   try {
+    if (!await allowPublicOperation('proof-upload')) return tooManyRequests()
+    const declaredLength = Number(request.headers.get('content-length'))
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_MULTIPART_BYTES) return reply({ error: 'El archivo supera el límite de 5 MB.' }, 413)
     const data = await boundedFormData(request)
     const reference = data.get('reference'), accessToken = data.get('accessToken'), file = data.get('comprobante')
     if (typeof reference !== 'string' || !/^[A-Za-z0-9_-]{10,80}$/.test(reference) ||

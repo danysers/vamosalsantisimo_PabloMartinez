@@ -47,6 +47,7 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     const { auth } = await import('../../../../lib/auth')
     const handler = toNextJsHandler(auth)
     const response = await handler[method](request)
+    if (response.status === 429) response.headers.set('Retry-After', response.headers.get('X-Retry-After') || '60')
     response.headers.set('Cache-Control', 'no-store')
     response.headers.set('X-Correlation-ID', correlationId)
     auditAction(request, response.status, correlationId)

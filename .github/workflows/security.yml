@@ -25,7 +25,7 @@ jobs:
           node-version: '22.23.4'
       - run: npm install --global pnpm@11.27.1
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod
+      - run: pnpm audit
       - run: pnpm typecheck && pnpm lint
       - run: node scripts/migrate.mjs && node scripts/seed-workshop.mjs
       - run: pnpm test

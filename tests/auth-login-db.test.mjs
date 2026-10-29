@@ -21,7 +21,7 @@ test('bounded auth requests preserve login, origin checks and session revocation
       [randomUUID(), id, 'credential', await hashPassword(password)])
     server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', '31633'], {
       stdio: 'ignore', windowsHide: true, env: { ...process.env, APP_SURFACE: 'panel',
-        BETTER_AUTH_URL: base, BETTER_AUTH_SECRET: randomBytes(32).toString('hex') },
+        BETTER_AUTH_URL: base, BETTER_AUTH_SECRET: randomBytes(32).toString('hex'), TRUST_REVERSE_PROXY: '0' },
     })
     let ready = false
     for (let i = 0; i < 100; i++) {
@@ -48,6 +48,20 @@ test('bounded auth requests preserve login, origin checks and session revocation
     })
     assert.equal(logout.status, 200)
     assert.equal((await pool.query('SELECT count(*)::int AS total FROM "session" WHERE user_id=$1', [id])).rows[0].total, 0)
+    const injection = await fetch(base + '/api/auth/sign-in/username', { method:'POST', headers,
+      body:JSON.stringify({username:"' OR 1=1 --",password:'wrong-credential-for-test'}) })
+    assert.ok([400,401,422].includes(injection.status), 'SQL injection must never authenticate')
+    for (const endpoint of ['username', 'email']) {
+      const responses = await Promise.all(Array.from({ length: 12 }, (_, i) => fetch(base + '/api/auth/sign-in/' + endpoint, {
+        method: 'POST', headers: { ...headers, 'x-forwarded-for': `198.51.100.${i + 1}`,
+          'x-real-ip': `203.0.113.${i + 1}`, 'cf-connecting-ip': `192.0.2.${i + 1}` },
+        body: JSON.stringify({ username, email: 'intruder@example.invalid', password: 'wrong-credential-for-test' }),
+      })))
+      assert.ok(responses.every(response => response.status !== 200), 'injection must never authenticate')
+      assert.ok(responses.filter(response => response.status !== 429).length <= 5,
+        `${endpoint}: concurrent requests and forged IP headers must not bypass the limit`)
+      assert.ok(responses.filter(response => response.status === 429).every(response => Number(response.headers.get('retry-after')) > 0))
+    }
   } finally {
     server?.kill()
     await pool.end()

@@ -19,8 +19,12 @@ export function localAuthPolicy(base: string, secret: string) {
       storage: 'database' as const,
       window: 60,
       max: 30,
-      customRules: { '/sign-in/username': { window: 60, max: 5 } },
+      customRules: { '/sign-in/username': { window: 60, max: 5 }, '/sign-in/email': { window: 60, max: 5 } },
     },
-    advanced: { disableCSRFCheck: false, disableOriginCheck: false, trustedProxyHeaders: false, useSecureCookies: url.protocol === 'https:' },
+    advanced: { disableCSRFCheck: false, disableOriginCheck: false, trustedProxyHeaders: false,
+      // trustedProxyHeaders controls host/protocol, NOT the rate-limiter IP.
+      // Without a verified proxy, Better Auth uses its shared per-path bucket.
+      ipAddress: { ipAddressHeaders: process.env.TRUST_REVERSE_PROXY === '1' ? ['x-real-ip'] : [] },
+      useSecureCookies: url.protocol === 'https:' },
   }
 }
