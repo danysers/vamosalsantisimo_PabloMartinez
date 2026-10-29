@@ -22,10 +22,22 @@ Cloudflare confirmó la actualización de la ruta raíz hacia el puente. Dokploy
 
 Verificación externa con HTTPS válido: portadas 200 con contenido idéntico, inscripción/configuración 200, inscripciones abiertas y Mercado Pago configurado; las seis APIs rechazan cuerpos vacíos con 400 desde cada dominio autorizado y rechazan un origen ajeno con 403. `/admin` devuelve 404 en los dominios públicos y 200 en el panel privado. `www` redirige con 308; `/taller` redirige a `/formacion`. Logo de correos anteriores 200. Los dos endpoints de webhook responden 401 a solicitudes sin firma.
 
-Pendiente en el panel de Mercado Pago: al abrir la aplicación se mostró **“Alcanzaste el límite de intentos”**, con posibilidad de otra verificación o espera de 24 horas. No se pudieron leer ni modificar los valores guardados de la ficha/Webhooks. El usuario fue avisado y la pestaña quedó disponible para verificar acceso. El endpoint anterior sigue disponible, por lo que la migración no exige interrumpir notificaciones a esa dirección. Cuando se pueda ingresar, revisar:
+Incidencia de acceso resuelta: al abrir inicialmente la aplicación se mostró **“Alcanzaste el límite de intentos”**. Después de que el usuario completó la verificación telefónica se pudo actualizar la ficha y la configuración productiva de Webhooks. Se comprobó la persistencia recargando ambas pantallas; la API oficial de aplicaciones también confirmó el nuevo callback:
 
 - Sitio web principal: `https://vamosalsantisimo.com`.
-- URL productiva de Webhooks propuesta: `https://vamosalsantisimo.com/api/mercado-pago/webhook`.
+- URL productiva de Webhooks guardada: `https://vamosalsantisimo.com/api/mercado-pago/webhook`, evento **Order (Mercado Pago)** conservado.
 - Endpoint anterior conservado: `https://pablomartinez.vamosalsantisimo.com/api/mercado-pago/webhook`.
 
 No se regeneraron credenciales ni claves de firma, no se crearon órdenes de cobro y no se ejecutó un pago real como prueba. Verificar una configuración de checkout no equivale a demostrar un cobro real.
+
+## Corrección adicional del webhook
+
+El historial productivo mostraba dos entregas HTTP 400 anteriores a la migración. El detalle de una entrega real no contenía `id` de evento en la raíz; el endpoint lo exigía. Ese formato sin `id` también aparece en la [documentación oficial de Orders](https://www.mercadopago.com.ar/developers/es/docs/checkout-pro-orders/notifications).
+
+El commit `03e3561` admite ambos formatos. Si falta `id`, deriva una identidad estable de aplicación, vendedor, ambiente, orden, acción, versión y fecha; no usa el identificador de cada entrega para deduplicar. Conserva la firma HMAC, la validación de aplicación/vendedor/ambiente y la consulta autenticada del recurso antes de autorizar un pago. Importes y estados del cuerpo de la notificación no deciden la aprobación.
+
+[Pipeline 40912933360](https://github.com/danysers/vamosalsantisimo_PabloMartinez/actions/runs/40912933360) exitoso: 147 pruebas, 146 aprobadas, ninguna fallida y una omitida. Incluye formato actual sin `id`, compatibilidad anterior, rechazo de otra orden/vendedor/aplicación/ambiente y reintentos con distinto request-id procesados una sola vez en PostgreSQL. Imagen ARM64 probada y escaneada antes de publicar; despliegue público del 29/10/2026 16:40:39 UTC terminado correctamente.
+
+En producción se reprodujo una notificación firmada de una orden existente, con los mismos campos de identidad que la entrega rechazada: HTTP **200**, `{ "received": true }`. La prueba consulta el recurso real y no crea otro cobro. Ambos dominios siguen respondiendo 200 y ambos endpoints rechazan notificaciones sin firma con 401. El simulador de la interfaz se abrió y se envió una prueba, pero no mostró un resultado verificable; la evidencia 200 corresponde a la reproducción firmada controlada.
+
+La ficha de la aplicación conservaba un identificador antiguo del sector educativo que no se mostraba como opción vigente. Para guardar el sitio hubo que volver a elegir **Educación / Capacitación**, manteniendo su categoría. La ruta directa del ajuste de Webhooks es `/developers/panel/app/1258485942121950/webhooks`; la pestaña Webhooks de Inicio muestra el historial de entregas, no el formulario de configuración. En el recorrido guiado se marcaron como completadas las etapas de órdenes e integración web, ya implementadas; no se activaron etapas de compras de prueba ni se modificaron credenciales.
