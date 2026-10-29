@@ -19,3 +19,11 @@ Se verificaron el trabajador y la cola de producción: los mensajes originales e
 Con autorización expresa del titular se envió una prueba técnica sin datos de asistentes a su Gmail y se reencoló una sola acreditación ya abonada para su dirección Outlook registrada, reutilizando el QR existente. Gmail recibió la prueba en Entrada y verificó SPF, DKIM y DMARC correctos. El servidor SMTP aceptó el reenvío de la acreditación el 29/10/2026 a las 17:01 UTC (14:01 de Argentina).
 
 La recepción final en Outlook queda pendiente de confirmación del usuario, quien indicó que lo revisará después. No corresponde afirmar que esa entrega esté resuelta ni cambiar SPF/DKIM/DMARC sin evidencia adicional. Si no llega, corresponde solicitar al proveedor SMTP el seguimiento de esa entrega aceptada. No se hicieron reenvíos masivos, cobros ni nuevas inscripciones.
+
+## Publicación y comprobación final
+
+Código `3445ddc` publicado en `main`. [Pipeline 40918366368](https://github.com/danysers/vamosalsantisimo_PabloMartinez/actions/runs/40918366368) completado: 150 pruebas, 149 aprobadas, ninguna fallida y una omitida; arranque de imagen y análisis de vulnerabilidades aprobados. Despliegue público terminado el 29/10/2026 a las 17:15:03 UTC.
+
+La vista local en una pestaña nueva mostró la confirmación, versículo y tarjeta con QR ficticio marcado sin validez; solo consultó retorno y estado, sin invocar checkout. Un enlace anterior mostró el formulario de recuperación.
+
+Después del despliegue, ambos dominios públicos respondieron 200 con la nueva versión del controlador y rechazaron orígenes ajenos con 403. Se verificó el intercambio de una capacidad válida para una inscripción abonada existente: 200, acceso privado coincidente y `private, no-store`; una firma alterada devolvió 401. Esa comprobación solo leyó la inscripción, no creó órdenes ni pagos ni emitió otro QR. El panel separado respondió 200.
