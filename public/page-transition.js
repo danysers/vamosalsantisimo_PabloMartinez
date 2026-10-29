@@ -29,7 +29,7 @@
     const overlay = workshop ? workshopOverlay() : null;
     const hero = new Image();
     hero.src = location.pathname.startsWith('/formacion')
-      ? '/formacion/assets/pablo-martinez.png'
+      ? '/formacion/assets/pablo-martinez-camisa-azul.png'
       : location.pathname === '/' ? '/2026/adoracion/santisimo-portada.png' : '/2026/logo.webp';
     // Wait for real resources, with a bounded wait on a slow connection.
     await Promise.race([

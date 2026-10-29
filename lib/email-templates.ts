@@ -33,7 +33,7 @@ export function brandedEmailHtml(text: string, qrCid?: string): string {
 <table role="presentation" width="660" cellspacing="0" cellpadding="0" style="width:100%;max-width:660px;background:#ffffff">
 <tr><td align="center" style="padding:32px 28px 27px;background:#000000"><img src="https://vamosalsantisimo.com/logo-vamos.png" width="158" alt="Vamos al Santísimo" style="display:block;width:158px;max-width:100%;height:auto;margin:0 auto"><div style="font-size:11px;letter-spacing:2px;font-weight:bold;color:#ffffff;margin-top:15px">FORMOSA · ARGENTINA</div></td></tr>
 <tr><td style="height:3px;background:#d2ad58;font-size:0;line-height:0">&nbsp;</td></tr>
-<tr><td style="padding:39px 44px 32px;font-size:15px;line-height:1.78;color:#111111"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.3;font-weight:normal;color:#000000;margin:0 0 12px">Taller de formación católica</h1><div style="width:56px;height:3px;background:#d2ad58;margin:0 0 25px"></div>${paragraphs}${qr}</td></tr>
+<tr><td style="padding:39px 44px 32px;font-size:15px;line-height:1.78;color:#111111"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.3;font-weight:normal;color:#000000;margin:0 0 12px">Taller de música</h1><div style="width:56px;height:3px;background:#d2ad58;margin:0 0 25px"></div>${paragraphs}${qr}</td></tr>
 <tr><td style="padding:24px 44px;background:#ffffff;border-top:1px solid #d2ad58"><p style="font-family:Georgia,'Times New Roman',serif;font-size:16px;text-align:center;margin:0 0 12px"><em>Con fraternal cercanía,</em></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0;border-bottom:1px solid #dddddd"><strong>Sergio Daniel Servin</strong> · <a href="tel:+543704258770" style="color:#111111">(+54 3704) 258770</a> · <a href="mailto:danielservin@vamosalsantisimo.com" style="color:#111111">danielservin@vamosalsantisimo.com</a></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0;border-bottom:1px solid #dddddd"><strong>Luciano Barrios</strong> · <a href="tel:+543704632884" style="color:#111111">(+54 3704) 632884</a> · <a href="mailto:lucianobarrios@vamosalsantisimo.com" style="color:#111111">lucianobarrios@vamosalsantisimo.com</a></p><p style="font-size:13px;line-height:1.8;margin:0;padding:8px 0"><strong>Enzo Machuca</strong> · (+54 3704) 208333 · <a href="mailto:contactos@vamosalsantisimo.com" style="color:#111111">contactos@vamosalsantisimo.com</a></p><p style="font-size:11px;line-height:1.6;text-align:center;border-top:1px solid #dddddd;padding-top:11px;margin:8px 0 0"><strong><em>Coordinadores locales de la Comunidad Vamos al Santísimo</em></strong></p></td></tr>
 <tr><td align="center" style="padding:19px 27px 20px;background:#000000;color:#ffffff;font-size:12px;line-height:1.8">Correo oficial: <a href="mailto:contactos@vamosalsantisimo.com" style="color:#ffffff">contactos@vamosalsantisimo.com</a><br>Redes oficiales: <a href="https://www.instagram.com/vamosalsantisimof/" style="color:#d2ad58">Instagram</a> · <a href="https://www.facebook.com/vamosalsantisimof/" style="color:#d2ad58">Facebook</a> · <a href="https://www.tiktok.com/@vamosalsantisimo" style="color:#d2ad58">TikTok</a><br><span style="font-size:10px">Comunidad Vamos al Santísimo · Formosa</span></td></tr>
 <tr><td style="height:3px;background:#d2ad58;font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr></table></body></html>`
@@ -67,7 +67,7 @@ export function registrationEmail(input: {
   const lines = [
     `Hola ${name}:`,
     '',
-    'Tu inscripción al taller de formación católica de Pablo Martínez fue registrada con éxito.',
+    'Tu inscripción al taller de música de Pablo Martínez fue registrada con éxito.',
     `Tu referencia es ${input.reference}.`,
     'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
     '',
@@ -117,7 +117,7 @@ export function groupPaymentEmail(input: {
 }) {
   const lines = [
     `Hola ${input.firstName.trim()}:`, '',
-    'Tu inscripción al taller de formación católica quedó incorporada a un pago grupal.',
+    'Tu inscripción al taller de música quedó incorporada a un pago grupal.',
     `Tu referencia personal es ${input.reference}. El grupo reúne ${input.memberCount} personas.`,
     'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.', '',
   ]

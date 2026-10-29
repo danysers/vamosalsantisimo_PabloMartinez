@@ -46,7 +46,7 @@ const nextConfig = {
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
-        { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(self), payment=(), usb=()' },
+        { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(self), payment=(), usb=(), accelerometer=(self), gyroscope=(self)' },
         { key: 'Content-Security-Policy', value: "base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'" },
       ] },
       ...['/', '/formacion/:path*', '/pagina%20principal%20con%20efecto/:path*', '/eventos-anteriores/:path*'].map(source => ({

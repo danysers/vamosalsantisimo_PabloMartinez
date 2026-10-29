@@ -167,8 +167,8 @@
       +'<div class="pass-actions"><button type="button" class="button" id="print-workshop-pass">Imprimir mi acreditación <span aria-hidden="true">↗</span></button><button type="button" class="checkout-edit" id="pass-change-method" hidden>Elegir otro método de pago</button><a href="/formacion" class="confirmation-back">Volver al taller</a></div><div id="confirmation-method-slot"></div>'
       +'<p class="pass-caption">También podés presentar el QR desde tu celular.</p></div>'
       +'<div class="pass-stage"><article class="workshop-pass" aria-label="Tu acreditación al taller de Pablo Martínez">'
-      +'<div class="workshop-pass__art"><img class="workshop-pass__logo" src="/formacion/assets/logo-dorado.png" alt="Vamos al Santísimo" width="900" height="686"><span class="workshop-pass__edition">FORMOSA · 2026</span><span class="workshop-pass__type">TALLER DE FORMACIÓN</span><h3>Formación<br><em>católica.</em></h3><p class="workshop-pass__speaker">Pablo Martínez</p></div>'
-      +'<div class="workshop-pass__body"><p class="workshop-pass__test" id="pass-test" hidden>PRUEBA · Sin validez para el evento</p><p class="workshop-pass__date" id="pass-date"></p><p class="workshop-pass__venue" id="pass-venue"></p><p class="workshop-pass__nickname" id="pass-nickname" hidden></p><div class="workshop-pass__qr"><img id="pass-qr" width="192" height="192" alt="QR personal para acreditarte en el taller" hidden><p id="pass-qr-pending" role="status">Preparando tu QR…</p></div><p class="workshop-pass__admission" id="pass-admission">TU ACREDITACIÓN PERSONAL</p><p class="workshop-pass__payment" id="pass-payment" hidden></p><p class="workshop-pass__reference" id="pass-reference"></p></article></div>';
+      +'<div class="workshop-pass__art"><img class="workshop-pass__logo" src="/formacion/assets/logo-dorado.png" alt="Vamos al Santísimo" width="900" height="686"><span class="workshop-pass__edition">FORMOSA · 2026</span><span class="workshop-pass__type">TALLER DE MÚSICA</span><h3>Taller de<br><em>música.</em></h3><p class="workshop-pass__speaker">Pablo Martínez</p></div>'
+      +'<div class="workshop-pass__body"><p class="workshop-pass__test" id="pass-test" hidden>PRUEBA · Sin validez para el evento</p><p class="workshop-pass__date" id="pass-date"></p><p class="workshop-pass__venue" id="pass-venue"></p><p class="workshop-pass__nickname" id="pass-nickname" hidden></p><div class="workshop-pass__qr"><img id="pass-qr" width="192" height="192" alt="QR personal para acreditarte en el taller" hidden><p id="pass-qr-pending" role="status">Preparando tu QR…</p></div><p class="workshop-pass__admission" id="pass-admission">TU ACREDITACIÓN PERSONAL</p><p class="workshop-pass__payment" id="pass-payment" hidden></p><p class="workshop-pass__reference" id="pass-reference"></p></article><div class="device-tilt-controls" id="pass-motion-controls" hidden><button type="button" data-tilt-toggle aria-pressed="false">Activar movimiento con el celular</button><p data-tilt-status role="status" hidden></p></div></div>';
     const contact=document.createElement('a');contact.id='confirmation-help';contact.className='whatsapp-help';contact.target='_blank';contact.rel='noopener noreferrer';contact.innerHTML=whatsappIcon+'<span><strong>¿Tenés alguna duda sobre tu inscripción?</strong><small>Consultanos por WhatsApp</small></span>';section.querySelector('.confirmation-copy').append(contact);
     document.getElementById('registration-result').append(section);
     section.querySelector('#print-workshop-pass').addEventListener('click',() => { if (!section.querySelector('#pass-qr').hidden) window.print(); });
@@ -183,13 +183,15 @@
       card.classList.add('is-tilting');
     });
     stage.addEventListener('pointerleave',reset);
+    window.VASDeviceTilt?.attach(stage,card,{controls:section.querySelector('#pass-motion-controls'),x:'--pass-x',y:'--pass-y',
+      maxX:2.5,maxY:3.5,ignore:'.workshop-pass__qr',isActive:()=>!section.hidden});
     return section;
   }
   function renderConfirmation(result,paid=true) {
     const root=shell(); if (!root) return false;
     const section=confirmation() || document.getElementById('registration-confirmed');
     section.querySelector('.workshop-pass').setAttribute('aria-label',paid?'Tu acreditación al taller de Pablo Martínez':'Tu credencial de inscripción · Pago en el taller pendiente');
-    root.dataset.state='confirmed'; section.hidden=false; document.getElementById('payment-next').hidden=true;
+    root.dataset.state='confirmed'; section.hidden=false; window.VASDeviceTilt?.refresh(); document.getElementById('payment-next').hidden=true;
     root.dataset.payment=paid?'paid':'pending';
     document.getElementById('pass-test').hidden=!(result.testMode || current?.testMode);
     document.getElementById('confirmation-help').href=helpUrl(result);

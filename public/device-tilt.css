@@ -1,0 +1,11 @@
+.device-tilt-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:15px auto 0;text-align:center;color:var(--wine,var(--gold-light,#d8b577))}
+.device-tilt-controls[hidden]{display:none!important}
+.device-tilt-controls button{font:500 12px/1.4 var(--sans,system-ui);color:inherit;background:transparent;border:1px solid currentColor;border-radius:24px;padding:10px 16px;min-height:42px;cursor:pointer}
+.device-tilt-controls button:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+.device-tilt-controls button:disabled{opacity:.6;cursor:wait}
+.device-tilt-controls p{flex-basis:100%;font:12px/1.5 var(--sans,system-ui);margin:0;color:inherit}
+.invite-motion-controls{grid-column:1/-1;color:var(--gold-light,#d8b577)}
+.invite-poster.sensor-is-tilting,.invite-preview-stage.sensor-is-tilting{animation:none;transform:perspective(760px) translate3d(0,-5px,12px) rotateX(var(--poster-x)) rotateY(var(--poster-y)) rotateZ(var(--poster-rest));transition:transform 180ms ease-out}
+.workshop-pass.sensor-is-tilting{animation:none;transform:translateY(-4px) rotateX(var(--pass-x)) rotateY(var(--pass-y))}
+@media(prefers-reduced-motion:reduce){.device-tilt-controls{display:none!important}.invite-poster.sensor-is-tilting,.invite-preview-stage.sensor-is-tilting,.workshop-pass.sensor-is-tilting{animation:none!important;transform:none!important}}
+@media print{.device-tilt-controls{display:none!important}}

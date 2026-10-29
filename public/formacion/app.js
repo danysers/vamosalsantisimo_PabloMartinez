@@ -242,7 +242,7 @@ function loadPage(url) {
   return cache.get(key);
 }
 const portrait = new Image();
-portrait.src = '/formacion/assets/pablo-martinez.png';
+portrait.src = '/formacion/assets/pablo-martinez-camisa-azul.png';
 const assetsReady = Promise.allSettled([document.fonts.ready,portrait.decode()]);
 let generation = 0;
 let transition;

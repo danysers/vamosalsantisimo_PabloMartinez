@@ -120,6 +120,8 @@ test('a fresh return tab restores private access and displays the animated confi
   assert.equal(app.ids.get('pass-qr').hidden,false)
   assert.match(app.ids.get('registration-confirmed').html,/Filipenses 4, 13/)
   assert.match(app.ids.get('registration-confirmed').html,/workshop-pass/)
+  assert.match(app.ids.get('registration-confirmed').html,/TALLER DE MÚSICA/)
+  assert.doesNotMatch(app.ids.get('registration-confirmed').html,/TALLER DE FORMACIÓN/)
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
 })
 

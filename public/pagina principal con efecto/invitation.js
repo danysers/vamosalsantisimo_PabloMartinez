@@ -8,6 +8,12 @@
   // The small invitation keeps its ambient float; the dialog preview follows the pointer.
   const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const preview = $('.invite-preview-stage');
+  if (typeof window !== 'undefined' && window.VASDeviceTilt) {
+    const mini = $('.invite-poster');
+    window.VASDeviceTilt.attach(mini,mini,{controls:$('#invite-feature-motion')});
+    window.VASDeviceTilt.attach(preview,preview,{controls:$('#invite-preview-motion'),isActive:()=>dialog.open});
+    dialog.addEventListener('close',window.VASDeviceTilt.refresh);
+  }
   if (preview && !prefersReducedMotion.matches) {
     let previewFrame = 0;
     let pointerX = 0;
@@ -141,6 +147,7 @@
       returnFocus = document.activeElement;
       selectNetwork();
       dialog.showModal();
+      if (typeof window !== 'undefined') window.VASDeviceTilt?.refresh();
       document.documentElement.classList.add('invitation-open');
       prepareFile();
     });
