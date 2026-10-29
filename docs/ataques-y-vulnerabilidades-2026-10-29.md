@@ -33,6 +33,10 @@ La nueva imagen usa [Distroless cc Debian 13](https://github.com/GoogleContainer
 
 Validación local: 142 pruebas, 141 correctas, 0 fallidas y 1 escenario administrativo legado omitido; TypeScript/ESLint y auditoría completa de dependencias correctos. Imagen reducida: **0 HIGH/CRITICAL** en el escaneo. Smoke de imagen: migraciones, portada/taller, imágenes nativas, autenticación, imports de workers, ejecución sin root y ausencia de shell/npm.
 
+El escaneo adicional de severidades menores de la imagen local registra **23 MEDIUM y 8 LOW**, sin versión corregida informada por la base de Trivy para esos paquetes Debian. No se ocultaron ni se consideran resueltas. Cero HIGH/CRITICAL no significa cero vulnerabilidades.
+
+El commit `c21cfcb7ca63cc02e51009c70afbffa24850d70f` pasó el [pipeline 40895930096](https://github.com/danysers/vamosalsantisimo_PabloMartinez/actions/runs/40895930096): 141 pruebas correctas, ninguna fallida, una omitida, auditoría completa, smoke de la imagen ARM64 y bloqueo Trivy HIGH/CRITICAL. Ambos despliegues Dokploy terminaron correctamente el 29/10/2026, a las 14:58 y 14:59 UTC. La portada y `/admin` respondieron 200 con CSP; el optimizador rechazó destinos no autorizados y consultas añadidas al logo, y entregó el logo permitido. La API de auspiciantes respondió 200 con su alternativa estática (`available: false`); esto no acredita una sincronización de Drive en producción.
+
 El pipeline ahora construye y carga la imagen, ejecuta el smoke sobre esa misma imagen, la escanea y solo entonces publica `latest`. Una alerta HIGH/CRITICAL bloquea la publicación y requiere revisión; no hay exclusiones para ocultar hallazgos.
 
 ## Límites operativos
