@@ -72,6 +72,11 @@ test('complete enrollment stores pending payment and one confirmation email per 
       WHERE registration_id IN (SELECT id FROM registrations WHERE workshop_id=$1 AND reference=$2)`,
     [workshop.rows[0].id, receipt.reference]), /payment quote is immutable/)
 
+    for (const notes of [undefined, '', '   ']) {
+      const missingReason = await send({ ...person, firstName: 'Luis', email: 'luis-test@example.invalid',
+        paymentDifficulty: true, paymentDifficultyNotes: notes, paymentMethod: undefined }, randomUUID())
+      assert.equal(missingReason.status, 400)
+    }
     const assistance = await send({ ...person, firstName: 'Luis', email: 'luis-test@example.invalid',
       paymentDifficulty: true, paymentDifficultyNotes: 'Necesita ayuda', paymentMethod: undefined }, randomUUID())
     assert.equal(assistance.status, 201)

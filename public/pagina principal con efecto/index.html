@@ -249,6 +249,7 @@
       <details class="question"><summary>¿Cómo me inscribo al taller?<span aria-hidden="true">+</span></summary><p>Te recomendamos hacer la inscripción previa cuando se habilite el formulario. Si no llegás a anotarte antes, también vas a poder inscribirte en el lugar el mismo día del taller.</p></details><details class="question"><summary>¿Puedo llevar algo para estar más cómodo y alabar?<span aria-hidden="true">+</span></summary><p>Sí. Podés llevar una silleta, agua, un anotador, una pandereta u otros instrumentos para alabar al Señor; lo que te ayude a estar más cómodo.</p></details>
     </section>
   </main>
+  <button class="music-sound-prompt" id="music-sound-prompt" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14"/></svg>Activar música</button>
   <nav class="social-band" aria-label="Redes sociales de Vamos al Santísimo">
     <div class="wrap social-band-grid">
       <a class="social-channel social-instagram" href="https://www.instagram.com/vamosalsantisimof/" target="_blank" rel="noopener noreferrer" aria-label="Vamos al Santísimo en Instagram, abre en otra pestaña">
@@ -329,6 +330,7 @@
   function notifyOpeningComplete() {
     if (openingNotified) return;
     openingNotified = true;
+    document.documentElement.dataset.openingComplete = 'true';
     document.dispatchEvent(new Event('vas:opening-complete'));
   }
 

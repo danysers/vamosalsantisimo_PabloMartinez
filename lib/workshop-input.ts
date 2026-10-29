@@ -39,6 +39,7 @@ export const individualRegistrationSchema = workshopPersonSchema.extend({
 }).strict().superRefine((value, ctx) => {
   if (!validWorkshopLocation(value.country, value.province, value.locality)) ctx.addIssue({ code: 'custom', path: ['province'], message: 'Elegí una provincia argentina o completá tu provincia y localidad si venís de otro país.' })
   if (value.paymentDifficulty === !!value.paymentMethod) ctx.addIssue({ code: 'custom', path: ['paymentMethod'], message: 'Elegí una forma de pago válida.' })
+  if (value.paymentDifficulty && !value.paymentDifficultyNotes?.trim()) ctx.addIssue({ code: 'custom', path: ['paymentDifficultyNotes'], message: 'Contanos el motivo por el que necesitás ayuda para pagar.' })
   if (!value.paymentDifficulty && value.paymentDifficultyNotes?.trim()) ctx.addIssue({ code: 'custom', path: ['paymentDifficultyNotes'], message: 'No corresponde.' })
 })
 

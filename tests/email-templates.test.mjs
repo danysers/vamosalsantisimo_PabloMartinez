@@ -57,8 +57,11 @@ test('Mercado Pago copy avoids settlement claims and branded HTML omits priest c
 })
 
 test('assistance alert goes to organizer and approval message is separate', () => {
-  const alert = assistanceReviewEmail({ fullName: 'Ana Pérez', reference: 'REF-123', email: 'ana@example.invalid', phone: '370 0000000' })
+  const alert = assistanceReviewEmail({ fullName: 'Ana Pérez', reference: 'REF-123', email: 'ana@example.invalid', phone: '370 0000000', reason: 'No puedo cubrir el costo.\nNecesito ayuda <temporal>.' })
   assert.match(alert.text, /pendiente de revisión/)
+  assert.match(alert.text, /Motivo de la solicitud:\nNo puedo cubrir el costo\.\nNecesito ayuda <temporal>\./)
+  assert.match(alert.html, /Necesito ayuda &lt;temporal&gt;\./)
+  assert.doesNotMatch(alert.html, /<temporal>/)
   assert.doesNotMatch(alert.text, /fue aprobada/)
   const decision = assistanceApprovedEmail({ firstName: 'Ana', reference: 'REF-123' })
   assert.match(decision.text, /fue aprobada/)

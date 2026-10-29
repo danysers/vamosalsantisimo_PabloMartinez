@@ -7,20 +7,59 @@
   const status = document.getElementById('music-control-status');
   const caption = document.getElementById('music-frame-status');
   const placeholder = document.getElementById('music-video-placeholder');
+  const soundPrompt = document.getElementById('music-sound-prompt');
   if (!button || !status || !caption || !placeholder || !document.getElementById('music-video')) return;
 
   let player = null;
   let playerReady = false;
-  let openingFinished = false;
+  let openingFinished = document.documentElement?.dataset.openingComplete === 'true';
   let userChosePlayback = false;
   let autoAttempted = false;
   let failed = false;
   let readyTimeout = null;
   let playerConstructed = false;
+  let playbackTimeout = null;
+  let mutedAttempted = false;
+  let needsSound = false;
+  let userPaused = false;
 
   function showPlaying(isPlaying) {
-    button.setAttribute('aria-pressed', String(isPlaying));
-    button.setAttribute('aria-label', isPlaying ? 'Pausar música' : 'Reproducir música');
+    button.setAttribute('aria-pressed', String(isPlaying && !needsSound));
+    button.setAttribute('aria-label', needsSound ? 'Activar sonido de la música' : isPlaying ? 'Pausar música' : 'Reproducir música');
+    button.setAttribute('title', needsSound ? 'Activar sonido de la música' : isPlaying ? 'Pausar música' : 'Reproducir música');
+    if (soundPrompt) soundPrompt.hidden = !needsSound || failed;
+  }
+
+  function offerSound() {
+    needsSound = true;
+    showPlaying(false);
+    status.textContent = 'Tocá para escuchar';
+    caption.textContent = 'El navegador requiere un toque para escuchar. Tocá «Activar música» o el botón superior.';
+  }
+
+  function tryMutedPlayback() {
+    clearTimeout(playbackTimeout);
+    if (!playerReady || failed || userPaused) return;
+    offerSound();
+    // Browsers may allow inline muted video even when audible autoplay is blocked.
+    // Never retry after the visitor has explicitly chosen to play or pause.
+    if (mutedAttempted || userChosePlayback) return;
+    mutedAttempted = true;
+    player.mute();
+    player.playVideo();
+  }
+
+  function activateSound() {
+    if (!playerReady || failed) return;
+    userChosePlayback = true;
+    userPaused = false;
+    clearTimeout(playbackTimeout);
+    needsSound = false;
+    player.unMute();
+    if (player.getVolume?.() === 0) player.setVolume(65);
+    player.playVideo();
+    showPlaying(player.getPlayerState() === window.YT.PlayerState.PLAYING);
+    status.textContent = 'Iniciando música';
   }
 
   function currentTitle() {
@@ -33,6 +72,9 @@
     autoAttempted = true;
     status.textContent = 'Iniciando música';
     player.playVideo();
+    playbackTimeout = setTimeout(() => {
+      if (!userChosePlayback && player.getPlayerState() !== window.YT.PlayerState.PLAYING) tryMutedPlayback();
+    }, 4000);
   }
 
   function armReadyTimeout() {
@@ -40,6 +82,7 @@
     readyTimeout = setTimeout(() => {
       if (playerReady || failed) return;
       failed = true;
+      if (soundPrompt) soundPrompt.hidden = true;
       button.disabled = true;
       status.textContent = 'Abrir en YouTube';
       caption.textContent = 'YouTube no respondió. Podés abrir la lista en una pestaña nueva.';
@@ -57,10 +100,14 @@
 
   button.addEventListener('click', () => {
     if (!playerReady || failed) return;
+    if (needsSound || player.isMuted()) { activateSound(); return; }
     userChosePlayback = true;
-    if (player.getPlayerState() === window.YT.PlayerState.PLAYING) player.pauseVideo();
-    else player.playVideo();
+    clearTimeout(playbackTimeout);
+    userPaused = player.getPlayerState() === window.YT.PlayerState.PLAYING;
+    if (userPaused) player.pauseVideo();
+    else activateSound();
   });
+  soundPrompt?.addEventListener('click', activateSound);
 
   window.onYouTubeIframeAPIReady = () => {
     player = new window.YT.Player('music-video', {
@@ -72,6 +119,11 @@
           clearTimeout(readyTimeout);
           failed = false;
           playerReady = true;
+          const iframe = player.getIframe?.();
+          if (iframe) {
+            const allow = iframe.getAttribute('allow') || '';
+            if (!/(^|;)\s*autoplay(?:\s|;|$)/.test(allow)) iframe.setAttribute('allow', [allow, 'autoplay'].filter(Boolean).join('; '));
+          }
           placeholder.hidden = true;
           button.disabled = false;
           status.textContent = 'Música lista';
@@ -81,9 +133,12 @@
         },
         onStateChange(event) {
           if (event.data === window.YT.PlayerState.PLAYING) {
+            clearTimeout(playbackTimeout);
+            needsSound = player.isMuted();
             showPlaying(true);
-            status.textContent = currentTitle();
-            caption.textContent = 'Reproduciendo · usá el botón superior o los controles del video para pausar.';
+            status.textContent = needsSound ? 'Activar música' : currentTitle();
+            caption.textContent = needsSound ? 'El video está reproduciéndose sin sonido. Tocá «Activar música» para escucharlo.' :
+              'Reproduciendo · usá el botón superior o los controles del video para pausar.';
           } else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.ENDED) {
             showPlaying(false);
             status.textContent = event.data === window.YT.PlayerState.ENDED ? 'Música finalizada' : 'Música en pausa';
@@ -91,14 +146,14 @@
           }
         },
         onAutoplayBlocked() {
-          showPlaying(false);
-          status.textContent = 'Tocá para escuchar';
-          caption.textContent = 'Tu navegador requiere que pulses Reproducir para escuchar la música.';
+          tryMutedPlayback();
         },
         onError() {
           clearTimeout(readyTimeout);
+          clearTimeout(playbackTimeout);
           failed = true;
           button.disabled = true;
+          needsSound = false;
           showPlaying(false);
           status.textContent = 'Abrir en YouTube';
           caption.textContent = 'Este video no se puede reproducir aquí. Podés abrir la lista en YouTube.';
@@ -116,6 +171,7 @@
   script.async = true;
   script.onerror = () => {
     failed = true;
+    if (soundPrompt) soundPrompt.hidden = true;
     status.textContent = 'YouTube no disponible';
     caption.textContent = 'No se pudo cargar el video. Podés abrir la lista en YouTube.';
     placeholder.textContent = 'No se pudo cargar YouTube.';

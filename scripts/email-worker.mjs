@@ -50,7 +50,7 @@ async function render(pool, job) {
     })
   }
   const result = await pool.query(`
-    SELECT r.email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,
+    SELECT r.email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,
       p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.transfer_holder,s.transfer_document,
       s.proof_whatsapp_e164,s.reminder_email,
       registration_has_approved_payment(r.id) AS paid,
@@ -74,6 +74,7 @@ async function render(pool, job) {
     return assistanceReviewEmail({
       fullName: registration.name, reference: registration.reference,
       email: registration.email, phone: registration.phone,
+      reason: registration.payment_difficulty_notes,
     })
   }
   if (job.kind === 'payment_proof_submitted') {

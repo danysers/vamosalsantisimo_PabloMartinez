@@ -20,6 +20,12 @@ El pago **en efectivo en el taller** usa un precio de ventanilla independiente d
 
 ## Variables
 
+### Música de la portada
+
+El reproductor de YouTube intenta comenzar cuando termina el círculo de apertura. La marca `data-opening-complete` permite reconocer el final aunque la API de YouTube llegue más tarde o se haya omitido la animación. El iframe usa reproducción en línea y permiso de autoplay. Si el navegador bloquea el sonido, se intenta reproducir silenciado y aparece **Activar música**; un toque activa el sonido. También se detectan bloqueos que no emiten el evento de YouTube. La elección de pausar del visitante no se revierte automáticamente. Safari, Chrome y los ajustes del dispositivo pueden exigir interacción incluso en este flujo: una animación o temporizador no sustituye un gesto del usuario. Referencias: [Chrome](https://developer.chrome.com/blog/autoplay), [WebKit](https://webkit.org/blog/6784/new-video-policies-for-ios/) y [API de YouTube](https://developers.google.com/youtube/iframe_api_reference#onAutoplayBlocked).
+
+### Variables del servicio
+
 | Variable | Uso |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL privado. En Dokploy debe usar el host `postgres` de la red `vas_workshop_private`. |

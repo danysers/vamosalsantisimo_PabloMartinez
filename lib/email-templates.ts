@@ -127,13 +127,15 @@ export function groupPaymentEmail(input: {
   return { subject: `Inscripción grupal · ${input.reference}`, text, html: brandedEmailHtml(text) }
 }
 
-export function assistanceReviewEmail(input: { fullName: string; reference: string; email: string; phone: string }) {
+export function assistanceReviewEmail(input: { fullName: string; reference: string; email: string; phone: string; reason: string | null }) {
   const text = [
     'Solicitud de ayuda para pagar el taller.', '',
     `${input.fullName} indicó que no puede abonar la inscripción.`,
     `Referencia: ${input.reference}.`,
     `Correo de contacto: ${input.email}.`,
     `Teléfono de contacto: ${input.phone}.`, '',
+    'Motivo de la solicitud:',
+    input.reason?.trim() || 'No se informó un motivo en esta solicitud anterior.', '',
     'La solicitud está pendiente de revisión. No se enviará una aprobación al participante hasta que un administrador la apruebe.',
     '', 'Vamos al Santísimo',
   ].join('\n')

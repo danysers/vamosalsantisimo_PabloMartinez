@@ -39,8 +39,8 @@ test('assistance outbox renders organizer notice and reviewed decisions without 
       `${firstName.toLowerCase()} prueba`, email, email, '3700000000', '3700000000'])
     const id = registration.rows[0].id
     await pool.query(`INSERT INTO registration_intakes
-      (registration_id,first_name,last_name,birth_date,ecclesial_state,payment_difficulty)
-      VALUES ($1,$2,$3,$4,$5,true)`, [id, firstName, 'Prueba', '1990-01-01', 'laico'])
+      (registration_id,first_name,last_name,birth_date,ecclesial_state,payment_difficulty,payment_difficulty_notes)
+      VALUES ($1,$2,$3,$4,$5,true,$6)`, [id, firstName, 'Prueba', '1990-01-01', 'laico', 'Necesito ayuda para cubrir el importe.\nSituación de prueba <temporal>.'])
     await pool.query('INSERT INTO assistance_requests (registration_id) VALUES ($1)', [id])
     return { id, email }
   }
@@ -65,6 +65,8 @@ test('assistance outbox renders organizer notice and reviewed decisions without 
     assert.equal(await processEmailJob(pool, fakeTransport, await job(person.id, 'assistance_review_request'), 'contactos@vamosalsantisimo.com'), 'sent')
     assert.equal(sent.at(-1).to, 'organizer@example.invalid')
     assert.match(sent.at(-1).text, /no puede abonar/)
+    assert.match(sent.at(-1).text, /Motivo de la solicitud:\nNecesito ayuda para cubrir el importe\.\nSituación de prueba <temporal>\./)
+    assert.match(sent.at(-1).html, /Situación de prueba &lt;temporal&gt;\./)
     assert.equal(await processEmailJob(pool, fakeTransport, await job(person.id, 'assistance_approved'), 'contactos@vamosalsantisimo.com'), 'sent')
     assert.equal(sent.at(-1).to, person.email)
     assert.match(sent.at(-1).text, /fue aprobada/)

@@ -25,20 +25,27 @@ function updatePaymentDescription() {
 }
 document.addEventListener('change', event => {
   if(event.target.name === 'formaPago') { updatePaymentDescription(); return; }
-  if(event.target.name !== 'tieneInconveniente') return;
+  if(event.target.name === 'tieneInconveniente') updatePaymentDifficulty();
+});
+function updatePaymentDifficulty() {
   const details = document.querySelector('#payment-details-field');
   const textarea = document.querySelector('#inconveniente');
-  const showDetails = event.target.value === 'si';
+  if (!details || !textarea) return;
+  const choice = document.querySelector('#registration [name="tieneInconveniente"]:checked')?.value;
+  const showDetails = choice === 'si';
   details.hidden = !showDetails;
+  textarea.required = showDetails;
+  textarea.disabled = !showDetails;
+  textarea.setCustomValidity('');
   if(!showDetails) textarea.value = '';
   const methodField = document.querySelector('#payment-method-field');
-  methodField.hidden = showDetails;
+  methodField.hidden = choice !== 'no';
   for (const radio of methodField.querySelectorAll('input[name="formaPago"]')) {
-    radio.required = !showDetails;
+    radio.required = choice === 'no';
     if (showDetails) radio.checked = false;
   }
   updatePaymentDescription();
-});
+}
 function todayIso() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -47,6 +54,7 @@ function prepareRegistrationForm() {
   const birthDate = document.querySelector('#registration [name="fechaNacimiento"]');
   if (birthDate) birthDate.max = todayIso();
   updateCountryFields();
+  updatePaymentDifficulty();
   document.dispatchEvent(new Event('workshop:form-ready'));
 }
 function updateCountryFields() {
@@ -90,6 +98,9 @@ function validateRegistration(form) {
   const digits = value.replace(/\D/g, '');
   phone.setCustomValidity(value && (!/^\+?[\d\s()-]+$/.test(value) || digits.length < 7 || digits.length > 15 || /^(\d)\1+$/.test(digits))
     ? 'Ingresá un teléfono válido con código de área.' : '');
+  const reason = form.elements.namedItem('inconveniente');
+  reason.setCustomValidity(form.elements.namedItem('tieneInconveniente').value === 'si' && !reason.value
+    ? 'Contanos el motivo por el que necesitás ayuda para pagar.' : '');
   return form.reportValidity();
 }
 function showRegistrationResult(form, receipt) {

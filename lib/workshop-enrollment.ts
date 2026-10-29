@@ -60,6 +60,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
   if (!slug) return unavailable
   const payment = input.paymentDifficulty ? 'assistance' : input.paymentMethod
   if (!payment || (input.paymentDifficulty && input.paymentMethod)) return { code: 400, body: { error: 'Elegí una forma de pago válida.' } }
+  if (input.paymentDifficulty && !input.paymentDifficultyNotes?.trim()) return { code: 400, body: { error: 'Contanos el motivo por el que necesitás ayuda para pagar.' } }
   const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`
   const documentNumber = input.documentNumber.trim().toUpperCase().replace(/[.\s]/g, '')
   if (!/^[A-Z0-9-]{5,20}$/.test(documentNumber)) return { code: 400, body: { error: 'Ingresá un D.N.I válido.' } }
