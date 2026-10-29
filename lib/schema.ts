@@ -13,7 +13,7 @@ export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assi
 export const accreditationDelivery = pgEnum('accreditation_delivery', ['screen', 'download', 'print', 'email'])
 export const admissionScanResult = pgEnum('admission_scan_result', ['admitted', 'already_admitted', 'not_eligible', 'revoked', 'expired', 'unknown'])
 export const promotionKind = pgEnum('promotion_kind', ['bundle', 'group_fixed'])
-export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted', 'registration_access'])
+export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted', 'registration_access', 'lot_changed'])
 export const emailStatus = pgEnum('email_status', ['queued', 'sending', 'sent', 'failed', 'cancelled'])
 const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
 
@@ -36,6 +36,8 @@ export const workshops = pgTable('workshops', {
   venue: text('venue'),
   capacity: integer('capacity'), // null means unlimited; never infer from a payment count.
   activeLot: integer('active_lot').notNull().default(1),
+  lotAutomationEnabled: boolean('lot_automation_enabled').notNull().default(false),
+  lotNotificationEmail: text('lot_notification_email'),
   registrationOpen: boolean('registration_open').notNull().default(false),
   liveStartedAt: timestamp('live_started_at', { withTimezone: true }),
   waitlistEnabled: boolean('waitlist_enabled').notNull().default(false),
@@ -53,12 +55,32 @@ export const workshopLots = pgTable('workshop_lots', {
   number: integer('number').notNull(),
   amountMinor: integer('amount_minor').notNull(),
   currency: text('currency').notNull().default('ARS'),
+  advanceAfter: integer('advance_after'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex('workshop_lots_number_unique').on(table.workshopId, table.number),
   check('workshop_lots_number_range', sql`${table.number} BETWEEN 1 AND 3`),
   check('workshop_lots_amount_positive', sql`${table.amountMinor} > 0`),
   check('workshop_lots_ars', sql`${table.currency} = 'ARS'`),
+  check('workshop_lots_advance_after', sql`${table.advanceAfter} IS NULL OR (${table.number} < 3 AND ${table.advanceAfter} BETWEEN 1 AND 1000000)`),
+])
+
+export const workshopLotChanges = pgTable('workshop_lot_changes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workshopId: uuid('workshop_id').notNull().references(() => workshops.id),
+  fromLot: integer('from_lot').notNull(),
+  toLot: integer('to_lot').notNull(),
+  threshold: integer('threshold').notNull(),
+  paidPlaces: integer('paid_places').notNull(),
+  fromAmountMinor: integer('from_amount_minor').notNull(),
+  toAmountMinor: integer('to_amount_minor').notNull(),
+  toEmail: text('to_email').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  index('lot_changes_by_workshop').on(table.workshopId, table.createdAt),
+  check('lot_changes_forward_only', sql`${table.fromLot} BETWEEN 1 AND 2 AND ${table.toLot} = ${table.fromLot} + 1`),
+  check('lot_changes_valid_count', sql`${table.threshold} > 0 AND ${table.paidPlaces} >= ${table.threshold}`),
+  check('lot_changes_positive_prices', sql`${table.fromAmountMinor} > 0 AND ${table.toAmountMinor} > 0`),
 ])
 
 export const workshopPromotions = pgTable('workshop_promotions', {
@@ -498,6 +520,7 @@ export const emailOutbox = pgTable('email_outbox', {
   recoveryId: uuid('recovery_id').references(() => registrationRecoveries.id),
   credentialId: uuid('credential_id').references(() => accreditationCredentials.id),
   settlementReminderId: uuid('settlement_reminder_id').references(() => settlementReminders.id),
+  lotChangeId: uuid('lot_change_id').references(() => workshopLotChanges.id),
   attemptCount: integer('attempt_count').notNull().default(0),
   nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
   sentAt: timestamp('sent_at', { withTimezone: true }),
@@ -508,7 +531,8 @@ export const emailOutbox = pgTable('email_outbox', {
   check('email_outbox_attempts_nonnegative', sql`${table.attemptCount} >= 0`),
   check('email_outbox_one_subject', sql`(
     (${table.registrationId} IS NOT NULL)::integer +
-    (${table.settlementReminderId} IS NOT NULL)::integer = 1
+    (${table.settlementReminderId} IS NOT NULL)::integer +
+    (${table.lotChangeId} IS NOT NULL)::integer = 1
   )`),
 ])
 

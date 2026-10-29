@@ -225,6 +225,13 @@
       "when": 1793276050005,
       "tag": "0031_workshop_live_cutover",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793281161368,
+      "tag": "0032_automatic_lot_changes",
+      "breakpoints": true
     }
   ]
 }

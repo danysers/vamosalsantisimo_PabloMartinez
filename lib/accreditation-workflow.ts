@@ -79,6 +79,10 @@ export function verifyManualPayment(db: Db, input: {
   reference: string; eventSlug: string; operatorId: string; note: string; manualReference: string
 }) {
   return db.transaction(async tx => {
+    // Use the same lock order as online reconciliation and enrollment.
+    const workshop = await tx.execute(sql`SELECT w.id FROM workshops w JOIN events e ON e.id=w.event_id
+      WHERE e.slug=${input.eventSlug} FOR UPDATE OF w`)
+    if (!workshop.rows[0]) return { code: 404, body: { error: 'Taller no encontrado.' } }
     const found = await tx.execute(sql`
       SELECT p.id,p.registration_id,p.source,p.status,p.amount_minor,p.payer_name,p.payer_email
       FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
@@ -138,6 +142,7 @@ export function verifyManualPayment(db: Db, input: {
     await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'payment.manually_verified',
       subjectId: attempt.id, reason: input.note,
       changes: { source: attempt.source, amountMinor: attempt.amount_minor, manualReference: input.manualReference || null, accreditedPeople: members.length } })
+    await tx.execute(sql`SELECT advance_workshop_lot(${String(workshop.rows[0].id)})`)
     return { code: 200, body: { status: 'approved', accreditedPeople: members.length, emailQueued: true } }
   })
 }

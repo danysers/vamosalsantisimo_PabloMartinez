@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import SettlementPlanner from './settlement-planner'
+import LotAutomation, { type LotAutomationSettings } from './lot-automation'
 
-type Lot = { id: string; number: number; amountMinor: number; serviceFeeMinor: number; onlineAmountMinor: number }
+type Lot = { id: string; number: number; amountMinor: number; serviceFeeMinor: number; onlineAmountMinor: number;
+  advanceAfter: number | null; paidPlaces: number }
 type Promo = { id: string; code: string; kind: 'bundle' | 'group_fixed'; active: boolean;
   bundleSize: number | null; payablePeople: number | null; minPeople: number | null; maxPeople: number | null;
   groupTotalMinor: number | null; startsAt: string | null; endsAt: string | null; updatedAt: string }
 type Config = { activeLot: number; registrationOpen: boolean; emailReady: boolean; capacity: number | null; serviceFeeMinor: number; onSitePriceMinor: number | null;
-  lots: Lot[]; promotions: Promo[]; paymentMethods: { bankTransfer: boolean; onSite: boolean } }
+  lots: Lot[]; lotAutomation: LotAutomationSettings; promotions: Promo[]; paymentMethods: { bankTransfer: boolean; onSite: boolean } }
 type Person = { firstName: string; lastName: string; documentNumber: string; birthDate: string; phone: string; email: string;
   ecclesialState: string; prayerGroup: string; movement: string; occupation: string }
 type Quote = { amountMinor: number; subtotalMinor: number; discountMinor: number;
@@ -226,6 +228,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
           onClick={() => void saveConfig({ type: 'active_lot', number: lot.number })}>Activar lote</button></>}
       </div>)}</div>
       <p role="status">{configMessage}</p>
+      <LotAutomation settings={config.lotAutomation} lots={config.lots} canConfigure={canConfigure} onSaved={reload} />
     </section>
     <SettlementPlanner canConfigure={canConfigure} />
     <section className="admin-accreditation-block" id="promociones">

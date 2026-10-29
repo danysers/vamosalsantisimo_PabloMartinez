@@ -31,6 +31,10 @@ const change = z.union([
   z.object({ type: z.literal('active_lot'), number: z.number().int().min(1).max(3) }).strict(),
   z.object({ type: z.literal('online_fee'), amountMinor: z.number().int().min(0).max(20_000_000) }).strict(),
   z.object({ type: z.literal('on_site_price'), amountMinor: money.nullable() }).strict(),
+  z.object({ type: z.literal('lot_automation'), enabled: z.boolean(), notificationEmail: z.union([z.email().max(254), z.literal('')]),
+    limits: z.object({ lot1: z.number().int().min(1).max(1_000_000).nullable(),
+      lot2: z.number().int().min(1).max(1_000_000).nullable() }).strict(),
+  }).strict(),
   promotion,
 ])
 

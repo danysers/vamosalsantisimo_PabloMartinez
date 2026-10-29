@@ -5,7 +5,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditation-token.ts'
 import { decryptRecoveryCode } from '../lib/recovery-code.ts'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { processLotAutomation } from './lot-automation.mjs'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, lotChangedEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
 async function claim(pool) {
   // A local preview may restrict delivery to jobs created during that preview;
@@ -28,6 +29,15 @@ async function claim(pool) {
 }
 
 async function render(pool, job) {
+  if (job.kind === 'lot_changed') {
+    const result = await pool.query(`SELECT c.*,e.title FROM workshop_lot_changes c
+      JOIN workshops w ON w.id=c.workshop_id JOIN events e ON e.id=w.event_id WHERE c.id=$1`, [job.lot_change_id])
+    const change = result.rows[0]
+    if (!change || change.to_email.toLowerCase() !== job.to_email.toLowerCase()) return null
+    return lotChangedEmail({ eventTitle: change.title, fromLot: change.from_lot, toLot: change.to_lot,
+      threshold: change.threshold, paidPlaces: change.paid_places, amountMinor: change.to_amount_minor,
+      changedAt: new Date(change.created_at).toISOString() })
+  }
   if(job.kind==='registration_access') {
     const result=await pool.query(`SELECT c.id,c.code_encrypted,c.expires_at,c.consumed_at,r.email,i.first_name,
       registration_is_current(r.id) AS current_registration
@@ -236,9 +246,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
   try {
     if (process.argv.includes('--once')) {
+      await processLotAutomation(pool)
       await processEmailJobOnce(pool, transport, process.env.SMTP_FROM)
     } else {
       for (;;) {
+        try { await processLotAutomation(pool) }
+        catch { console.error('Automatic lot check failed; retrying on the next cycle') }
         const worked = await processEmailJobOnce(pool, transport, process.env.SMTP_FROM)
         if (!worked) await new Promise(resolve => setTimeout(resolve, 20_000))
       }

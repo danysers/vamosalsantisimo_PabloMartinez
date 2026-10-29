@@ -29,32 +29,48 @@ export type GroupDraft = {
 const invalid = (error: string, code = 409): Result => ({ code, body: { error } })
 const toDate = (value: string | null | undefined) => value ? new Date(value) : null
 
-async function lockWorkshop(tx: Tx, eventSlug: string) {
+async function lockWorkshop(tx: Tx, eventSlug: string, advanceLot = false) {
   const found = await tx.execute(sql`
     SELECT w.id,w.active_lot,w.capacity,w.registration_open,w.starts_at,w.live_started_at
     FROM workshops w JOIN events e ON e.id=w.event_id
     WHERE e.slug=${eventSlug} FOR UPDATE OF w
   `)
-  return found.rows[0] as { id: string; active_lot: number; capacity: number | null;
+  const workshop = found.rows[0] as { id: string; active_lot: number; capacity: number | null;
     registration_open: boolean; starts_at: Date; live_started_at: Date | null } | undefined
+  if (workshop && advanceLot) {
+    const result = await tx.execute(sql`SELECT advance_workshop_lot(${workshop.id}) AS active_lot`)
+    workshop.active_lot = Number(result.rows[0].active_lot)
+  }
+  return workshop
 }
 
 export async function readWorkshopPricing(db: Db, eventSlug: string) {
   const found = await db.execute(sql`
-    SELECT w.id,w.active_lot,w.registration_open,w.capacity
+    SELECT w.id,w.active_lot,w.registration_open,w.capacity,w.lot_automation_enabled,w.lot_notification_email
     FROM workshops w JOIN events e ON e.id=w.event_id WHERE e.slug=${eventSlug}
   `)
-  const workshop = found.rows[0] as { id: string; active_lot: number; registration_open: boolean; capacity: number | null } | undefined
+  const workshop = found.rows[0] as { id: string; active_lot: number; registration_open: boolean; capacity: number | null;
+    lot_automation_enabled: boolean; lot_notification_email: string | null } | undefined
   if (!workshop) return null
-  const [lots, promotions, settings] = await Promise.all([
+  const [lots, promotions, settings, history] = await Promise.all([
     db.select({ id: workshopLots.id, number: workshopLots.number, amountMinor: workshopLots.amountMinor,
+      advanceAfter: workshopLots.advanceAfter,
+      paidPlaces: sql<number>`workshop_lot_paid_places(${workshop.id},${workshopLots.number})`,
       updatedAt: workshopLots.updatedAt }).from(workshopLots).where(eq(workshopLots.workshopId, workshop.id)).orderBy(workshopLots.number),
     db.select().from(workshopPromotions).where(eq(workshopPromotions.workshopId, workshop.id)).orderBy(workshopPromotions.code),
-    db.execute(sql`SELECT transfer_enabled,on_site_enabled,online_service_fee_minor,on_site_price_minor FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`),
+    db.execute(sql`SELECT transfer_enabled,on_site_enabled,online_service_fee_minor,on_site_price_minor,reminder_email FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`),
+    db.execute(sql`SELECT c.id,c.from_lot,c.to_lot,c.threshold,c.paid_places,c.to_email,c.created_at,o.status AS email_status
+      FROM workshop_lot_changes c LEFT JOIN email_outbox o ON o.lot_change_id=c.id AND o.kind='lot_changed'
+      WHERE c.workshop_id=${workshop.id} ORDER BY c.created_at DESC,c.id DESC LIMIT 10`),
   ])
   const serviceFeeMinor = Number(settings.rows[0]?.online_service_fee_minor ?? 0)
   return { workshopId: workshop.id, activeLot: workshop.active_lot, registrationOpen: workshop.registration_open,
     capacity: workshop.capacity, emailReady: process.env.REGISTRATION_EMAIL_READY === '1',
+    lotAutomation: { enabled: workshop.lot_automation_enabled,
+      notificationEmail: workshop.lot_notification_email ?? String(settings.rows[0]?.reminder_email ?? ''),
+      history: history.rows.map(row => ({ id: String(row.id), fromLot: Number(row.from_lot), toLot: Number(row.to_lot),
+        threshold: Number(row.threshold), paidPlaces: Number(row.paid_places), toEmail: String(row.to_email),
+        createdAt: new Date(String(row.created_at)).toISOString(), emailStatus: String(row.email_status ?? 'queued') })) },
     serviceFeeMinor, onSitePriceMinor: settings.rows[0]?.on_site_price_minor == null ? null : Number(settings.rows[0].on_site_price_minor),
     lots: lots.map(lot => ({ ...lot, serviceFeeMinor, onlineAmountMinor: lot.amountMinor + serviceFeeMinor })),
     promotions: promotions.map(p => ({ ...p, startsAt: p.startsAt?.toISOString() ?? null,
@@ -90,6 +106,7 @@ export async function updateWorkshopPricing(db: Db, input: {
     | { type: 'active_lot'; number: number }
     | { type: 'online_fee'; amountMinor: number }
     | { type: 'on_site_price'; amountMinor: number | null }
+    | { type: 'lot_automation'; enabled: boolean; notificationEmail: string; limits: { lot1: number | null; lot2: number | null } }
     | { type: 'promotion'; id?: string; code: string; kind: 'bundle' | 'group_fixed'; active: boolean;
       bundleSize?: number | null; payablePeople?: number | null; minPeople?: number | null; maxPeople?: number | null;
       groupTotalMinor?: number | null; startsAt?: string | null; endsAt?: string | null }
@@ -123,6 +140,28 @@ export async function updateWorkshopPricing(db: Db, input: {
       await tx.execute(sql`UPDATE workshop_payment_settings SET on_site_price_minor=${change.amountMinor},updated_at=now() WHERE workshop_id=${workshop.id}`)
       await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.on_site_price_updated', subjectId: workshop.id,
         changes: { fromMinor: settings.on_site_price_minor == null ? null : Number(settings.on_site_price_minor), toMinor: change.amountMinor } })
+    } else if (change.type === 'lot_automation') {
+      const email = change.notificationEmail.trim().toLowerCase()
+      const limits = [change.limits.lot1, change.limits.lot2]
+      if (email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ||
+          limits.some(limit => limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > 1_000_000)) ||
+          (change.enabled && (!email || limits.every(limit => limit === null)))) return invalid('Ingresá un correo válido y al menos un límite de lugares pagados.', 400)
+      if (change.enabled && process.env.REGISTRATION_EMAIL_READY !== '1') return invalid('Primero habilitá el envío de correos del taller.', 409)
+      const [before] = await tx.select({ enabled: workshops.lotAutomationEnabled, email: workshops.lotNotificationEmail })
+        .from(workshops).where(eq(workshops.id, workshop.id))
+      const oldLimits = await tx.select({ number: workshopLots.number, advanceAfter: workshopLots.advanceAfter })
+        .from(workshopLots).where(eq(workshopLots.workshopId, workshop.id))
+      if (limits.some((limit, i) => limit !== null && (!oldLimits.some(lot => lot.number === i + 1) ||
+          !oldLimits.some(lot => lot.number === i + 2)))) return invalid('Falta configurar el siguiente lote.', 409)
+      for (let i = 0; i < limits.length; i++) {
+        await tx.update(workshopLots).set({ advanceAfter: limits[i], updatedAt: new Date() })
+          .where(and(eq(workshopLots.workshopId, workshop.id), eq(workshopLots.number, i + 1)))
+      }
+      await tx.update(workshops).set({ lotAutomationEnabled: change.enabled, lotNotificationEmail: email || null })
+        .where(eq(workshops.id, workshop.id))
+      await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'pricing.lot_automation_configured', subjectId: workshop.id,
+        changes: { before: { ...before, limits: oldLimits }, enabled: change.enabled, notificationEmail: email, limits: change.limits } })
+      await tx.execute(sql`SELECT advance_workshop_lot(${workshop.id})`)
     } else {
       const startsAt = toDate(change.startsAt)
       const endsAt = toDate(change.endsAt)
@@ -172,7 +211,7 @@ function requestHash(draft: GroupDraft) {
 
 export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug: string; operatorId?: string }, create: boolean): Promise<Result> {
   return db.transaction(async tx => {
-    const workshop = await lockWorkshop(tx, input.eventSlug)
+    const workshop = await lockWorkshop(tx, input.eventSlug, true)
     if (!workshop) return invalid('Taller no encontrado.', 404)
     if (new Date(workshop.starts_at) <= new Date()) return invalid('El taller ya comenzó.', 409)
     if (create && (!workshop.registration_open || process.env.REGISTRATION_EMAIL_READY !== '1')) {

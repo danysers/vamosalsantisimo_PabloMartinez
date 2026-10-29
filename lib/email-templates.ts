@@ -1,5 +1,22 @@
 export type PaymentChoice = 'mercado_pago' | 'bank_transfer' | 'on_site' | 'assistance' | 'waived' | 'paid'
 
+export function lotChangedEmail(input: {
+  eventTitle: string; fromLot: number; toLot: number; threshold: number; paidPlaces: number;
+  amountMinor: number; changedAt: string
+}) {
+  const when = new Date(input.changedAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })
+  const price = (input.amountMinor / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })
+  const text = [
+    `El taller ${input.eventTitle} cambió automáticamente del lote ${input.fromLot} al lote ${input.toLot}.`,
+    `Se alcanzó el límite de ${input.threshold} lugares con pago confirmado del lote ${input.fromLot}. Conteo al realizar el cambio: ${input.paidPlaces} personas.`,
+    `Nuevo precio base: ${price}. Mercado Pago suma el gasto de plataforma configurado.`,
+    `Fecha del cambio: ${when} (hora argentina).`,
+    'Las nuevas inscripciones usan el nuevo lote. Las cotizaciones anteriores conservan el importe que ya tenían.',
+    'Podés consultar el historial del cambio y el estado de este aviso en el panel, en Precios y grupos → Lotes.',
+  ].join('\n\n')
+  return { subject: `Lote ${input.toLot} activado · Taller Pablo Martínez`, text, html: brandedEmailHtml(text) }
+}
+
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]!)

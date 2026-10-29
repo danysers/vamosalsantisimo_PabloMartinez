@@ -72,6 +72,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     if (!target) return unavailable
     // All registration writers use the same workshop row lock for capacity and lot changes.
     await tx.execute(sql`SELECT id FROM ${workshops} WHERE ${workshops.id} = ${target.id} FOR UPDATE`)
+    await tx.execute(sql`SELECT advance_workshop_lot(${target.id})`)
     const [workshop] = await tx.select().from(workshops).where(eq(workshops.id, target.id)).limit(1)
     const [settings] = await tx.select().from(workshopPaymentSettings).where(eq(workshopPaymentSettings.workshopId, target.id)).limit(1)
     if (!workshop?.registrationOpen || !settings) return unavailable

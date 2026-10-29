@@ -156,6 +156,7 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
     }
     if (attempt.status !== status) await tx.insert(auditLog).values({ action: 'payment.provider_reconciled', subjectId: attempt.id,
       changes: { from: attempt.status, to: status, orderId, amountMinor: attempt.amountMinor } })
+    if (status === 'approved') await tx.execute(sql`SELECT advance_workshop_lot(${workshopId})`)
     return { status }
   })
 }
