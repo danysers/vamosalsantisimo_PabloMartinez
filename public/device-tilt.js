@@ -29,7 +29,11 @@
     }
   }
   function refresh() {
-    for (const item of mounts.values()) if (!allowed() || !available(item)) reset(item);
+    for (const item of mounts.values()) {
+      if (mode === 'off' || item.paused || printing) item.card.classList.add('device-motion-static');
+      else item.card.classList.remove('device-motion-static');
+      if (!allowed() || !available(item)) reset(item);
+    }
     const need = allowed() && [...mounts.values()].some(available);
     if (need !== listening) {
       listening = need;

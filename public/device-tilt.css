@@ -7,5 +7,6 @@
 .invite-motion-controls{grid-column:1/-1;color:var(--gold-light,#d8b577)}
 .invite-poster.sensor-is-tilting,.invite-preview-stage.sensor-is-tilting{animation:none;transform:perspective(760px) translate3d(0,-5px,12px) rotateX(var(--poster-x)) rotateY(var(--poster-y)) rotateZ(var(--poster-rest));transition:transform 180ms ease-out}
 .workshop-pass.sensor-is-tilting{animation:none;transform:translateY(-4px) rotateX(var(--pass-x)) rotateY(var(--pass-y))}
+.invite-poster.device-motion-static,.invite-preview-stage.device-motion-static,.workshop-pass.device-motion-static{animation:none;transform:none;transition:none}
 @media(prefers-reduced-motion:reduce){.device-tilt-controls{display:none!important}.invite-poster.sensor-is-tilting,.invite-preview-stage.sensor-is-tilting,.workshop-pass.sensor-is-tilting{animation:none!important;transform:none!important}}
 @media print{.device-tilt-controls{display:none!important}}
