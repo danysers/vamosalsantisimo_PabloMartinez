@@ -29,10 +29,15 @@ export function publicRequestOrigin(request: PublicRequest): string | null {
   return configured.includes(origin) ? origin : null
 }
 
-export function workshopCheckoutReturnUrl(reference: string, requestOrigin?: string) {
+export function workshopCheckoutReturnUrl(reference: string, requestOrigin?: string, returnToken?: string) {
   if (requestOrigin && !publicSiteOrigins().includes(requestOrigin)) throw new Error('Untrusted checkout return origin')
   const origin = requestOrigin || process.env.MP_PUBLIC_ORIGIN || process.env.SITE_ORIGIN
   const trusted = origin ? exactOrigin(origin) : null
-  return trusted?.startsWith('https:')
-    ? `${trusted}/formacion/pago?reference=${encodeURIComponent(reference)}` : undefined
+  if (!trusted?.startsWith('https:')) return undefined
+  const url = new URL('/formacion/pago', trusted)
+  url.searchParams.set('reference', reference)
+  // Fragments are not sent to our HTTP server or in Referer headers. The client
+  // removes this short-lived capability before calling the exchange endpoint.
+  if (returnToken) url.hash = new URLSearchParams({ return: returnToken }).toString()
+  return url.toString()
 }

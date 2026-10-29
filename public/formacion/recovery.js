@@ -1,5 +1,20 @@
 (() => {
   let challengeId=null, pending=false;
+  function showReturnRecovery() {
+    if(document.getElementById('registration-result')?.dataset.state!=='recovery') return;
+    let panel=document.getElementById('payment-recovery');
+    if(panel) { panel.hidden=false; return; }
+    if(document.getElementById('receipt-lookup')) {
+      const grid=document.getElementById('registration-grid'); if(grid) grid.hidden=false;
+      return;
+    }
+    panel=document.createElement('div');panel.id='payment-recovery';panel.className='recovery-panel';
+    panel.innerHTML='<form id="receipt-lookup"><label for="recovery-identifier">DNI o número de gestión</label><input id="recovery-identifier" name="identifier" autocomplete="off" minlength="5" maxlength="80" required placeholder="Tu documento o referencia"><p>Te enviaremos un código al correo que usaste al inscribirte. Revisá también correo no deseado.</p><button type="submit" class="button gold">Enviar código a mi correo</button></form><form id="receipt-verify" hidden><label for="recovery-code">Código de seis dígitos</label><input id="recovery-code" name="code" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" required><p>El código dura quince minutos y se utiliza una sola vez.</p><button type="submit" class="button gold">Verificar y continuar</button><button type="button" class="checkout-edit" id="recovery-resend">Solicitar otro código</button></form><p id="recovery-feedback" role="status" aria-live="polite"></p><p><a href="https://wa.me/5493704258770" target="_blank" rel="noopener noreferrer">¿Necesitás ayuda? Consultanos por WhatsApp</a></p>';
+    document.getElementById('payment-next').append(panel);
+    const reference=new URLSearchParams(location.search).get('reference');
+    if(reference && /^[A-Za-z0-9_-]{10,80}$/.test(reference)) document.getElementById('recovery-identifier').value=reference;
+  }
+  document.addEventListener('workshop:recovery-needed',showReturnRecovery);
   async function request(body) {
     const response=await fetch('/api/taller/inscripciones/recuperar',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const value=await response.json();
@@ -34,4 +49,5 @@
     document.getElementById('recovery-feedback').textContent='Revisá los datos y solicitá otro código. Podés pedir hasta tres en quince minutos.';
     document.getElementById('recovery-identifier').focus();
   });
+  showReturnRecovery();
 })();

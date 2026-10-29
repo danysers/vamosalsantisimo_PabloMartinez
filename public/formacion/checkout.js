@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   let current=null, preparing=null, checking=null, timer=0, checks=0;
+  let restoringReturn=null;
   let lastState=null, savingMethod=false, baseAmountMinor=null, onlineFeeMinor=null, onlineCheckoutReady=false, testMode=false;
   const whatsappIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2.5A13.4 13.4 0 0 0 4.4 22.6L2.5 29.5l7.1-1.9A13.5 13.5 0 1 0 16 2.5Z"/><path fill="#fff" d="M22.7 19.1c-.4-.2-2.2-1.1-2.6-1.2-.3-.1-.6-.2-.8.2l-1.1 1.3c-.2.2-.4.3-.8.1-2.2-1.1-3.6-2.1-4.8-4.3-.4-.6.4-.6 1.1-1.9.1-.2.1-.5 0-.7l-1.2-2.8c-.3-.7-.6-.6-.8-.6h-.8c-.3 0-.7.1-1 .5-1 1.1-1.3 2.2-1.1 3.6.3 1.8 1.7 3.8 3.3 5.4 2.3 2.3 5.3 3.8 7.8 4.1 1.3.2 2.5-.4 3.1-1.2.4-.6.6-1.7.5-1.9-.2-.3-.5-.4-.8-.6Z"/></svg>';
   function helpUrl(result={}) {
@@ -195,7 +196,7 @@
     for(const id of ['checkout-transfer-alias','checkout-transfer-qr','checkout-proof','checkout-help','checkout-pay','checkout-retry']) document.getElementById(id).hidden=true;
     document.getElementById('registration-result-title').textContent=paid?'Inscripción confirmada':'Inscripción registrada';
     root.querySelector('.result-intro').textContent='Tu inscripción ha sido registrada. '+(result.nickname?'¡Te esperamos, '+result.nickname+'!':'¡Te esperamos en el taller!');
-    root.querySelector('.result-symbol').textContent='✓'; document.getElementById('registration-reference').hidden=true;
+    root.querySelector('.result-symbol').textContent='✓'; root.querySelector('.result-symbol').hidden=false; document.getElementById('registration-reference').hidden=true;
     document.getElementById('pass-reference').textContent=result.reference;
     const name=document.getElementById('pass-nickname'); name.hidden=!result.nickname; name.textContent=result.nickname||'';
     document.getElementById('pass-admission').textContent=paid?'TU ACREDITACIÓN PERSONAL':'TU CREDENCIAL DE INSCRIPCIÓN';
@@ -226,6 +227,7 @@
   function renderState(result) {
     const root=shell(), ui=controls(); if (!ui || !root) return false;
     lastState=result;
+    const recovery=document.getElementById('payment-recovery'); if(recovery) recovery.hidden=true;
     if (result.deleted || result.archived) {
       const confirmed=document.getElementById('registration-confirmed');if(confirmed)confirmed.hidden=true;
       const qr=document.getElementById('pass-qr');if(qr){qr.hidden=true;qr.removeAttribute('src');}
@@ -358,9 +360,22 @@
     if (description) description.textContent='Taller '+money(baseAmountMinor)+' + gasto de plataforma '+money(onlineFeeMinor);
   }
   document.addEventListener('change',event => { if (event.target.name==='formaPago') updateOnlinePriceDescription(); });
+  function showReturnRecovery() {
+    const root=shell(), ui=controls(); if(!root || !ui) return;
+    root.dataset.state='recovery'; root.querySelector('.result-symbol').hidden=true;
+    document.getElementById('registration-result-title').textContent='Volvé a tu inscripción';
+    root.querySelector('.result-intro').textContent='Si ya pagaste, no vuelvas a hacerlo. Recuperá tu acceso para ver la confirmación y tu acreditación.';
+    ui.host.hidden=false; ui.retry.hidden=true; ui.link.hidden=true; ui.edit.hidden=true;
+    ui.title.textContent='Recuperá el acceso de forma segura';
+    ui.description.textContent='Usá el código que enviaremos al correo registrado. Tu pago se consulta directamente con Mercado Pago.';
+    document.dispatchEvent(new CustomEvent('workshop:recovery-needed'));
+  }
   function restorePayment() {
+    if(restoringReturn) return;
     clearTimeout(timer); current=null;
-    const reference=new URLSearchParams(location.search).get('reference');
+    const url=new URL(location.href), reference=url.searchParams.get('reference');
+    const returnToken=new URLSearchParams(url.hash.slice(1)).get('return');
+    if(returnToken) { url.hash=''; history.replaceState({...history.state},'',url); }
     if (!document.getElementById('payment-next') || (!reference && !document.querySelector('[data-payment-return]'))) return;
     try {
       const saved=JSON.parse(sessionStorage.getItem('vas-workshop-payment:'+reference) || 'null');
@@ -368,7 +383,14 @@
     } catch { /* Recover without exposing private data. */ }
     shell(); const ui=controls(); ui.host.hidden=false; ui.retry.hidden=true;
     if (current) { checks=0; refreshPayment(); }
-    else { ui.title.textContent='Consultá tu inscripción'; ui.description.textContent='Abrí esta pantalla desde el mismo navegador en el que te inscribiste o contactá a la organización con tu referencia.'; ui.edit.hidden=true; }
+    else if(reference && returnToken) {
+      const pending={reference,returnToken}; restoringReturn=pending;
+      json('/api/taller/pagos/retorno',pending).then(result=>{
+        if(restoringReturn!==pending) return;
+        restoringReturn=null;
+        remember({reference:result.reference,paymentAccessToken:result.accessToken}); checks=0; refreshPayment();
+      }).catch(()=>{if(restoringReturn===pending){restoringReturn=null;showReturnRecovery();}});
+    } else showReturnRecovery();
   }
   document.addEventListener('workshop:form-ready',() => { configureForm(); queueMicrotask(restorePayment); });
   document.addEventListener('workshop:registered',async event => {
@@ -394,7 +416,7 @@
     }
   });
   document.addEventListener('workshop:recovered',event=>{
-    clearTimeout(timer);current=null;lastState=null;
+    clearTimeout(timer);current=null;lastState=null;restoringReturn=null;
     remember({reference:event.detail.reference,paymentAccessToken:event.detail.accessToken});checks=0;refreshPayment();
   });
   document.addEventListener('visibilitychange',() => { if (!document.hidden && current) { checks=0; refreshPayment(); } else clearTimeout(timer); });

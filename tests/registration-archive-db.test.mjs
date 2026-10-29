@@ -32,12 +32,17 @@ test('archival excludes old records from live counts, preserves data and leaves 
     assert.equal((await accreditation.verifyManualPayment(db, { eventSlug: slug, operatorId: operator.id, reference: receipt.body.reference,
       note: 'Pago ficticio en base descartable', manualReference: randomUUID() })).code, 200)
     const access = { reference: receipt.body.reference, accessToken: receipt.body.paymentAccessToken }
+    const { checkoutReturnToken } = await import('../lib/checkout-access.ts')
+    const returnRow = (await pool.query('SELECT id,creation_key FROM registrations WHERE reference=$1', [access.reference])).rows[0]
+    const returnAccess = { reference: access.reference, returnToken: checkoutReturnToken(access.reference, returnRow.id, returnRow.creation_key) }
+    assert.deepEqual(await payments.restoreWorkshopPaymentReturn(returnAccess), access)
     const before = await payments.workshopPaymentStatus(access, false)
     const change = operation => changeRegistrationDeletion(db, { eventSlug: slug, operatorId: operator.id, reference: access.reference, operation, confirmation: 'ELIMINAR' })
     const activeCount = async () => (await pool.query('SELECT count(*)::int AS n FROM registrations WHERE workshop_id=$1 AND archived_at IS NULL AND deleted_at IS NULL', [workshop.id])).rows[0].n
     assert.equal(await activeCount(), 1)
     assert.equal((await change('archive')).code, 200)
     assert.equal((await change('archive')).body.replayed, true)
+    await assert.rejects(payments.restoreWorkshopPaymentReturn(returnAccess), /access denied/)
     assert.equal(await activeCount(), 0)
     const stored = (await pool.query('SELECT * FROM registrations WHERE reference=$1', [access.reference])).rows[0]
     assert.equal(stored.status, 'confirmed'); assert.equal(stored.deleted_at, null); assert.ok(stored.archived_at)
@@ -57,9 +62,11 @@ test('archival excludes old records from live counts, preserves data and leaves 
     assert.equal((await change('unarchive')).code, 409, 'restoration must respect capacity')
     await pool.query('UPDATE workshops SET capacity=NULL WHERE id=$1', [workshop.id])
     assert.equal((await change('unarchive')).code, 200)
+    assert.deepEqual(await payments.restoreWorkshopPaymentReturn(returnAccess), access)
     assert.equal((await payments.workshopPaymentStatus(access, false)).accreditation.qrDataUrl, before.accreditation.qrDataUrl)
     assert.equal((await change('archive')).code, 200)
     assert.equal((await change('delete')).code, 200)
+    await assert.rejects(payments.restoreWorkshopPaymentReturn(returnAccess), /access denied/)
     assert.equal((await change('restore')).code, 200)
     const restored = (await pool.query('SELECT deleted_at,archived_at FROM registrations WHERE reference=$1', [access.reference])).rows[0]
     assert.equal(restored.deleted_at, null); assert.ok(restored.archived_at, 'restoring from Eliminadas must preserve archival')

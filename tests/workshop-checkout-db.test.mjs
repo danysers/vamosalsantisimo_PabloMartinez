@@ -13,7 +13,7 @@ test('registration → one ARS 16000 checkout → verified payment and one QR �
   const slug='mp-checkout-test-'+randomUUID()
   Object.assign(process.env,{WORKSHOP_EVENT_SLUG:slug,WORKSHOP_CHECKOUT_TOKEN_KEY:randomBytes(48).toString('base64url'),
     MP_CHECKOUT_ENABLED:'1',MP_ACCESS_TOKEN:'FAKE_LOCAL_TEST_TOKEN',MP_SELLER_USER_ID:'111',MP_APPLICATION_ID:'222',MP_ENVIRONMENT:'test',
-    SITE_ORIGIN:'http://localhost:3000',ACCREDITATION_TOKEN_KEY_ID:'test-key',ACCREDITATION_TOKEN_KEY:randomBytes(32).toString('base64url')})
+    SITE_ORIGIN:'https://checkout.example.invalid',MP_PUBLIC_ORIGIN:'https://checkout.example.invalid',ACCREDITATION_TOKEN_KEY_ID:'test-key',ACCREDITATION_TOKEN_KEY:randomBytes(32).toString('base64url')})
   const {enrollWorkshop}=await import('../lib/workshop-enrollment.ts')
   const {startWorkshopCheckout,reconcileWorkshopOrder,workshopPaymentStatus,persistMercadoPagoNotification,changeWorkshopPaymentMethod}=await import('../lib/workshop-payments.ts')
   const event=await pool.query('INSERT INTO events(slug,title,starts_at) VALUES($1,$2,$3) RETURNING id',[slug,'Local checkout test','2026-12-19T18:00:00Z'])
@@ -31,6 +31,13 @@ test('registration → one ARS 16000 checkout → verified payment and one QR �
   assert.equal(replay.code,200)
   assert.deepEqual(replay.body,enrolled.body)
   const access={reference:enrolled.body.reference,accessToken:enrolled.body.paymentAccessToken}
+  const {checkoutReturnToken}=await import('../lib/checkout-access.ts')
+  const {restoreWorkshopPaymentReturn}=await import('../lib/workshop-payments.ts')
+  const receiptRow=(await pool.query('SELECT id,creation_key FROM registrations WHERE reference=$1',[access.reference])).rows[0]
+  const returnToken=checkoutReturnToken(access.reference,receiptRow.id,receiptRow.creation_key)
+  assert.deepEqual(await restoreWorkshopPaymentReturn({reference:access.reference,returnToken}),access)
+  await assert.rejects(restoreWorkshopPaymentReturn({reference:access.reference,returnToken:returnToken.slice(0,-1)+(returnToken.endsWith('a')?'b':'a')}),/access denied/)
+  assert.equal((await pool.query('SELECT status FROM registrations WHERE id=$1',[receiptRow.id])).rows[0].status,'pending','return access cannot confirm an unpaid registration')
   assert.equal((await workshopPaymentStatus(access,false)).accreditation,null,'an unpaid registration never exposes a QR')
   await assert.rejects(workshopPaymentStatus({...access,accessToken:'x'.repeat(43)},false),/access denied/)
   const attempt=(await pool.query('SELECT * FROM payment_attempts WHERE registration_id IN(SELECT id FROM registrations WHERE workshop_id=$1)',[workshopId])).rows[0]
@@ -41,6 +48,10 @@ test('registration → one ARS 16000 checkout → verified payment and one QR �
   let creates=0
   const create=async (order,key) => {
     creates++;assert.equal(order.amountMinor,1_600_000);assert.equal(order.reference,attempt.external_reference);assert.equal(key,attempt.idempotency_key)
+    const redirect=new URL(order.returnUrl)
+    assert.equal(redirect.origin,'https://checkout.example.invalid')
+    assert.equal(redirect.searchParams.get('reference'),access.reference)
+    assert.deepEqual(await restoreWorkshopPaymentReturn({reference:access.reference,returnToken:new URLSearchParams(redirect.hash.slice(1)).get('return')}),access)
     return {id:orderId,checkoutUrl:url}
   }
   const [a,b]=await Promise.all([startWorkshopCheckout(access,create),startWorkshopCheckout(access,create)])

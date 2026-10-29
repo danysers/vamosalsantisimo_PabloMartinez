@@ -3,7 +3,7 @@ import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { getDb } from './db'
-import { hasCheckoutAccess, localWorkshopTestMode } from './checkout-access'
+import { checkoutAccessToken, checkoutReturnToken, hasCheckoutAccess, hasCheckoutReturn, localWorkshopTestMode } from './checkout-access'
 import { createCheckoutProOrder, fetchCheckoutProOrder, cancelCheckoutProOrder, checkoutConfigured, mercadoPagoConfig, assertOrderEnvironment } from './mercado-pago-client'
 import { inspectUnpaidCheckoutOrder } from './checkout-method-contract'
 import { proofWhatsappUrl } from './email-templates'
@@ -54,13 +54,26 @@ export async function startWorkshopCheckout(access: Access, createOrder = create
     if (attempt.source !== 'mercado_pago' || attempt.amount_minor === null || attempt.status !== 'pending' || attempt.registration_status !== 'pending') throw new Error('Payment is not pending')
     if (!attempt.expires_at || new Date(attempt.expires_at).getTime() <= Date.now()) throw new Error('Checkout reservation expired')
     if (attempt.checkout_url) return { checkoutUrl: attempt.checkout_url, amountMinor: attempt.amount_minor }
-    const returnUrl = workshopCheckoutReturnUrl(attempt.reference, requestOrigin)
+    const returnUrl = workshopCheckoutReturnUrl(attempt.reference, requestOrigin,
+      checkoutReturnToken(attempt.reference, attempt.registration_id, attempt.creation_key))
     const order = await createOrder({ reference: attempt.external_reference, email: attempt.payer_email, amountMinor: attempt.amount_minor, ...(returnUrl ? { returnUrl } : {}) }, attempt.idempotency_key)
     await tx.update(paymentAttempts).set({ providerOrderId: order.id, checkoutUrl: order.checkoutUrl, checkoutCreatedAt: new Date(), updatedAt: new Date() }).where(eq(paymentAttempts.id, attempt.id))
     await tx.insert(auditLog).values({ action: 'payment.checkout_created', subjectId: attempt.id,
       changes: { orderId: order.id, amountMinor: attempt.amount_minor, providerFeeMinor: attempt.provider_fee_minor } })
     return { checkoutUrl: order.checkoutUrl, amountMinor: attempt.amount_minor }
   })
+}
+
+export async function restoreWorkshopPaymentReturn(input: { reference: string; returnToken: string }) {
+  const result = await getDb().execute(sql`SELECT r.id,r.reference,r.creation_key FROM registrations r
+    JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
+    WHERE r.reference=${input.reference} AND e.slug=${process.env.WORKSHOP_EVENT_SLUG || ''}
+      AND registration_is_current(r.id) LIMIT 1`)
+  const row = result.rows[0]
+  if (!row || !hasCheckoutReturn(input.returnToken, String(row.reference), String(row.id), String(row.creation_key))) {
+    throw new Error('Payment return access denied')
+  }
+  return { reference: String(row.reference), accessToken: checkoutAccessToken(String(row.id), String(row.creation_key)) }
 }
 
 export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchCheckoutProOrder) {

@@ -8,12 +8,13 @@ const flush=() => new Promise(resolve => setImmediate(resolve))
 
 // Small DOM boundary for the checkout controller: real timers and network are
 // replaced so we can cover long waits, interruptions and return-tab recovery.
-function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false}={}) {
+function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false,rejectReturn=false,initialResponse={}}={}) {
   const ids=new Map(), classes=new Map(), events=new Map(), windowEvents=new Map(), timers=new Map()
   let serial=0, now=0, printed=0, interrupted=false
   let releasePending
   const calls=[]
   let response={reference:'TestReference123',status:'pending',registrationStatus:'pending',baseAmountMinor:1_000_000,amountMinor:1_100_000,onlineCheckoutReady:true,testMode:true,emailStatus:'queued',checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id=ORDTST1234567890',paymentMethod:'mercado_pago',attemptId:'00000000-0000-4000-8000-000000000001',canChangeMethod:true,methods:{mercado_pago:true,bank_transfer:true,on_site:true},transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'}}
+  response={...response,...initialResponse}
   class Element {
     constructor(){this.hidden=false;this.dataset={};this.style={setProperty(){},removeProperty(){}};this.classList={add(){},remove(){}};this.handlers=new Map();this.isConnected=true}
     set id(value){this._id=value;ids.set(value,this)} get id(){return this._id}
@@ -31,9 +32,9 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
   const document={hidden:false,body:{classList:{add(){}}},title:'',
     getElementById:id=>ids.get(id),createElement:()=>new Element(),
     querySelector:selector=>selector==='[data-payment-return]'&&location.pathname==='/formacion/pago'?ids.get('registration-result'):null,
-    addEventListener:(name,callback)=>events.set(name,callback)}
+    addEventListener:(name,callback)=>events.set(name,callback),dispatchEvent:event=>events.get(event.type)?.(event)}
   const location=new URL(url)
-  const context={document,location,URL,URLSearchParams,Intl,JSON,console,queueMicrotask,
+  const context={document,location,URL,URLSearchParams,Intl,JSON,console,queueMicrotask,CustomEvent:class {constructor(type){this.type=type}},
     sessionStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)},
     history:{state:{},replaceState:(state,unused,next)=>{location.href=String(next)}},
     matchMedia:()=>({matches:false}),window:{print(){printed++}},
@@ -41,6 +42,7 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
     setTimeout:(fn,delay)=>{const id=++serial;timers.set(id,{fn,at:now+delay});return id},clearTimeout:id=>timers.delete(id),
     fetch:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});if(path.endsWith('/estado')&&interrupted){interrupted=false;throw new Error('Temporary network failure')}
       if(path.endsWith('/metodo')) {const method=JSON.parse(options.body).method;response={...response,paymentMethod:method,amountMinor:method==='mercado_pago'?1_100_000:1_000_000,attemptId:'00000000-0000-4000-8000-000000000002'}}
+      if(path.endsWith('/retorno')) return {ok:!rejectReturn,json:async()=>rejectReturn?{error:'Expired'}:{reference:'TestReference123',accessToken:'a'.repeat(43)}}
       const snapshot=JSON.parse(JSON.stringify(response))
       if(path.endsWith('/estado')&&holdFirstStatus){holdFirstStatus=false;await new Promise(resolve=>{releasePending=resolve})}
       return {ok:true,json:async()=>path.endsWith('/checkout')?{checkoutUrl:snapshot.checkoutUrl,amountMinor:snapshot.amountMinor}:snapshot}},
@@ -103,6 +105,34 @@ test('reload recovers the private receipt, pauses in the background and refreshe
   assert.equal(app.calls.length,before)
   app.document.hidden=false;app.events.get('visibilitychange')();await flush()
   assert.equal(app.calls.length,before+1)
+})
+
+test('a fresh return tab restores private access and displays the animated confirmation without another checkout',async()=>{
+  const token='v1.1793383200.'+'b'.repeat(43)
+  const app=browser({url:'https://example.invalid/formacion/pago?reference=TestReference123#return='+token,
+    initialResponse:{status:'approved',registrationStatus:'confirmed',emailStatus:'sent',
+      accreditation:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis de Francia'}}})
+  await flush();await flush()
+  assert.equal(app.calls[0].path,'/api/taller/pagos/retorno')
+  assert.equal(app.calls[0].body.returnToken,token)
+  assert.equal(app.location.hash,'','strip the capability before the first network exchange')
+  assert.equal(app.ids.get('registration-result').dataset.state,'confirmed')
+  assert.equal(app.ids.get('pass-qr').hidden,false)
+  assert.match(app.ids.get('registration-confirmed').html,/Filipenses 4, 13/)
+  assert.match(app.ids.get('registration-confirmed').html,/workshop-pass/)
+  assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
+})
+
+test('an expired return or older link offers recovery, never an endless payment check or a fabricated paid pass',async()=>{
+  for(const suffix of ['', '#return=v1.1793383200.'+'b'.repeat(43)]) {
+    const app=browser({url:'https://example.invalid/formacion/pago?reference=TestReference123'+suffix,rejectReturn:true})
+    await flush();await flush()
+    assert.equal(app.ids.get('registration-result').dataset.state,'recovery')
+    assert.equal(app.ids.get('registration-result-title').textContent,'Volvé a tu inscripción')
+    assert.equal(app.location.hash,'')
+    assert.equal(app.ids.has('registration-confirmed'),false)
+    assert.equal(app.calls.some(call=>call.path.endsWith('/checkout')||call.path.endsWith('/inscripciones')),false)
+  }
 })
 
 test('a delayed request from an older restored receipt cannot block or replace its confirmation',async()=>{

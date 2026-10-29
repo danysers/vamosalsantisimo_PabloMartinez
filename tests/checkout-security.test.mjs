@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { checkoutAccessToken, hasCheckoutAccess } from '../lib/checkout-access.ts'
+import { checkoutAccessToken, checkoutReturnToken, hasCheckoutAccess, hasCheckoutReturn } from '../lib/checkout-access.ts'
 import { verifyMercadoPagoSignature } from '../lib/mercado-pago-webhook.ts'
 import { individualRegistrationSchema } from '../lib/workshop-input.ts'
 
@@ -26,6 +26,19 @@ test('order notifications require the genuine signature and canonical lowercase 
     {...signed,signature:null}, {...signed,signature:`ts=${ts},ts=${ts},v1=${digest}`},
     {...signed,signature:`ts=${ts},v1=${'0'.repeat(64)}`}, {...signed,requestId:'bad;request-id:spoof'},
   ]) assert.equal(verifyMercadoPagoSignature(modified),false)
+})
+
+test('fresh-tab payment return is expiring, purpose-separated and bound to the original private receipt', () => {
+  process.env.WORKSHOP_CHECKOUT_TOKEN_KEY='return-test-key-'.repeat(4)
+  const now=Date.parse('2026-10-29T16:00:00Z')
+  const token=checkoutReturnToken('reference-one','registration-one','creation-one',now)
+  assert.equal(hasCheckoutReturn(token,'reference-one','registration-one','creation-one',now),true)
+  for (const [reference,id,key] of [['reference-two','registration-one','creation-one'],['reference-one','registration-two','creation-one'],['reference-one','registration-one','creation-two']])
+    assert.equal(hasCheckoutReturn(token,reference,id,key,now),false)
+  assert.equal(hasCheckoutReturn(token,'reference-one','registration-one','creation-one',now+24*60*60_000),false)
+  assert.equal(hasCheckoutReturn(token,'reference-one','registration-one','creation-one',now-5*60_000),false)
+  assert.equal(hasCheckoutAccess(token,'registration-one','creation-one'),false)
+  assert.equal(hasCheckoutReturn(checkoutAccessToken('registration-one','creation-one'),'reference-one','registration-one','creation-one',now),false)
 })
 
 test('the enrollment contract never accepts an amount or a Mercado Pago choice with an assistance request', () => {

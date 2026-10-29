@@ -46,7 +46,7 @@ test('browser security covers static landing, workshop and isolated panel', asyn
         assert.equal(response.status, 400)
         assert.equal((await fetch(base + '/formacion')).status, 404)
       } else {
-        for (const path of ['/api/taller/inscripciones','/api/taller/inscripciones/recuperar',...['checkout','metodo','estado','comprobante'].map(p=>'/api/taller/pagos/'+p)]) {
+        for (const path of ['/api/taller/inscripciones','/api/taller/inscripciones/recuperar',...['checkout','metodo','estado','comprobante','retorno'].map(p=>'/api/taller/pagos/'+p)]) {
           for (const origin of ['https://vamosalsantisimo.com','https://pablomartinez.vamosalsantisimo.com','https://evil.invalid']) {
             const result=await fetch(base+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','x-forwarded-host':'vamosalsantisimo.com'},body:'{}'})
             assert.equal(result.status,origin==='https://evil.invalid'?403:400, `${path}: ${origin}`)

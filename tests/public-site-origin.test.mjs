@@ -17,6 +17,9 @@ test('both public domains are allowed explicitly and payment returns keep the in
       assert.equal(publicRequestOrigin(request(origin)), null, String(origin))
     }
     assert.throws(() => workshopCheckoutReturnUrl('registration_123', 'https://evil.invalid'), /Untrusted/)
+    const callback=new URL(workshopCheckoutReturnUrl('registration_123', process.env.SITE_ORIGIN, 'v1.1234567890.'+'a'.repeat(43)))
+    assert.equal(callback.searchParams.has('return'),false,'the return credential must not enter HTTP queries or referrers')
+    assert.ok(callback.hash.startsWith('#return='))
     assert.equal(workshopCheckoutReturnUrl('registration_123'), process.env.SITE_ORIGIN+'/formacion/pago?reference=registration_123')
     process.env.SITE_ORIGIN = 'http://localhost:3000'
     delete process.env.PUBLIC_SITE_ALIASES
