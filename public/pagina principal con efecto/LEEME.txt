@@ -73,3 +73,5 @@ La promoción habilita el indexado de la nueva portada y declara su dirección c
 
 REDES EN EL PIE
 Después de las preguntas frecuentes se agregó una franja con Instagram y Facebook @vamosalsantisimof, y TikTok @vamosalsantisimo. footer-socials.css mantiene blancos los tres logos y aplica una iluminación tenue del color de cada red al pasar el mouse o enfocar el enlace con teclado, adaptada a la composición oscura y dorada de esta página. La referencia visual fue la fila de redes al final de https://www.infolavelada.com/. El pie incluye «© 2026 Vamos al Santísimo - Todos los derechos reservados».
+
+Corrección del 29/10/2026: el usuario confirmó que la hora anunciada para la adoración es 19:00 h, no 21:00 h. Se unificaron portada, preguntas, descripción, textos compartidos y alternativas React. Se conserva la misa central de las 20:00 h y el taller de las 15:00 h; el afiche original no se modificó. Esta corrección reemplaza el horario de adoración del registro del 26/10/2026.

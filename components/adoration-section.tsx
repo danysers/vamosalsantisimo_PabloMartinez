@@ -17,7 +17,7 @@ export default function AdorationSection() {
         <p className={styles.overline}>Una noche para encontrarnos con Jesús</p>
         <h2 id="adoration-title">Adoración<span>eucarística</span></h2>
         <div className={styles.rule} aria-hidden="true" />
-        <p className={styles.date}><time dateTime="2026-12-19T20:00:00-03:00">19 de diciembre · 20:00 h</time></p>
+        <p className={styles.date}><time dateTime="2026-12-19T19:00:00-03:00">19 de diciembre · 19:00 h</time></p>
         <p className={styles.location}>Lugar a confirmar · Entrada gratuita</p>
         <p className={styles.description}>Una noche de oración, música y adoración a Jesús en el Santísimo Sacramento, junto a Pablo Martínez.</p>
       </div>

@@ -8,7 +8,7 @@ export default function ShareInvitation() {
   const [status, setStatus] = useState('')
   const invitation = () => ({
     title: 'Vamos al Santísimo · Pablo Martínez',
-    text: 'Te invito a Vamos al Santísimo, una noche de adoración con Pablo Martínez. Sábado 19 de diciembre de 2026 · 20:00 h · Lugar a confirmar. Entrada gratuita.',
+    text: 'Te invito a Vamos al Santísimo, una noche de adoración con Pablo Martínez. Sábado 19 de diciembre de 2026 · 19:00 h · Lugar a confirmar. Entrada gratuita.',
     url: new URL('/', window.location.href).href,
   })
 

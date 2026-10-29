@@ -96,7 +96,7 @@
 
   // Always share a public address, including when previewing on localhost/LAN.
   const publicUrl = 'https://vamosalsantisimo.com/';
-  const message = () => `Yo voy a VAMOS AL SANTÍSIMO 2026. ¿Venís conmigo? Sábado 19 de diciembre · ${document.documentElement.dataset?.eventVenue === 'indoor' ? 'Parroquia María Auxiliadora' : 'Anfiteatro de la Juventud'}. 19:00 Convocatoria · 20:00 Misa central · 21:00 Adoración. Con Pablo Martínez. Si llueve, nos encontramos en María Auxiliadora. Consultá la sede actualizada en el enlace.`;
+  const message = () => `Yo voy a VAMOS AL SANTÍSIMO 2026. ¿Venís conmigo? Sábado 19 de diciembre · ${document.documentElement.dataset?.eventVenue === 'indoor' ? 'Parroquia María Auxiliadora' : 'Anfiteatro de la Juventud'}. Desde las 19:00 h · 20:00 Misa central. Con Pablo Martínez. Si llueve, nos encontramos en María Auxiliadora. Consultá la sede actualizada en el enlace.`;
   const download = $('#invite-save');
   const fileName = download.download;
   const assetUrl = download.href;

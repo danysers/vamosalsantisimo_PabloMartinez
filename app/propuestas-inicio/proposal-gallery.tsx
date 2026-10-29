@@ -120,7 +120,7 @@ export default function ProposalGallery({ initialDesign, exportMode }: GalleryPr
           <p className={styles.date}>Sábado 19 de diciembre de 2026</p>
 
           <div className={styles.facts}>
-            <span>20:00 h</span>
+            <span>19:00 h</span>
             <i aria-hidden="true" />
             <span>María Auxiliadora</span>
             <i aria-hidden="true" />

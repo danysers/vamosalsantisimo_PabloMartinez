@@ -95,7 +95,7 @@ test('unsupported browsers retain download and all three network destinations',a
     assert.equal(url.protocol,'https:');
     if (network.value === 'whatsapp') {
       assert.equal(url.hostname,'wa.me');
-      assert.match(url.searchParams.get('text'),/19:00 Convocatoria.*20:00 Misa central.*21:00 Adoración/);
+      assert.match(url.searchParams.get('text'),/Desde las 19:00 h.*20:00 Misa central/);
       assert.match(url.searchParams.get('text'),/https:\/\/vamosalsantisimo.com\//);
       assert.ok(!link.href.includes('localhost'));
     } else assert.equal(url.hostname,`www.${network.value}.com`);

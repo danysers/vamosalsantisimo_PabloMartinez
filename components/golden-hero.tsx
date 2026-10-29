@@ -101,7 +101,7 @@ export default function GoldenHero({ children }: { children?: ReactNode }) {
         <div className={styles.rule} aria-hidden="true" />
         <p className={styles.subtitle}>Adoración con Pablo Martínez</p>
         <p className={styles.date}><time dateTime="2026-12-19">Sábado 19 de diciembre de 2026</time></p>
-        <p className={styles.details}>20:00 h <span>·</span> Lugar a confirmar <span>·</span> Entrada gratuita</p>
+        <p className={styles.details}>19:00 h <span>·</span> Lugar a confirmar <span>·</span> Entrada gratuita</p>
         <div className={styles.actions}>
           <a className={styles.primary} href="#adoracion">Ver el encuentro <span aria-hidden="true">↗</span></a>
           <a className={styles.secondary} href="#formacion">Taller de músicos</a>
