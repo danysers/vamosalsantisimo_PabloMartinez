@@ -22,9 +22,9 @@ COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts ./scripts
-COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts /app/lib/recovery-code.ts /app/lib/sponsor-media.mjs /app/lib/bounded-download.mjs ./lib/
+COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts /app/lib/recovery-code.ts /app/lib/sponsor-media.mjs /app/lib/bounded-download.mjs /app/lib/traffic-guard.mjs ./lib/
 COPY --from=production-dependencies /app/node_modules ./node_modules
-RUN node scripts/strip-runtime-tools.mjs && mkdir -p .next/cache && chown -R 65532:65532 .next/cache
+RUN node scripts/strip-runtime-tools.mjs && mkdir -p .next/cache/traffic-guard && chown -R 65532:65532 .next/cache
 
 # Keep the patched Node binary, without shell, package managers or build tools.
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e

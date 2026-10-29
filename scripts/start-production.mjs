@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { startTrafficMonitor } from './traffic-monitor.mjs'
 
 function prepare(script) {
   const result = spawnSync(process.execPath, [script], { stdio: 'inherit', windowsHide: true })
@@ -14,10 +15,12 @@ if (process.env.WORKSHOP_RUN_MIGRATIONS === '1') {
 }
 
 const children = new Set()
+const stopTrafficMonitor = startTrafficMonitor()
 let stopping = false
 function stop(code) {
   if (stopping) return
   stopping = true
+  stopTrafficMonitor()
   for (const child of children) child.kill('SIGTERM')
   const timer = setTimeout(() => { for (const child of children) child.kill('SIGKILL'); process.exit(code) }, 15_000)
   timer.unref()

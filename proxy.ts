@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto'
 import { contentPolicy } from './lib/browser-security.mjs'
+import { createMemoryGate, isTrafficEntry, trafficWaitHeaders, trafficWaitHtml } from './lib/traffic-guard.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 
 const administrativePath = /^\/(?:admin|api\/(?:admin|auth))(?:\/|$)/
 const panelAsset = /^\/(?:_next(?:\/|$)|favicon-mark\.png$|page-transition\.js$)/
+const memoryGate = createMemoryGate()
 
 function hidden() {
   return new NextResponse('No disponible.', {
@@ -34,7 +36,16 @@ export function proxy(request: NextRequest) {
     return administrativePath.test(path) || panelAsset.test(path) ? nextPage(request) : hidden()
   }
   // An unset/unknown surface is public, never administrative.
-  return administrativePath.test(path) ? hidden() : nextPage(request)
+  if (administrativePath.test(path)) return hidden()
+  if (process.env.TRAFFIC_GUARD_ENABLED === '1' && isTrafficEntry(request.method, path)) {
+    if (memoryGate().waiting) return new NextResponse(request.method === 'HEAD' ? null : trafficWaitHtml, {
+      status: 503, headers: trafficWaitHeaders,
+    })
+    const response = nextPage(request)
+    response.headers.set('Cache-Control', 'private, no-store')
+    return response
+  }
+  return nextPage(request)
 }
 
 export const config = { matcher: '/:path*' }
