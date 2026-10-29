@@ -1,0 +1,31 @@
+name: Security regression checks
+on:
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgres://postgres:disposable-ci-only@localhost:5432/postgres
+      RUN_GROUP_WORKFLOW_DB_TEST: '1'
+      RUN_PAYMENT_PROOF_DB_TEST: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.4'
+      - run: npm install --global pnpm@11.27.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm typecheck && pnpm lint
+      - run: node scripts/migrate.mjs && node scripts/seed-workshop.mjs
+      - run: pnpm test

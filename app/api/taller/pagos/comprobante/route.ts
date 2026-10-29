@@ -16,7 +16,7 @@ async function boundedFormData(request: NextRequest) {
       const { done, value } = await reader.read()
       if (done) break
       length += value.byteLength
-      if (length > MAX_MULTIPART_BYTES) throw new Error('too_large')
+      if (length > MAX_MULTIPART_BYTES) { await reader.cancel(); throw new Error('too_large') }
       chunks.push(value)
     }
   } finally { reader.releaseLock() }

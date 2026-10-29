@@ -3,3 +3,7 @@
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+
+# Remove the vulnerable optional CLI transitive version (GHSA-67mh-4wv8-2f99).
+overrides:
+  'esbuild@<0.25.0': '0.25.12'

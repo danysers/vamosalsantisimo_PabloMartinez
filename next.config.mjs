@@ -1,7 +1,10 @@
+import { fileURLToPath } from 'node:url'
+import { contentPolicy, staticScriptHashes } from './lib/browser-security.mjs'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
+  poweredByHeader: false,
   ...(process.env.NEXT_BUILD_CPUS ? { experimental: { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } } : {}),
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
@@ -27,6 +30,17 @@ const nextConfig = {
   },
   async headers() {
     return [
+      { source: '/:path*', headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+        { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(self), payment=(), usb=()' },
+        { key: 'Content-Security-Policy', value: "base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'" },
+      ] },
+      ...['/', '/formacion/:path*', '/pagina%20principal%20con%20efecto/:path*', '/eventos-anteriores/:path*'].map(source => ({
+        source, headers: [{ key: 'Content-Security-Policy', value: contentPolicy(staticScriptHashes(fileURLToPath(new URL('./public', import.meta.url))).join(' ')) }],
+      })),
       {
         source: '/2026/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],

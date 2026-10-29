@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import pg from 'pg'
 
 test('complete enrollment stores pending payment and one confirmation email per registration', {
@@ -22,7 +22,8 @@ test('complete enrollment stores pending payment and one confirmation email per 
   // This flag only tests queuing. No SMTP is configured or contacted.
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
     cwd: process.cwd(), stdio: 'ignore',
-    env: { ...process.env, WORKSHOP_EVENT_SLUG: slug, SITE_ORIGIN: origin, REGISTRATION_EMAIL_READY: '1' },
+    env: { ...process.env, WORKSHOP_EVENT_SLUG: slug, SITE_ORIGIN: origin, REGISTRATION_EMAIL_READY: '1',
+      WORKSHOP_CHECKOUT_TOKEN_KEY: randomBytes(32).toString('base64url') },
   })
   try {
     let ready = false

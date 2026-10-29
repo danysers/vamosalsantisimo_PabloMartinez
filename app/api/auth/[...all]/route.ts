@@ -1,3 +1,4 @@
+import { readSmallJson } from '../../../../lib/read-small-json'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -36,6 +37,13 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     })
   }
   try {
+    if (method === 'POST') {
+      if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 415 })
+      let body: unknown
+      try { body = await readSmallJson(request, 16 * 1024) }
+      catch { return NextResponse.json({ error: 'Solicitud inválida o demasiado grande.' }, { status: 400 }) }
+      request = new NextRequest(request.url, { method, headers: request.headers, body: JSON.stringify(body) })
+    }
     const { auth } = await import('../../../../lib/auth')
     const handler = toNextJsHandler(auth)
     const response = await handler[method](request)
