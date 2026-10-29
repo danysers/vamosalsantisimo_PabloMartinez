@@ -70,10 +70,13 @@ test('registration → one ARS 16000 checkout → verified payment and one QR �
   await pool.query('UPDATE accreditation_credentials SET issued_at=$2,expires_at=$3 WHERE id=$1',[originalCredential.id,originalCredential.issued_at,originalCredential.expires_at])
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM accreditation_credentials WHERE registration_id=$1',[attempt.registration_id])).rows[0].n,1)
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM email_outbox WHERE registration_id=$1 AND kind='accreditation_ready'",[attempt.registration_id])).rows[0].n,1)
-  const notice={eventId:randomUUID(),orderId,action:'order.processed',requestId:randomUUID(),applicationId:'222',sellerUserId:'111',liveMode:false}
+  const {parseMercadoPagoNotification}=await import('../lib/mercado-pago-notification.ts')
+  const rawNotice={action:'order.processed',type:'order',application_id:'222',user_id:'111',live_mode:false,
+    date_created:new Date().toISOString(),data:{id:orderId,version:1}}
+  const notice={...parseMercadoPagoNotification(rawNotice,{orderId,applicationId:'222',sellerUserId:'111',liveMode:false}),requestId:randomUUID()}
   let reads=0
   const load=async()=>{reads++;return approved}
-  await persistMercadoPagoNotification(notice,load)
+  await persistMercadoPagoNotification({...notice,requestId:randomUUID()},load)
   await persistMercadoPagoNotification(notice,load)
   assert.equal(reads,1,'a processed notification is not executed again')
   const refunded={...approved,status:'refunded',status_detail:'refunded',last_updated_date:'2026-10-28T02:00:00Z',transactions:{...approved.transactions,refunds:[{id:'REF'+randomBytes(12).toString('hex').toUpperCase(),transaction_id:approved.transactions.payments[0].id,amount:'16000.00',status:'processed'}]}}
