@@ -103,6 +103,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
     const [replay] = await tx.select().from(registrations).where(eq(registrations.creationKey, input.creationKey)).limit(1)
     if (replay) {
       if (replay.deletedAt) return { code: 409, body: { error: 'Esta inscripción fue eliminada. Contactá a la organización si necesitás recuperarla.' } }
+      if (replay.archivedAt) return { code: 409, body: { error: 'Esta inscripción está archivada. Contactá a la organización si necesitás recuperarla.' } }
       if (workshop.liveStartedAt && (replay.isTest || replay.createdAt < workshop.liveStartedAt)) return { code: 409, body: { error: 'Ese registro pertenece al ensayo anterior. Volvé al formulario para realizar tu inscripción actual.' } }
       const [intake] = await tx.select().from(registrationIntakes).where(eq(registrationIntakes.registrationId, replay.id)).limit(1)
       const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.registrationId, replay.id)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)

@@ -55,6 +55,7 @@ export async function register(input: RegistrationInput): Promise<Result> {
       .where(and(eq(registrations.workshopId, workshop.id), eq(registrations.accessTokenHash, tokenHash))).limit(1)
     if (replay) {
       if (replay.deletedAt) return duplicate
+      if (replay.archivedAt) return duplicate
       if (workshop.liveStartedAt && (replay.isTest || replay.createdAt < workshop.liveStartedAt)) return duplicate
       // A replay must reproduce the original operation, never silently accept
       // changed personal data under the same token and idempotency key.

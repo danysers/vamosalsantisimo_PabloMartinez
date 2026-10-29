@@ -239,6 +239,13 @@
       "when": 1793282855876,
       "tag": "0033_recoverable_registration_deletion",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793287227238,
+      "tag": "0034_registration_archive",
+      "breakpoints": true
     }
   ]
 }

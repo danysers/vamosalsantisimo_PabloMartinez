@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function RegistrationDeleteAction({ reference, name, deleted }: {
-  reference: string; name: string; deleted: boolean
+export default function RegistrationDeleteAction({ reference, name, deleted, archived }: {
+  reference: string; name: string; deleted: boolean; archived: boolean
 }) {
   const router = useRouter()
   const dialog = useRef<HTMLDialogElement>(null)
@@ -14,7 +14,7 @@ export default function RegistrationDeleteAction({ reference, name, deleted }: {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [open, setOpen] = useState(false)
-  async function save(operation: 'delete' | 'restore') {
+  async function save(operation: 'delete' | 'restore' | 'archive' | 'unarchive') {
     setBusy(true); setError('')
     try {
       const response = await fetch('/api/admin/inscripciones/eliminacion', {
@@ -28,6 +28,8 @@ export default function RegistrationDeleteAction({ reference, name, deleted }: {
     finally { setBusy(false) }
   }
   return <>
+    {!deleted && <button type="button" className="admin-text-action" disabled={busy || done}
+      onClick={() => void save(archived ? 'unarchive' : 'archive')}>{busy ? 'Guardando…' : archived ? 'Desarchivar' : 'Archivar'}</button>}
     {deleted ? <button type="button" className="admin-text-action" disabled={busy || done}
       onClick={() => void save('restore')}>{busy ? 'Restaurando…' : 'Restaurar'}</button>
       : <button type="button" className="admin-text-action admin-text-danger" disabled={busy || done} onClick={() => {

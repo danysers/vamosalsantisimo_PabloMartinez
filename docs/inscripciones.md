@@ -60,6 +60,14 @@ La pestaña **Eliminadas** permite restaurar. Antes se comprueba que no haya una
 
 Las pruebas de eliminación usan una base descartable y verifican confirmación, aislamiento por taller, idempotencia, QR bloqueado, pagos conservados, restauración, duplicados, capacidad, grupos y confirmaciones tardías del proveedor.
 
+## Archivo de registros
+
+**Inscripciones → Archivadas** conserva las fichas para consulta y futuras pruebas. La acción **Archivar** guarda fecha y operador sin modificar el estado original de inscripción ni los pagos, comprobantes, QR y demás datos relacionados. **Desarchivar** recupera el registro con las mismas comprobaciones de duplicados y capacidad que una restauración. Las eliminadas y las archivadas se mantienen como categorías distintas.
+
+El resumen, las inscripciones activas, los lugares ocupados y los conteos de lotes excluyen los registros archivados. Mientras estén archivados no pueden recibir nuevas acreditaciones ni iniciar un pago desde la web; las notificaciones del proveedor siguen conservando su evidencia financiera. Archivar no realiza devoluciones ni anula órdenes externas. Los registros nuevos quedan activos por defecto. La migración `0034_registration_archive.sql` agrega los campos sin archivar ninguna ficha automáticamente; cualquier archivo de datos existentes debe tener un alcance definido y dejar auditoría.
+
+`tests/registration-archive-db.test.mjs` verifica conservación de fichas y pagos, conteos activos, plazas liberadas, nuevas altas, QR bloqueados y recuperación sin confundir archivo y eliminación.
+
 ## Pruebas
 
 Con una base PostgreSQL **descartable** y migrada, ejecutar `pnpm typecheck` y `pnpm test`. `tests/workshop-enrollment-db.test.mjs` comprueba alta completa, idempotencia y dos tareas de correo para solicitud de ayuda. `tests/email-worker-db.test.mjs` recorre recepción, aviso al organizador, aprobación, rechazo y cancelación de un correo obsoleto con un transporte SMTP simulado: **no envía correos reales**. `tests/accreditation-db.test.mjs` comprueba puertas de emisión y admisión una sola vez. `tests/group-workflow-db.test.mjs` se activa expresamente con `RUN_GROUP_WORKFLOW_DB_TEST=1` y el cargador de TypeScript de prueba; valida precio editado, 3×2, idempotencia, avisos grupales con transporte ficticio, reagrupamiento y QR. **Nunca se debe apuntar esta prueba a la base real o de desarrollo**, pues crea datos y depende de descartar la base completa. Sin `DATABASE_URL`, las pruebas de base aparecen omitidas. `scripts/migrate.mjs` aplica las migraciones en arranque de la app de Dokploy; `scripts/seed-workshop.mjs` siembra el taller cerrado. Ver `docs/despliegue-dokploy.md`.

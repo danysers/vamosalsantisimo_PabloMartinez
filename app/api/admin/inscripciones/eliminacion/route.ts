@@ -8,7 +8,7 @@ import { changeRegistrationDeletion } from '../../../../../lib/registration-dele
 
 export const runtime = 'nodejs'
 const schema = z.object({ reference: z.string().regex(/^[A-Za-z0-9_-]{10,80}$/),
-  operation: z.enum(['delete', 'restore']), confirmation: z.string().max(40).optional() }).strict()
+  operation: z.enum(['delete', 'restore', 'archive', 'unarchive']), confirmation: z.string().max(40).optional() }).strict()
 
 export async function POST(request: NextRequest) {
   try {

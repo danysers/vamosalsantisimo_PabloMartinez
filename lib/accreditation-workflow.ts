@@ -89,7 +89,7 @@ export function verifyManualPayment(db: Db, input: {
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
       WHERE e.slug=${input.eventSlug} AND p.status='pending' AND
         registration_is_live(r.id) AND
-        ((r.reference=${input.reference} AND r.deleted_at IS NULL) OR EXISTS (
+        ((r.reference=${input.reference} AND r.deleted_at IS NULL AND r.archived_at IS NULL) OR EXISTS (
           SELECT 1 FROM payment_allocations a JOIN registrations member ON member.id=a.registration_id
           WHERE a.attempt_id=p.id AND member.reference=${input.reference} AND registration_is_current(member.id)
         ))
@@ -157,7 +157,7 @@ export function admitAccreditation(db: Db, input: { qrValue: string; eventSlug: 
       const registrationsFound = await tx.execute(sql`SELECT r.id,r.reference,r.creation_key,r.name,r.status,
         (SELECT c.token_hash FROM accreditation_credentials c WHERE c.registration_id=r.id AND c.revoked_at IS NULL ORDER BY c.version DESC LIMIT 1) AS active_token_hash
         FROM registrations r JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
-        WHERE r.reference=${reference} AND e.slug=${input.eventSlug} AND r.deleted_at IS NULL AND registration_is_current(r.id)`)
+        WHERE r.reference=${reference} AND e.slug=${input.eventSlug} AND r.deleted_at IS NULL AND r.archived_at IS NULL AND registration_is_current(r.id)`)
       const registration = registrationsFound.rows[0]
       if (!registration || !verifyRegistrationQr(input.qrValue, String(registration.id), reference, String(registration.creation_key))) {
         return { code: 404, body: { result: 'unknown', error: 'QR no reconocido.' } }
@@ -179,7 +179,7 @@ export function admitAccreditation(db: Db, input: { qrValue: string; eventSlug: 
       LEFT JOIN assistance_requests a ON a.registration_id=r.id
       LEFT JOIN fee_waivers fw ON fw.registration_id=r.id AND fw.revoked_at IS NULL
       WHERE c.token_hash=${tokenHash} AND e.slug=${input.eventSlug}
-        AND r.deleted_at IS NULL AND registration_is_current(r.id)
+        AND r.deleted_at IS NULL AND r.archived_at IS NULL AND registration_is_current(r.id)
       FOR UPDATE OF c,r
     `)
     const row = found.rows[0] as {

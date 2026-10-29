@@ -40,7 +40,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
     const [registrationCount] = eventSlug
       ? await db.select({ total: count() }).from(registrations)
         .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
-        .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL`))
+        .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL AND ${registrations.archivedAt} IS NULL`))
       : [{ total: 0 }]
     const [confirmedCount] = eventSlug
       ? await db.select({ total: count() }).from(registrations)
@@ -51,7 +51,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
     const recent = eventSlug && role !== 'unlinked' ? await db.select({ reference: registrations.reference, name: registrations.name,
       status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})` }).from(registrations)
       .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
-      .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL`))
+      .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL AND ${registrations.archivedAt} IS NULL`))
       .orderBy(desc(registrations.createdAt)).limit(8) : []
     let requests: PendingAssistance[] = []
     if (reviewEnabled) {
@@ -98,7 +98,7 @@ export default async function AdminPage() {
     <AdminWorkspace title="Resumen" description="Seguimiento del taller y acceso a las tareas de la organización."
       section="overview" role={state.role} canManageWorkshop={state.reviewEnabled}>
       <dl className="admin-counts">
-        <div><dt>Inscripciones</dt><dd>{state.registrations}</dd><small>Incluye el histórico conservado</small></div>
+        <div><dt>Inscripciones</dt><dd>{state.registrations}</dd><small>Solo inscripciones activas</small></div>
         <div><dt>Confirmadas</dt><dd>{state.confirmed}</dd><small>Con acreditación aprobada</small></div>
         <div><dt>Ayudas pendientes</dt><dd>{state.reviewEnabled ? state.requests.length : '—'}</dd><small>Esperando revisión</small></div>
         <div><dt>Eventos</dt><dd>{state.events}</dd><small>En la organización</small></div>

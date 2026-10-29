@@ -130,6 +130,8 @@ export const registrations = pgTable('registrations', {
   isTest: boolean('is_test').notNull().default(true),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   deletedBy: uuid('deleted_by').references(() => adminUsers.id),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
+  archivedBy: uuid('archived_by').references(() => adminUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -137,6 +139,7 @@ export const registrations = pgTable('registrations', {
   index('registrations_by_email_name').on(table.workshopId, table.normalizedEmail, table.normalizedName),
   index('registrations_by_phone_name').on(table.workshopId, table.normalizedPhone, table.normalizedName),
   check('registrations_deletion_actor', sql`(${table.deletedAt} IS NULL) = (${table.deletedBy} IS NULL)`),
+  check('registrations_archive_actor', sql`(${table.archivedAt} IS NULL) = (${table.archivedBy} IS NULL)`),
 ])
 
 // Complete form data is separate from the legacy minimal registration API.

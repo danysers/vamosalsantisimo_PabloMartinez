@@ -226,12 +226,12 @@
   function renderState(result) {
     const root=shell(), ui=controls(); if (!ui || !root) return false;
     lastState=result;
-    if (result.deleted) {
+    if (result.deleted || result.archived) {
       const confirmed=document.getElementById('registration-confirmed');if(confirmed)confirmed.hidden=true;
       const qr=document.getElementById('pass-qr');if(qr){qr.hidden=true;qr.removeAttribute('src');}
       root.dataset.state='deleted';
-      document.getElementById('registration-result-title').textContent='Inscripción eliminada';
-      root.querySelector('.result-intro').textContent='La organización eliminó esta inscripción. Si necesitás recuperarla o consultar un pago, comunicate con los contactos del taller.';
+      document.getElementById('registration-result-title').textContent=result.archived?'Inscripción archivada':'Inscripción eliminada';
+      root.querySelector('.result-intro').textContent='La organización '+(result.archived?'archivó':'eliminó')+' esta inscripción. Si necesitás recuperarla o consultar un pago, comunicate con los contactos del taller.';
       document.getElementById('registration-reference').hidden=false;
       ui.host.hidden=true;ui.editor.hidden=true;
       return false;

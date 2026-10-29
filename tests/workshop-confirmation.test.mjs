@@ -247,3 +247,13 @@ test('deleted registration hides its credential and cannot open another checkout
   assert.equal(app.ids.get('payment-next').hidden,true)
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
 })
+
+test('archived registration stays available as history without a QR or checkout',async()=>{
+  const app=browser()
+  app.response={archived:true,status:'approved',registrationStatus:'confirmed'}
+  app.events.get('workshop:recovered')({detail:{reference:'TestReference123',accessToken:'a'.repeat(43)}})
+  await flush()
+  assert.equal(app.ids.get('registration-result-title').textContent,'Inscripción archivada')
+  assert.equal(app.ids.get('payment-next').hidden,true)
+  assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
+})
