@@ -5,6 +5,7 @@ import { user as authUser } from '../../../lib/auth-schema'
 import { getDb } from '../../../lib/db'
 import { adminUsers } from '../../../lib/schema'
 import AccreditationConsole from './accreditation-console'
+import AdminWorkspace from '../admin-workspace'
 import '../admin.css'
 
 export const dynamic = 'force-dynamic'
@@ -36,10 +37,12 @@ export default async function AccreditationPage({ searchParams }: { searchParams
   const reference = typeof rawReference === 'string' ? rawReference : ''
   if (role === 'login') redirect('/admin')
   if (role === 'denied') notFound()
-  if (role === 'unavailable') return <main className="admin-shell"><h1>Panel no disponible</h1><p>Revisá la conexión con la base de datos.</p></main>
-  return <main className="admin-shell"><p><a href="/admin">← Volver al panel</a></p><h1>Acreditación del taller</h1>
-    <p>Los pagos y excepciones requieren verificación humana. El QR se emite solo al confirmar esa revisión; el ingreso queda registrado con fecha, hora y operador.</p>
+  if (role === 'unavailable') return <main className="admin-login-page"><section className="admin-login-card"><h1>Panel no disponible</h1><p>Revisá la conexión con la base de datos.</p></section></main>
+  return <AdminWorkspace title="Pagos y acreditación" description="Comprobantes, confirmación de pagos y control de ingreso."
+    section="payments" role={role} canManageWorkshop={role !== 'admission_operator'}>
+    <nav className="admin-section-tabs" aria-label="Secciones de acreditación">{role !== 'admission_operator' && <><a href="#comprobantes">Comprobantes</a><a href="#pagos">Confirmar pagos</a></>}<a href="#ingreso">Control de ingreso</a></nav>
+    <p className="admin-context-note">Los pagos y excepciones requieren verificación humana. El QR se emite solo al confirmar esa revisión; el ingreso queda registrado con fecha, hora y operador.</p>
     <AccreditationConsole initialReference={/^[A-Za-z0-9_-]{6,80}$/.test(reference) ? reference : ''}
       canVerify={role !== 'admission_operator'} scanEnabled={process.env.ADMISSION_SCAN_ENABLED === '1'} />
-  </main>
+  </AdminWorkspace>
 }

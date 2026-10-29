@@ -5,6 +5,7 @@ import { user as authUser } from '../../../lib/auth-schema'
 import { getDb } from '../../../lib/db'
 import { adminUsers } from '../../../lib/schema'
 import WorkshopAdminConsole from './workshop-admin-console'
+import AdminWorkspace from '../admin-workspace'
 import '../admin.css'
 
 export const dynamic = 'force-dynamic'
@@ -27,13 +28,13 @@ export default async function WorkshopAdminPage() {
   await headers()
   if (!process.env.BETTER_AUTH_URL || !process.env.BETTER_AUTH_SECRET || !process.env.DATABASE_URL) notFound()
   let access: string
-  try { access = await role() } catch { return <main className="admin-shell"><h1>Panel no disponible</h1><p>Revisá la conexión con la base de datos.</p></main> }
+  try { access = await role() } catch { return <main className="admin-login-page"><section className="admin-login-card"><h1>Panel no disponible</h1><p>Revisá la conexión con la base de datos.</p></section></main> }
   if (access === 'login') redirect('/admin')
   if (access !== 'configuration' && access !== 'registration_operator') notFound()
-  return <main className="admin-shell admin-workshop-shell">
-    <p><a href="/admin">← Volver al panel</a></p>
-    <h1>Precios e inscripciones grupales</h1>
-    <p>Los importes se consultan y calculan en PostgreSQL. Las cotizaciones quedan congeladas al crear el intento de pago; editar un lote nunca reescribe cobros anteriores.</p>
+  return <AdminWorkspace title="Precios y grupos" description="Configuración de lotes, promociones e inscripciones grupales."
+    section="workshop" role={access} canManageWorkshop>
+    <nav className="admin-section-tabs" aria-label="Secciones del taller"><a href="#lotes">Lotes</a><a href="#comisiones">Comisiones</a><a href="#promociones">Promociones</a><a href="#grupos">Grupos</a></nav>
+    <p className="admin-context-note">Los importes se consultan y calculan en PostgreSQL. Las cotizaciones quedan congeladas al crear el intento de pago; editar un lote nunca reescribe cobros anteriores.</p>
     <WorkshopAdminConsole canConfigure={access === 'configuration'} />
-  </main>
+  </AdminWorkspace>
 }

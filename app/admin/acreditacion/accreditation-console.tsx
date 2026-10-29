@@ -105,7 +105,7 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
   const printable = /^[A-Za-z0-9_-]{6,80}$/.test(reference.trim())
 
   return <>
-    {canVerify && <section className="admin-accreditation-block" aria-labelledby="proofs-title">
+    {canVerify && <section className="admin-accreditation-block" id="comprobantes" aria-labelledby="proofs-title">
       <h2 id="proofs-title">Comprobantes recibidos</h2>
       <p>Revisá el archivo y el movimiento bancario antes de marcar el pago como confirmado. La inscripción y el pago se actualizan por separado en la base.</p>
       <button className="button button-outline" type="button" onClick={() => void loadProofs()}>Actualizar lista</button>
@@ -118,7 +118,7 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
         {proof.payment_status === 'pending' && <button type="button" className="button button-outline" onClick={() => { setReference(proof.reference); setNote(''); document.getElementById('payment-title')?.scrollIntoView({ behavior: 'smooth' }) }}>Revisar pago</button>}
       </article>)}</div>
     </section>}
-    {canVerify && <section className="admin-accreditation-block" aria-labelledby="payment-title">
+    {canVerify && <section className="admin-accreditation-block" id="pagos" aria-labelledby="payment-title">
       <h2 id="payment-title">Verificar pago y emitir volante</h2>
       <p>Solo confirmá una transferencia después de verificarla, o efectivo después de cobrarlo en el taller. El efectivo usa el precio de ventanilla, no lotes ni promociones; si todavía está a definir, el sistema no permite marcarlo como pagado. La aprobación de una excepción emite el QR automáticamente.</p>
       <label>Referencia de inscripción<input value={reference} onChange={event => setReference(event.target.value)} maxLength={80} autoComplete="off" /></label>
@@ -131,7 +131,7 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
       </div>
       <p role="status" aria-live="polite">{paymentMessage}</p>
     </section>}
-    <section className="admin-accreditation-block" aria-labelledby="scan-title">
+    <section className="admin-accreditation-block" id="ingreso" aria-labelledby="scan-title">
       <h2 id="scan-title">Control de ingreso</h2>
       {!scanEnabled && <p>El escáner está cerrado. Se habilita expresamente el día del evento; no registra ingresos de prueba ahora.</p>}
       <label>Punto de ingreso<input value={entryPoint} onChange={event => setEntryPoint(event.target.value)} maxLength={80} /></label>

@@ -83,7 +83,7 @@ export default function SettlementPlanner({canConfigure}:{canConfigure:boolean})
     await submit({action:'record_provider_change',confirmedFromAccount:true,releaseDays:option.releaseDays,feeBasisPoints:option.feeBasisPoints})
   }
   const plan=config?.plan
-  return <section className="admin-accreditation-block">
+  return <section className="admin-accreditation-block" id="comisiones">
     <h2>Comisiones y disponibilidad del dinero</h2>
     <p>El taller calcula qué plazo conviene según la fecha en que necesitás los fondos. Los cambios de plazo se hacen en <a href="https://www.mercadopago.com.ar/costs-section/merchant-svcs/processing/options" target="_blank" rel="noopener noreferrer">Costos y cuotas de Mercado Pago</a> y se registran aquí después de comprobarlos.</p>
     {config&&<>

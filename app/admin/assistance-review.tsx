@@ -52,7 +52,7 @@ export default function AssistanceReview({ requests }: { requests: PendingAssist
     }
   }
 
-  return <section className="admin-assistance" aria-labelledby="assistance-title">
+  return <section className="admin-assistance" id="solicitudes" aria-labelledby="assistance-title">
     <h2 id="assistance-title">Solicitudes de ayuda pendientes</h2>
     <p>Revisá cada caso antes de decidir. Aprobar la excepción emite un QR único y deja el volante en cola de correo; no registra el ingreso.</p>
     {requests.length === 0 ? <p>No hay solicitudes pendientes.</p> : <div className="admin-assistance-list">

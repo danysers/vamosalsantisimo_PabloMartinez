@@ -28,6 +28,7 @@ test('admin and auth routes fail closed without local setup', async () => {
     assert.match(admin.headers.get('cache-control') ?? '', /no-store/)
     assert.match(admin.headers.get('x-robots-tag') ?? '', /noindex/)
     assert.match(await admin.text(), /Administración local no configurada/)
+    assert.equal((await fetch(`${base}/admin/inscripciones`, { redirect: 'manual' })).status, 404)
     const review = await fetch(`${base}/api/admin/assistance/decision`, {
       method: 'POST', headers: { origin: base, 'content-type': 'application/json' },
       body: JSON.stringify({ registrationId: '00000000-0000-4000-8000-000000000000', decision: 'approved', note: '' }),
@@ -66,6 +67,9 @@ test('configured admin remains private and denies public signup', { skip: !proce
     const page = await admin.text()
     assert.match(page, /Acceso privado/)
     assert.ok(!page.includes('Inscripciones guardadas'))
+    const privateList = await fetch(`${base}/admin/inscripciones`, { redirect: 'manual' })
+    assert.equal(privateList.status, 307)
+    assert.equal(new URL(privateList.headers.get('location'), base).pathname, '/admin')
     const unauthenticatedReview = await fetch(`${base}/api/admin/assistance/decision`, {
       method: 'POST', headers: { origin: base, 'content-type': 'application/json' },
       body: JSON.stringify({ registrationId: '00000000-0000-4000-8000-000000000000', decision: 'approved', note: '' }),
@@ -107,7 +111,7 @@ test('configured admin remains private and denies public signup', { skip: !proce
       const cookie = setCookies.map(value => value.split(';')[0]).join('; ')
       const dashboard = await fetch(`${base}/admin`, { headers: { cookie } })
       assert.equal(dashboard.status, 200)
-      assert.match(await dashboard.text(), /Inscripciones guardadas/)
+      assert.match(await dashboard.text(), /Últimas inscripciones/)
       const reviewHeaders = { ...headers, cookie }
       const registrationId = randomUUID()
       const unlinkedReview = await fetch(`${base}/api/admin/assistance/decision`, {

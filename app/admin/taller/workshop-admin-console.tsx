@@ -194,7 +194,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
     (!promo.startsAt || new Date(promo.startsAt) <= new Date()) && (!promo.endsAt || new Date(promo.endsAt) > new Date()))
   const existingRefs = references.split(/\r?\n|,/).map(value => value.trim()).filter(Boolean)
   return <>
-    <section className="admin-accreditation-block">
+    <section className="admin-accreditation-block" id="lotes">
       <h2>Lotes</h2>
       <p>Lote activo: <strong>{config.activeLot}</strong>. {config.registrationOpen ? 'Inscripción abierta en la base.' : 'Inscripción cerrada en la base.'}</p>
       <p>Alias y QR usan el precio del lote, sin gastos de servicio. El pago en efectivo en el taller tiene precio de ventanilla separado, sin promociones; mientras no se defina, queda pendiente sin importe. Mercado Pago permite tarjeta y suma el gasto configurado.</p>
@@ -228,7 +228,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
       <p role="status">{configMessage}</p>
     </section>
     <SettlementPlanner canConfigure={canConfigure} />
-    <section className="admin-accreditation-block">
+    <section className="admin-accreditation-block" id="promociones">
       <h2>Promociones</h2>
       <p>Se aplican solo a integrantes del mismo lote y precio. El grupo puede pagar sin promoción. Una promoción ya utilizada conserva sus condiciones históricas; para cambiarlas, creá otro código.</p>
       <div className="admin-promo-list">{config.promotions.map(promo => canConfigure
@@ -236,7 +236,7 @@ export default function WorkshopAdminConsole({ canConfigure }: { canConfigure: b
         : <p key={promo.id}><strong>{promo.code}</strong> · {promo.active ? 'activa' : 'inactiva'} · {promo.kind === 'bundle' ? `${promo.bundleSize}×${promo.payablePeople}` : formatMoney(promo.groupTotalMinor ?? 0)}</p>)}</div>
       {canConfigure && <><h3>Nueva promoción</h3><PromotionEditor onSaved={reload} /></>}
     </section>
-    <section className="admin-accreditation-block">
+    <section className="admin-accreditation-block" id="grupos">
       <h2>Inscripción y pago grupal</h2>
       <p>Una persona paga por todas. El importe se calcula en el servidor y queda congelado por integrante. La transferencia o el pago presencial permanecen pendientes hasta verificación humana; recién entonces se emiten los QR personales.</p>
       {!ready && <p className="admin-operator-notice" role="status">Creación bloqueada: falta abrir la inscripción en la base y/o confirmar que el trabajador de correo está listo. Podés calcular una vista previa sin registrar participantes.</p>}
