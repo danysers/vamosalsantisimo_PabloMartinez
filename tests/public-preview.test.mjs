@@ -39,7 +39,7 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.equal(asset.status, 200)
     assert.match(asset.headers.get('content-type') ?? '', /image\/webp/)
     assert.equal(asset.headers.get('cache-control'), 'public, max-age=86400, stale-while-revalidate=604800')
-    for (const file of ['directions.js', 'invitation.js', 'invitation.css', 'vendor/gsap.min.js', 'assets/invitacion-vamos-al-santisimo-2026-prueba.png']) {
+    for (const file of ['directions.js', 'invitation.js', 'invitation.css', 'vendor/gsap.min.js', 'assets/invitacion-vamos-al-santisimo-2026-final.png']) {
       const resource = await fetch(`${base}/pagina%20principal%20con%20efecto/${file}`)
       assert.equal(resource.status, 200, `homepage asset unavailable: ${file}`)
     }

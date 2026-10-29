@@ -17,7 +17,7 @@ ScrollTrigger 3.12.5: https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollT
 Lenis 1.1.13: https://unpkg.com/lenis@1.1.13/dist/lenis.min.js
 Documentación: https://gsap.com/docs/v3/ y https://github.com/darkroomengineering/lenis
 
-Las imágenes generales se referencian desde /2026/ en el mismo servidor. El afiche de invitación está en assets/invitacion-vamos-al-santisimo-2026-prueba.png. No requiere instalar paquetes ni cambiar la configuración del proyecto.
+Las imágenes generales se referencian desde /2026/ en el mismo servidor. El afiche de invitación está en assets/invitacion-vamos-al-santisimo-2026-final.png. No requiere instalar paquetes ni cambiar la configuración del proyecto.
 Con Next.js abrir la URL completa con /index.html. Para usar otra ruta amigable se puede integrar posteriormente con una página o rewrite.
 
 La preferencia de movimiento reducido se respeta y las partículas se detienen al ocultar la pestaña. Los destinos de taller, encuentro, voluntariado y donaciones son los de la página oficial. Compartir y copiar utilizan https://vamosalsantisimo.com/ incluso en localhost, para no enviar enlaces locales a otras personas.

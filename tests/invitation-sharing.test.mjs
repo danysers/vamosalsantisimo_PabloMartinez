@@ -28,8 +28,8 @@ function setup({support = true, share, fetch: customFetch, clipboard, venue = 'o
     documentElement:{dataset:{eventVenue:venue},classList:{add:value => classes.add(value),remove:value => classes.delete(value)}}
   };
   get('#invitation-dialog').querySelectorAll = () => choices;
-  get('#invite-save').href = 'http://localhost:3000/pagina%20principal%20con%20efecto/assets/invitacion-vamos-al-santisimo-2026-prueba.png';
-  get('#invite-save').download = 'invitacion-vamos-al-santisimo-2026-prueba.png';
+  get('#invite-save').href = 'http://localhost:3000/pagina%20principal%20con%20efecto/assets/invitacion-vamos-al-santisimo-2026-final.png';
+  get('#invite-save').download = 'invitacion-vamos-al-santisimo-2026-final.png';
   const shares = [], fetches = [], copies = [];
   const navigator = {clipboard:clipboard || {writeText:async text => copies.push(text)}};
   if (support) {
@@ -56,7 +56,7 @@ test('loads the file before the share tap and hands off a real PNG without anoth
   assert.equal(app.fetches.length,1);
   assert.ok(app.shares[0].files[0] instanceof File);
   assert.equal(app.shares[0].files[0].type,'image/png');
-  assert.equal(app.shares[0].files[0].name,'invitacion-vamos-al-santisimo-2026-prueba.png');
+  assert.equal(app.shares[0].files[0].name,'invitacion-vamos-al-santisimo-2026-final.png');
   assert.deepEqual(Object.keys(app.shares[0]),['files']);
 });
 
