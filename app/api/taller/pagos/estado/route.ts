@@ -1,3 +1,4 @@
+import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
 import { z } from 'zod'
@@ -11,7 +12,7 @@ const reply = (body: object, status: number) => Response.json(body, { status, he
 } })
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get('origin') !== (process.env.SITE_ORIGIN || request.nextUrl.origin)) return reply({ error: 'Solicitud inválida.' }, 403)
+  if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   let access: z.infer<typeof schema>
   try { access = schema.parse(await readSmallJson(request)) } catch { return reply({ error: 'Solicitud inválida.' }, 400) }

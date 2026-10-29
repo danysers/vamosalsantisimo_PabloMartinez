@@ -1,3 +1,4 @@
+import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { readSmallJson } from '../../../../../lib/read-small-json'
@@ -10,7 +11,7 @@ const schema = z.discriminatedUnion('action',[
 ])
 const reply = (body:object,status:number) => Response.json(body,{status,headers:{'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow'}})
 export async function POST(request:NextRequest) {
-  if (request.headers.get('origin')!==(process.env.SITE_ORIGIN||request.nextUrl.origin)) return reply({error:'Solicitud inválida.'},403)
+  if (!publicRequestOrigin(request)) return reply({error:'Solicitud inválida.'},403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({error:'Solicitud inválida.'},400)
   let input:z.infer<typeof schema>
   try { input=schema.parse(await readSmallJson(request,512)) } catch { return reply({error:'Revisá el DNI, número de gestión o código.'},400) }

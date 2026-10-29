@@ -1,3 +1,4 @@
+import { workshopCheckoutReturnUrl } from './public-site-origin'
 import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
 import { and, eq, isNull, sql } from 'drizzle-orm'
@@ -43,7 +44,7 @@ async function authorizedAttempt(db: Db | Tx, access: Access, lock = false): Pro
   return row
 }
 
-export async function startWorkshopCheckout(access: Access, createOrder = createCheckoutProOrder) {
+export async function startWorkshopCheckout(access: Access, createOrder = createCheckoutProOrder, requestOrigin?: string) {
   mercadoPagoConfig()
   return getDb().transaction(async tx => {
     const attempt = await authorizedAttempt(tx, access, true)
@@ -53,13 +54,7 @@ export async function startWorkshopCheckout(access: Access, createOrder = create
     if (attempt.source !== 'mercado_pago' || attempt.amount_minor === null || attempt.status !== 'pending' || attempt.registration_status !== 'pending') throw new Error('Payment is not pending')
     if (!attempt.expires_at || new Date(attempt.expires_at).getTime() <= Date.now()) throw new Error('Checkout reservation expired')
     if (attempt.checkout_url) return { checkoutUrl: attempt.checkout_url, amountMinor: attempt.amount_minor }
-    const origin = process.env.MP_PUBLIC_ORIGIN || process.env.SITE_ORIGIN
-    const publicOrigin = origin ? new URL(origin) : null
-    // HTTP loopback is used only for local development. Do not give Mercado Pago
-    // a return address that its servers cannot reach; the original tab retains
-    // the authenticated status screen when no HTTPS return origin is set.
-    const returnUrl = publicOrigin?.protocol === 'https:'
-      ? `${publicOrigin.origin}/formacion/pago?reference=${encodeURIComponent(attempt.reference)}` : undefined
+    const returnUrl = workshopCheckoutReturnUrl(attempt.reference, requestOrigin)
     const order = await createOrder({ reference: attempt.external_reference, email: attempt.payer_email, amountMinor: attempt.amount_minor, ...(returnUrl ? { returnUrl } : {}) }, attempt.idempotency_key)
     await tx.update(paymentAttempts).set({ providerOrderId: order.id, checkoutUrl: order.checkoutUrl, checkoutCreatedAt: new Date(), updatedAt: new Date() }).where(eq(paymentAttempts.id, attempt.id))
     await tx.insert(auditLog).values({ action: 'payment.checkout_created', subjectId: attempt.id,

@@ -1,3 +1,4 @@
+import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { readSmallJson } from '../../../../../lib/read-small-json'
@@ -9,13 +10,13 @@ const schema = z.object({ reference: z.string().regex(/^[A-Za-z0-9_-]{10,80}$/),
 const reply = (body: object, status: number) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get('origin') !== (process.env.SITE_ORIGIN || request.nextUrl.origin)) return reply({ error: 'Solicitud inválida.' }, 403)
+  if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   let access: z.infer<typeof schema>
   try { access = schema.parse(await readSmallJson(request)) } catch { return reply({ error: 'Solicitud inválida.' }, 400) }
   try {
     if (!await limitRegistrationRequest(request.headers.get('x-real-ip'))) return reply({ error: 'Demasiadas solicitudes. Intentá más tarde.' }, 429)
-    return reply(await startWorkshopCheckout(access), 200)
+    return reply(await startWorkshopCheckout(access, undefined, publicRequestOrigin(request)!), 200)
   } catch {
     return reply({ error: 'No pudimos preparar el pago. Tu inscripción sigue registrada: podés reintentar sin crear otra.' }, 503)
   }

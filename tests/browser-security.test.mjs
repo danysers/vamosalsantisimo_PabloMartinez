@@ -8,6 +8,7 @@ test('browser security covers static landing, workshop and isolated panel', asyn
     const base = `http://localhost:${port}`
     const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port)], {
       stdio: 'ignore', windowsHide: true, env: { ...process.env, APP_SURFACE: surface,
+        SITE_ORIGIN:'https://vamosalsantisimo.com', PUBLIC_SITE_ALIASES:'https://pablomartinez.vamosalsantisimo.com', REGISTRATION_EMAIL_READY:'1', WORKSHOP_EVENT_SLUG:'origin-test',
         BETTER_AUTH_URL: base, BETTER_AUTH_SECRET: 'test-only-secret-'.repeat(4), DATABASE_URL: 'postgres://invalid:invalid@127.0.0.1:1/invalid' },
     })
     try {
@@ -45,6 +46,16 @@ test('browser security covers static landing, workshop and isolated panel', asyn
         assert.equal(response.status, 400)
         assert.equal((await fetch(base + '/formacion')).status, 404)
       } else {
+        for (const path of ['/api/taller/inscripciones','/api/taller/inscripciones/recuperar',...['checkout','metodo','estado','comprobante'].map(p=>'/api/taller/pagos/'+p)]) {
+          for (const origin of ['https://vamosalsantisimo.com','https://pablomartinez.vamosalsantisimo.com','https://evil.invalid']) {
+            const result=await fetch(base+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','x-forwarded-host':'vamosalsantisimo.com'},body:'{}'})
+            assert.equal(result.status,origin==='https://evil.invalid'?403:400, `${path}: ${origin}`)
+          }
+        }
+        const canonical=await fetch(base+'/formacion/inscripcion').then(r=>r.text())
+        assert.ok(canonical.includes('rel="canonical" href="https://vamosalsantisimo.com/formacion/inscripcion"'))
+        assert.equal(new URL((await fetch(base+'/taller/inscripcion?reference=preserved')).url).pathname,'/formacion/inscripcion')
+        assert.equal((await fetch(base+'/logo-vamos.png')).status,200)
         assert.equal((await fetch(base + '/admin')).status, 404)
         for (const source of ['http://127.0.0.1:1/secret', 'http://169.254.169.254/latest/meta-data/', '/api/admin/taller/comprobantes/private', '/2026/logo.webp?secret=private']) {
           const query = new URLSearchParams({ url:source, w:'128', q:'75' })

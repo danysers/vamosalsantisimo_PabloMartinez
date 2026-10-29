@@ -1,3 +1,4 @@
+import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
 import { MAX_MULTIPART_BYTES, MAX_PROOF_BYTES, submitPaymentProof } from '../../../../../lib/payment-proof'
@@ -26,7 +27,7 @@ async function boundedFormData(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get('origin') !== (process.env.SITE_ORIGIN || request.nextUrl.origin)) return reply({ error: 'Solicitud inválida.' }, 403)
+  if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('multipart/form-data;')) return reply({ error: 'Solicitud inválida.' }, 400)
   try {
     if (!await allowPublicOperation('proof-upload')) return tooManyRequests()

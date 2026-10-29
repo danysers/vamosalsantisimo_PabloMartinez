@@ -17,6 +17,9 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: '/:path*', has: [{ type: 'host', value: 'www.vamosalsantisimo.com' }], destination: 'https://vamosalsantisimo.com/:path*', permanent: true },
+      { source: '/taller', destination: '/formacion', permanent: true },
+      { source: '/taller/:path*', destination: '/formacion/:path*', permanent: true },
       { source: '/formacion/el-taller', destination: '/formacion/inscripcion', permanent: true },
       // Keep the unfinished biography in the repository, but out of public navigation for now.
       { source: '/formacion/pablo-martinez', destination: '/formacion', permanent: false },
@@ -25,7 +28,11 @@ const nextConfig = {
   },
   async rewrites() {
     return {
-      beforeFiles: [{ source: '/', destination: '/pagina%20principal%20con%20efecto/index.html' }],
+      beforeFiles: [
+        { source: '/', destination: '/pagina%20principal%20con%20efecto/index.html' },
+        // Keep the image in previously delivered workshop emails available.
+        { source: '/logo-vamos.png', destination: '/eventos-anteriores/logo-vamos.png' },
+      ],
       afterFiles: ['', 'inscripcion', 'pago', 'comprobante', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
         source: page ? `/formacion/${page}` : '/formacion',
         destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',

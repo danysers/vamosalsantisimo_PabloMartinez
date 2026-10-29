@@ -1,3 +1,4 @@
+import { publicRequestOrigin } from '../../../../lib/public-site-origin'
 import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -21,9 +22,7 @@ export async function POST(request: NextRequest) {
   if (!process.env.DATABASE_URL || !process.env.WORKSHOP_EVENT_SLUG || (process.env.REGISTRATION_EMAIL_READY !== '1' && !localTest)) {
     return reply({ error: 'Las inscripciones todavía no están habilitadas.' }, 503)
   }
-  const origin = request.headers.get('origin')
-  const expected = process.env.SITE_ORIGIN ?? request.nextUrl.origin
-  if (!origin || origin !== expected) return reply({ error: 'Solicitud inválida.' }, 403)
+  if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   const idempotency = z.uuid().safeParse(request.headers.get('idempotency-key'))
   if (!idempotency.success) return reply({ error: 'Solicitud inválida.' }, 400)
