@@ -14,12 +14,21 @@
       const data = await response.json();
       if (data.available !== true || !Array.isArray(data.sponsors)) return;
       const visible = new Set();
+      const existing = new Map([...grid.querySelectorAll('[data-drive-id]')].map(node => [node.dataset.driveId, node]));
       for (const item of data.sponsors) {
         if (!item || !/^[A-Za-z0-9_-]{10,100}$/.test(item.id) ||
             typeof item.name !== 'string' || item.name.length < 1 || item.name.length > 90 ||
             typeof item.image !== 'string' || !imagePath.test(item.image)) continue;
         visible.add(item.id);
-        if ([...grid.querySelectorAll('[data-drive-id]')].some(node => node.dataset.driveId === item.id)) continue;
+        const previous = existing.get(item.id);
+        if (previous) {
+          const image = previous.querySelector('img');
+          if (image) {
+            if (image.getAttribute('src') !== item.image) image.src = item.image;
+            image.alt = item.name;
+          }
+          continue;
+        }
         const li = document.createElement('li');
         li.className = 'brand-shell';
         li.dataset.driveId = item.id;
@@ -35,6 +44,7 @@
         card.append(image);
         li.append(card);
         grid.append(li);
+        existing.set(item.id, li);
       }
       // An owner can remove an uploaded logo from Drive without disturbing the four originals.
       grid.querySelectorAll('[data-drive-id]').forEach(node => {
