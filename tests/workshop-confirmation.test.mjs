@@ -8,9 +8,10 @@ const flush=() => new Promise(resolve => setImmediate(resolve))
 
 // Small DOM boundary for the checkout controller: real timers and network are
 // replaced so we can cover long waits, interruptions and return-tab recovery.
-function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false,rejectReturn=false,initialResponse={}}={}) {
+function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false,rejectReturn=false,initialResponse={},proofMode='success'}={}) {
   const ids=new Map(), classes=new Map(), events=new Map(), windowEvents=new Map(), timers=new Map()
-  let serial=0, now=0, printed=0, interrupted=false
+  let serial=0, now=0, printed=0, interrupted=false, proofPosts=0, proofResets=0
+  let releaseProof
   let releasePending
   const calls=[]
   let response={reference:'TestReference123',status:'pending',registrationStatus:'pending',baseAmountMinor:1_000_000,amountMinor:1_100_000,onlineCheckoutReady:true,testMode:true,emailStatus:'queued',checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id=ORDTST1234567890',paymentMethod:'mercado_pago',attemptId:'00000000-0000-4000-8000-000000000001',canChangeMethod:true,methods:{mercado_pago:true,bank_transfer:true,on_site:true},transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'}}
@@ -22,25 +23,36 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
     append(...children){this.children=children}
     setAttribute(name,value){this[name]=value}
     removeAttribute(name){delete this[name]}
-    querySelector(selector){return selector.startsWith('#')?ids.get(selector.slice(1)):classes.get(selector.slice(1))}
+    querySelector(selector){return selector==='button'?this.children?.find(child=>child.tagName==='button'):selector.startsWith('#')?ids.get(selector.slice(1)):classes.get(selector.slice(1))}
     addEventListener(name,callback){this.handlers.set(name,callback)}
     focus(){}
+    reset(){if(this.id==='checkout-proof'){proofResets++;ids.get('checkout-proof-file').files=[]}}
     set innerHTML(value){this.html=value;for(const tag of value.matchAll(/<[a-z]+\b([^>]*)>/g)){const el=new Element();const id=tag[1].match(/id="([^"]+)"/);const cls=tag[1].match(/class="([^"]+)"/);if(id)el.id=id[1];if(cls)el.className=cls[1]}}
   }
   for(const id of ['registration-result','registration-result-title','registration-reference','payment-next','payment-next-title','payment-next-description','registration-grid']) {const el=new Element();el.id=id}
   for(const name of ['result-intro','result-symbol']) {const el=new Element();el.className=name}
   const document={hidden:false,body:{classList:{add(){}}},title:'',
-    getElementById:id=>ids.get(id),createElement:()=>new Element(),
+    getElementById:id=>ids.get(id),createElement:tag=>{const el=new Element();el.tagName=tag;return el},
     querySelector:selector=>selector==='[data-payment-return]'&&location.pathname==='/formacion/pago'?ids.get('registration-result'):null,
     addEventListener:(name,callback)=>events.set(name,callback),dispatchEvent:event=>events.get(event.type)?.(event)}
   const location=new URL(url)
-  const context={document,location,URL,URLSearchParams,Intl,JSON,console,queueMicrotask,CustomEvent:class {constructor(type){this.type=type}},
+  const context={document,location,URL,URLSearchParams,Intl,JSON,console,queueMicrotask,FormData,AbortController,CustomEvent:class {constructor(type){this.type=type}},
     sessionStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)},
     history:{state:{},replaceState:(state,unused,next)=>{location.href=String(next)}},
     matchMedia:()=>({matches:false}),window:{print(){printed++}},
     addEventListener:(name,callback)=>windowEvents.set(name,callback),
     setTimeout:(fn,delay)=>{const id=++serial;timers.set(id,{fn,at:now+delay});return id},clearTimeout:id=>timers.delete(id),
-    fetch:async(path,options)=>{calls.push({path,body:JSON.parse(options.body)});if(path.endsWith('/estado')&&interrupted){interrupted=false;throw new Error('Temporary network failure')}
+    fetch:async(path,options)=>{calls.push({path,body:path.endsWith('/comprobante')?options.body:JSON.parse(options.body)});if(path.endsWith('/estado')&&interrupted){interrupted=false;throw new Error('Temporary network failure')}
+      if(path.endsWith('/estado')&&proofPosts&&proofMode==='lost-without-status')throw new TypeError('Failed to fetch')
+      if(path.endsWith('/comprobante')) {
+        proofPosts++
+        if(proofMode==='hold')await new Promise(resolve=>{releaseProof=resolve})
+        if(proofMode==='lost-after-save'){response={...response,proofSubmitted:true};throw new TypeError('Failed to fetch')}
+        if(proofMode.startsWith('lost'))throw new TypeError('Failed to fetch')
+        if(proofMode==='too-large')return {ok:false,status:413,json:async()=>({error:'El archivo supera el límite de 5 MB.'})}
+        if(proofMode==='html-error')return {ok:false,status:503,json:async()=>{throw new SyntaxError('Unexpected token <html>')}}
+        response={...response,proofSubmitted:true};return {ok:true,status:201,json:async()=>({status:'review'})}
+      }
       if(path.endsWith('/metodo')) {const method=JSON.parse(options.body).method;response={...response,paymentMethod:method,amountMinor:method==='mercado_pago'?1_100_000:1_000_000,attemptId:'00000000-0000-4000-8000-000000000002'}}
       if(path.endsWith('/retorno')) return {ok:!rejectReturn,json:async()=>rejectReturn?{error:'Expired'}:{reference:'TestReference123',accessToken:'a'.repeat(43)}}
       const snapshot=JSON.parse(JSON.stringify(response))
@@ -49,7 +61,7 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
   }
   vm.runInNewContext(source,context)
   return {ids,events,windowEvents,document,storage,location,calls,
-    get printed(){return printed},set response(value){response={...response,...value}},interrupt(){interrupted=true},release(){releasePending?.()},
+    get printed(){return printed},get proofResets(){return proofResets},get proofPosts(){return proofPosts},releaseProof(){releaseProof?.()},set response(value){response={...response,...value}},interrupt(){interrupted=true},release(){releasePending?.()},
     async tick(){const next=[...timers].sort((a,b)=>a[1].at-b[1].at)[0];assert.ok(next,'automatic refresh must remain scheduled');timers.delete(next[0]);now=next[1].at;next[1].fn();await flush()},
   }
 }
@@ -288,4 +300,55 @@ test('archived registration stays available as history without a QR or checkout'
   assert.equal(app.ids.get('registration-result-title').textContent,'Inscripción archivada')
   assert.equal(app.ids.get('payment-next').hidden,true)
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
+})
+
+async function proofBrowser(proofMode) {
+  const app=browser({proofMode,initialResponse:{paymentMethod:'bank_transfer',proofSubmitted:false,amountMinor:1_000_000}})
+  app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1_000_000,transfer:{alias:'test.alias',provider:'Banco'}}})
+  await flush()
+  const file=new File([Buffer.from([255,216,255,1])],'comprobante.jpg',{type:'image/jpeg'})
+  app.ids.get('checkout-proof-file').files=[file]
+  app.submitProof=()=>app.ids.get('checkout-proof').handlers.get('submit')({preventDefault(){}})
+  return {app,file}
+}
+test('an interrupted upload keeps the selected file, checks status once and never retries the POST or invents a paid registration',async()=>{
+  for(const mode of ['lost-before-save','lost-without-status']) {
+    const {app,file}=await proofBrowser(mode)
+    const previous=app.calls.filter(call=>call.path.endsWith('/estado')).length
+    await app.submitProof()
+    assert.equal(app.proofPosts,1);assert.equal(app.proofResets,0)
+    assert.equal(app.ids.get('checkout-proof-file').files[0],file)
+    assert.equal(app.calls.filter(call=>call.path.endsWith('/estado')).length,previous+1)
+    assert.match(app.ids.get('checkout-proof-feedback').textContent,/Revisá tu conexión/)
+    assert.doesNotMatch(app.ids.get('checkout-proof-feedback').textContent,/Failed to fetch|Unexpected token/)
+    assert.equal(app.ids.get('checkout-proof').hidden,false)
+    assert.equal(app.ids.get('registration-result').dataset.state,'pending')
+    assert.equal(app.calls.filter(call=>/checkout$|metodo$|inscripciones$/.test(call.path)).length,0)
+  }
+})
+test('a lost response after commit recognizes an existing proof, keeps the payment pending and avoids a duplicate upload',async()=>{
+  const {app}=await proofBrowser('lost-after-save')
+  await app.submitProof()
+  assert.equal(app.proofPosts,1);assert.equal(app.proofResets,0)
+  assert.equal(app.ids.get('checkout-proof').hidden,true)
+  assert.match(app.ids.get('checkout-status').textContent,/Ya hay un comprobante guardado/)
+  assert.equal(app.ids.get('registration-result').dataset.state,'pending')
+})
+test('HTTP errors remain readable, preserve the file and do not expose HTML or raw browser exceptions',async()=>{
+  for(const mode of ['too-large','html-error']) {
+    const {app,file}=await proofBrowser(mode)
+    await app.submitProof()
+    const text=app.ids.get('checkout-proof-feedback').textContent
+    assert.match(text,mode==='too-large'?/supera el límite de 5 MB/:/servidor no pudo completar/)
+    assert.match(text,/archivo seleccionado se conserva/);assert.doesNotMatch(text,/Failed to fetch|Unexpected token|<html>/)
+    assert.equal(app.ids.get('checkout-proof-file').files[0],file);assert.equal(app.proofResets,0)
+  }
+})
+test('only a confirmed successful upload clears the file; concurrent submits are suppressed',async()=>{
+  const {app}=await proofBrowser('hold')
+  const pending=app.submitProof();await flush()
+  await app.submitProof();assert.equal(app.proofPosts,1)
+  app.releaseProof();await pending
+  assert.equal(app.proofResets,1);assert.equal(app.ids.get('checkout-proof').hidden,true)
+  assert.equal(app.ids.get('registration-result').dataset.state,'pending')
 })

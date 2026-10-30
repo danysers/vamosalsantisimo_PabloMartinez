@@ -2,7 +2,7 @@
   'use strict';
   let current=null, preparing=null, checking=null, timer=0, checks=0;
   let restoringReturn=null;
-  let lastState=null, savingMethod=false, baseAmountMinor=null, onlineFeeMinor=null, onlineCheckoutReady=false, testMode=false;
+  let lastState=null, savingMethod=false, uploading=null, baseAmountMinor=null, onlineFeeMinor=null, onlineCheckoutReady=false, testMode=false;
   const whatsappIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2.5A13.4 13.4 0 0 0 4.4 22.6L2.5 29.5l7.1-1.9A13.5 13.5 0 1 0 16 2.5Z"/><path fill="#fff" d="M22.7 19.1c-.4-.2-2.2-1.1-2.6-1.2-.3-.1-.6-.2-.8.2l-1.1 1.3c-.2.2-.4.3-.8.1-2.2-1.1-3.6-2.1-4.8-4.3-.4-.6.4-.6 1.1-1.9.1-.2.1-.5 0-.7l-1.2-2.8c-.3-.7-.6-.6-.8-.6h-.8c-.3 0-.7.1-1 .5-1 1.1-1.3 2.2-1.1 3.6.3 1.8 1.7 3.8 3.3 5.4 2.3 2.3 5.3 3.8 7.8 4.1 1.3.2 2.5-.4 3.1-1.2.4-.6.6-1.7.5-1.9-.2-.3-.5-.4-.8-.6Z"/></svg>';
   function helpUrl(result={}) {
     const fallback='https://wa.me/5493704258770';
@@ -14,8 +14,8 @@
   const opensInNewTab=location.protocol!=='https:';
   const money=minor => '$'+(minor/100).toLocaleString('es-AR');
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
-  async function json(url,body) {
-    const response=await fetch(url,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  async function json(url,body,signal) {
+    const response=await fetch(url,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
     const result=await response.json();
     if (!response.ok) throw new Error(result.error || 'No pudimos completar la consulta. Intentá nuevamente.');
     return result;
@@ -125,21 +125,47 @@
     if (current && !document.hidden && document.getElementById('payment-next')) timer=setTimeout(refreshPayment,delay);
   }
   async function uploadProof(event) {
-    event.preventDefault(); if(!current) return;
+    event.preventDefault(); if(!current || uploading?.reference===current.reference) return;
     const access=current, ui=controls();
     const file=document.getElementById('checkout-proof-file').files?.[0];
     const feedback=document.getElementById('checkout-proof-feedback');
-    if(!file || file.size>5*1024*1024) { feedback.textContent='Elegí una imagen o PDF de hasta 5 MB.'; return; }
+    if(!file || !file.size || file.size>5*1024*1024) { feedback.textContent='Elegí una imagen o PDF de hasta 5 MB.'; return; }
+    uploading=access; clearTimeout(timer);
     const button=ui.proof.querySelector('button'); button.disabled=true; feedback.textContent='Subiendo comprobante…';
+    let serverMessage='';
     try {
       const body=new FormData(); body.set('reference',access.reference); body.set('accessToken',access.accessToken); body.set('comprobante',file);
       const response=await fetch('/api/taller/pagos/comprobante',{method:'POST',body,cache:'no-store'});
-      const result=await response.json();
-      if(!response.ok) throw new Error(result.error||'No pudimos guardar el comprobante.');
+      const result=await response.json().catch(()=>null);
+      if(!response.ok) {
+        serverMessage=typeof result?.error==='string' ? result.error : response.status===413 ? 'El archivo supera el límite de 5 MB.'
+          : 'El servidor no pudo completar la subida. Esperá un momento y volvé a intentar.';
+        throw new Error('proof_upload_rejected');
+      }
+      if(!result || result.status!=='review') throw new Error('proof_upload_uncertain');
       if(current!==access) return;
       ui.proof.reset(); lastState={...lastState,proofSubmitted:true}; renderState(lastState);
-    } catch(error) { if(current===access) feedback.textContent=error.message; }
-    finally { button.disabled=false; }
+    } catch {
+      if(current!==access || !ui.host.isConnected) return;
+      feedback.textContent='No pudimos confirmar la subida. Estamos consultando si el comprobante quedó guardado…';
+      // The server may have committed even if the browser lost the response.
+      // Check privately once; never resend the file automatically or infer that
+      // the selected file arrived merely because a request was attempted.
+      const controller=new AbortController(), timeout=setTimeout(()=>controller.abort(),8000);
+      try {
+        const state=await json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken},controller.signal);
+        if(current!==access || !ui.host.isConnected) return;
+        if(state.proofSubmitted) {
+          renderState(state);
+          if(state.paymentMethod==='bank_transfer' && state.status==='pending') ui.status.textContent='Ya hay un comprobante guardado para esta inscripción y está en revisión. No vuelvas a pagar.';
+          return;
+        }
+      } catch { /* Keep the original file selected for an explicit retry. */ }
+      finally { clearTimeout(timeout); }
+      if(current===access && ui.host.isConnected) feedback.textContent=(serverMessage || 'No pudimos comunicarnos para confirmar la subida. Revisá tu conexión y volvé a intentar.')
+        +' El archivo seleccionado se conserva. No necesitás inscribirte ni pagar otra vez.';
+    }
+    finally { if(uploading===access) uploading=null; button.disabled=false; if(current===access) schedule(5000); }
   }
   async function preparePayment() {
     if (!current || preparing===current || !(lastState?.onlineCheckoutReady ?? onlineCheckoutReady)) return;
@@ -324,7 +350,7 @@
     return true;
   }
   async function refreshPayment() {
-    if (!current || checking===current || document.hidden || !document.getElementById('payment-next')) return;
+    if (!current || uploading===current || checking===current || document.hidden || !document.getElementById('payment-next')) return;
     const access=current; checking=access; let again=true;
     try {
       const result=await json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken});
