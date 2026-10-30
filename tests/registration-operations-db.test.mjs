@@ -172,5 +172,18 @@ test('administrative operations preserve payment facts and enforce owner, replay
       assert.equal(result.code,200);assert.equal(result.body.accreditedPeople,0);assert.equal(result.body.emailQueued,false);assert.equal(result.body.accreditationBlocked,true)
       assert.equal((await read(reference)).qrBlocked,true)
     })
+    await t.test('replacing payment with an authorized waiver keeps the QR and its entry eligibility',async()=>{
+      const {verifyManualPayment}=await import('../lib/accreditation-workflow.ts')
+      const reference=await enroll()
+      assert.equal((await verifyManualPayment(db,{eventSlug:slug,operatorId:owner.id,reference,note:'Pago ficticio para cambio de autorización',manualReference:'TEST-WAIVER'})).code,200)
+      const registration=(await pool.query('SELECT id FROM registrations WHERE reference=$1',[reference])).rows[0]
+      const old=(await pool.query('SELECT id,token_hash FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[registration.id])).rows[0]
+      const result=await edit(await payload(reference,{paymentMethod:'none',amountMinor:null,paidAmountMinor:0,feeMinor:0,waiver:'grant',confirmPayment:true}))
+      assert.equal(result.code,200,JSON.stringify(result.body))
+      const current=(await pool.query('SELECT id,token_hash,reason FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[registration.id])).rows[0]
+      assert.equal(current.id,old.id);assert.equal(current.token_hash,old.token_hash);assert.equal(current.reason,'waived')
+      // Exercise the database's actual entry eligibility guard, not just the UI.
+      await pool.query('INSERT INTO check_ins(registration_id,credential_id,scanned_by) VALUES($1,$2,$3)',[registration.id,current.id,owner.id])
+    })
   }finally{await pool.end();await db.$client.end()}
 })

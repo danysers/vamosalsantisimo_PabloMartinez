@@ -43,9 +43,19 @@ async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: str
   if (!['pending', 'confirmed'].includes(row.status)) return { code: 409, body: { error: 'La inscripción no está habilitada para acreditarse.' } }
   const reason = row.paid ? 'paid' : row.assistance_status === 'approved' ? 'assistance_approved' : row.waived ? 'waived' : null
   if (!reason) return { code: 409, body: { error: 'Primero debe verificarse el pago o aprobarse la excepción.' } }
-  const [existing] = await tx.select({ id: accreditationCredentials.id }).from(accreditationCredentials)
+  const [existing] = await tx.select({ id: accreditationCredentials.id, reason: accreditationCredentials.reason }).from(accreditationCredentials)
     .where(and(eq(accreditationCredentials.registrationId, registrationId), sql`${accreditationCredentials.revokedAt} IS NULL`)).limit(1)
-  if (existing) return { code: 200, body: { credentialId: existing.id, reference: row.reference, emailQueued: false, alreadyIssued: true } }
+  if (existing) {
+    const stillEligible = existing.reason === 'paid' ? row.paid : existing.reason === 'assistance_approved' ? row.assistance_status === 'approved' : row.waived
+    if (!stillEligible) {
+      // Keep the same QR when an owner replaces payment with an authorized
+      // exemption. Entry still checks this reason against the current records.
+      await tx.update(accreditationCredentials).set({ reason }).where(eq(accreditationCredentials.id, existing.id))
+      await tx.insert(auditLog).values({ actorId: operatorId, action: 'accreditation.eligibility_updated', subjectId: registrationId,
+        changes: { credentialId: existing.id, from: existing.reason, to: reason } })
+    }
+    return { code: 200, body: { credentialId: existing.id, reference: row.reference, emailQueued: false, alreadyIssued: true } }
+  }
   const { key, keyId } = qrConfig()
   const versionResult = await tx.execute(sql`SELECT coalesce(max(version),0)::integer AS version FROM accreditation_credentials WHERE registration_id=${registrationId}`)
   const version = Number(versionResult.rows[0]?.version ?? 0) + 1
