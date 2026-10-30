@@ -204,11 +204,11 @@ export function accreditationEmail(input: { firstName: string; reference: string
       `Referencia: ${input.reference}.`,
       'Presentá este mensaje o el volante impreso al ingresar. El QR identifica una sola inscripción y no debe compartirse.',
       'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
-      ...(input.passUrl ? ['', 'Abrí tu volante personal en 3D y elegí «Imprimir mi acreditación»:', input.passUrl, 'Este enlace es personal; no lo compartas.'] : []),
+      ...(input.passUrl ? ['', 'Abrí tu volante personal y elegí «Imprimir mi acreditación»:', input.passUrl, 'Este enlace es personal; no lo compartas.'] : []),
       '', 'Vamos al Santísimo',
     ].join('\n'),
   }
-  return { ...message, html: actionEmailHtml(message.text, input.passUrl, 'Ver mi volante 3D e imprimir', 'acreditacion') }
+  return { ...message, html: actionEmailHtml(message.text, input.passUrl, 'Ver mi volante e imprimir', 'acreditacion') }
 }
 
 export function paymentProofReviewEmail(input: { fullName: string; reference: string; amountMinor: number; proofUrl: string; panelUrl: string }) {

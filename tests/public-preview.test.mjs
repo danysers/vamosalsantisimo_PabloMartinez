@@ -25,6 +25,17 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     assert.equal(home.status, 200)
     assert.equal((await fetch(`${base}/encuentro`)).status, 404, 'retired encounter page must not be served')
     const html = await home.text()
+    assert.match(html,/Se pide, como colaboración voluntaria, un alimento no perecedero que será donado a las personas que más lo necesitan/)
+    const missing=await fetch(base+'/pagina-inexistente-comprobacion')
+    assert.equal(missing.status,404)
+    const missingHtml=await missing.text()
+    assert.match(missingHtml,/\/404\/vamos-al-santisimo-20261030.webp/)
+    assert.match(missingHtml,/Volver al inicio/)
+    assert.doesNotMatch(missingHtml,/Adoración con Pablo|music-player\.js|invitation\.js/)
+    const poster=await fetch(base+'/404/vamos-al-santisimo-20261030.webp')
+    assert.equal(poster.status,200);assert.match(poster.headers.get('content-type'),/image\/webp/)
+    assert.match(poster.headers.get('cache-control'),/max-age=31536000, immutable/)
+    assert.ok((await poster.arrayBuffer()).byteLength<25000)
     for (const text of ['Pablo Martínez', '19 de diciembre de 2026', 'María Auxiliadora', '20:00', '15:00 h', 'Entrada libre y gratuita', 'Colaboración voluntaria: un alimento no perecedero', 'Cada gesto de', 'directions-main']) {
       assert.ok(html.includes(text), `missing public text: ${text}`)
     }

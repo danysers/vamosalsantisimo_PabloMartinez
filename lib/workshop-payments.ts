@@ -19,6 +19,7 @@ type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 type Access = { reference: string; accessToken: string }
 type Attempt = {
   id: string; registration_id: string; workshop_id: string; reference: string; creation_key: string;
+  admin_change_id: string | null;
   source: string; status: string; registration_status: string; amount_minor: number | null; provider_fee_minor: number;
   payer_email: string; external_reference: string; idempotency_key: string; provider_order_id: string | null;
   checkout_url: string | null; reconciled_at: Date | null; expires_at: Date | null;
@@ -35,7 +36,7 @@ async function authorizedAttempt(db: Db | Tx, access: Access, lock = false): Pro
     FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
     JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
     LEFT JOIN reservations h ON h.registration_id=r.id
-    WHERE r.reference=${access.reference} AND e.slug=${process.env.WORKSHOP_EVENT_SLUG || ''}
+    WHERE p.superseded_by_admin IS NULL AND r.reference=${access.reference} AND e.slug=${process.env.WORKSHOP_EVENT_SLUG || ''}
     ORDER BY p.created_at DESC LIMIT 1 ${lock ? sql`FOR UPDATE OF p,r` : sql``}
   `)
   const row = result.rows[0] as unknown as Attempt | undefined
@@ -136,11 +137,13 @@ export async function reconcileWorkshopOrder(orderId: string, loadOrder = fetchC
       providerUpdatedAt: projection.providerUpdatedAt ? new Date(projection.providerUpdatedAt) : now,
       reconciledAt: now, updatedAt: now,
     } }).where(eq(paymentAttempts.id, attempt.id))
-    const members = await tx.execute(sql`SELECT r.id,r.status,r.email,r.reference,r.deleted_at,r.archived_at FROM registrations r
+    // Preserve processor facts without undoing an owner's correction.
+    if (attempt.supersededByAdmin) return { status, administrativeOverride: true }
+    const members = await tx.execute(sql`SELECT r.id,r.status,r.email,r.reference,r.deleted_at,r.archived_at,r.accreditation_blocked FROM registrations r
       JOIN payment_allocations a ON a.registration_id=r.id WHERE a.attempt_id=${attempt.id} ORDER BY r.id FOR UPDATE OF r`)
     if (status === 'approved') {
       for (const member of members.rows) {
-        if (member.deleted_at || member.archived_at) continue
+        if (member.deleted_at || member.archived_at || member.accreditation_blocked) continue
         if (!['pending', 'confirmed'].includes(String(member.status))) continue
         const seat = await tx.execute(sql`SELECT status,expires_at FROM reservations WHERE registration_id=${String(member.id)} FOR UPDATE`)
         const held = seat.rows[0]
@@ -193,7 +196,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
   const eligibility = await getDb().execute(sql`SELECT
     (SELECT count(*)::int FROM payment_allocations WHERE attempt_id=${attempt.id}) AS members,
     EXISTS(SELECT 1 FROM payment_allocations a JOIN payment_attempts p ON p.id=a.attempt_id
-      WHERE a.registration_id=${attempt.registration_id} AND p.id<>${attempt.id} AND p.status IN ('created','pending','approved')) AS other_active`)
+      WHERE a.registration_id=${attempt.registration_id} AND p.id<>${attempt.id} AND p.superseded_by_admin IS NULL AND p.status IN ('created','pending','approved')) AS other_active`)
   const profile = await getDb().execute(sql`SELECT i.nickname,w.starts_at FROM registration_intakes i
     JOIN registrations r ON r.id=i.registration_id JOIN workshops w ON w.id=r.workshop_id WHERE r.id=${attempt.registration_id}`)
   const registrationCard = null // Ventanilla no entrega un volante 3D, ni siquiera antes del pago.
@@ -224,7 +227,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
   }
   return { reference: attempt.reference, status: attempt.status, registrationStatus: attempt.registration_status,
     attemptId: attempt.id, paymentMethod: attempt.source, proofSubmitted: !!proof.rows[0],
-    canChangeMethod: !attempt.historical && !proof.rows[0] && ['mercado_pago','bank_transfer','on_site'].includes(attempt.source) && attempt.registration_status === 'pending' && ['pending','created','rejected','cancelled'].includes(attempt.status) &&
+    canChangeMethod: !attempt.admin_change_id && !attempt.historical && !proof.rows[0] && ['mercado_pago','bank_transfer','on_site'].includes(attempt.source) && attempt.registration_status === 'pending' && ['pending','created','rejected','cancelled'].includes(attempt.status) &&
       Number(eligibility.rows[0]?.members) === 1 && !eligibility.rows[0]?.other_active && attempt.paid_amount_minor === 0,
     onlineCheckoutReady: !!settings?.mercadoPagoEnabled && checkoutConfigured(),
     methods: { mercado_pago: !!settings && ((settings.mercadoPagoEnabled && checkoutConfigured()) || localWorkshopTestMode(process.env.SITE_ORIGIN ?? '')),
@@ -259,7 +262,7 @@ export async function changeWorkshopPaymentMethod(
     const workshopResult = await tx.execute(sql`SELECT id,registration_open,capacity,starts_at FROM workshops WHERE id=${initial.workshop_id} FOR UPDATE`)
     const workshop = workshopResult.rows[0]
     const attempt = await authorizedAttempt(tx, input, true)
-    if (attempt.deleted_at || attempt.archived_at || attempt.historical) throw new PaymentMethodChangeError('Esta inscripción no está disponible para modificar el pago.')
+    if (attempt.admin_change_id || attempt.deleted_at || attempt.archived_at || attempt.historical) throw new PaymentMethodChangeError('Esta inscripción no está disponible para modificar el pago.')
     if (!['mercado_pago','bank_transfer','on_site'].includes(attempt.source) || attempt.registration_status !== 'pending' || !['pending','created','rejected','cancelled'].includes(attempt.status) || attempt.paid_amount_minor !== 0) {
       throw new PaymentMethodChangeError('El pago ya fue confirmado o requiere revisión. No hace falta volver a pagar.')
     }
@@ -279,7 +282,7 @@ export async function changeWorkshopPaymentMethod(
     const allocations = await tx.select().from(paymentAllocations).where(eq(paymentAllocations.attemptId, attempt.id))
     const allocation = allocations[0]
     const other = await tx.execute(sql`SELECT 1 FROM payment_allocations a JOIN payment_attempts p ON p.id=a.attempt_id
-      WHERE a.registration_id=${attempt.registration_id} AND p.id<>${attempt.id} AND p.status IN ('created','pending','approved') LIMIT 1`)
+      WHERE a.registration_id=${attempt.registration_id} AND p.id<>${attempt.id} AND p.superseded_by_admin IS NULL AND p.status IN ('created','pending','approved') LIMIT 1`)
     if (allocations.length !== 1 || allocation.registrationId !== attempt.registration_id || other.rows.length) {
       throw new PaymentMethodChangeError('Esta inscripción tiene un pago grupal o en revisión. Contactá a la organización.')
     }

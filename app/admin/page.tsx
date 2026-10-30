@@ -52,8 +52,8 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
       : [{ total: 0 }]
     const recent = eventSlug && role !== 'unlinked' ? await db.select({ reference: registrations.reference, name: registrations.name,
       status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})`,
-      paymentSource: sql<string | null>`(SELECT p.source::text FROM payment_attempts p WHERE p.registration_id=${registrations.id}
-        OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=p.id AND a.registration_id=${registrations.id})
+      paymentSource: sql<string | null>`(SELECT COALESCE(p.reported_source,p.source)::text FROM payment_attempts p WHERE p.superseded_by_admin IS NULL AND (p.registration_id=${registrations.id}
+        OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=p.id AND a.registration_id=${registrations.id}))
         ORDER BY p.created_at DESC,p.id DESC LIMIT 1)`,
       paymentDifficulty: sql<boolean>`EXISTS(SELECT 1 FROM registration_intakes i WHERE i.registration_id=${registrations.id} AND i.payment_difficulty)` }).from(registrations)
       .innerJoin(workshops, eq(workshops.id, registrations.workshopId))

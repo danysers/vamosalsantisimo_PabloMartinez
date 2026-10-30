@@ -56,7 +56,7 @@ export async function syncEmailBounces(db, client) {
     return { recorded }
   } catch {
     await db.query("UPDATE email_bounce_sync SET last_error_code='mailbox_check_failed' WHERE id=1")
-    console.error('Email bounce check failed; will retry without interrupting delivery')
+    console.error('Manual email bounce check failed; another check requires an operator request')
     return { failed: true }
   } finally {
     try { await client.logout() } catch { client.close() }
@@ -72,17 +72,54 @@ export function imapClient(env = process.env) {
   client.on('error', () => {}) // syncEmailBounces reports failures without logging mailbox content.
   return client
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
-  pool.on('error', () => console.error('Email bounce database connection interrupted; will retry'))
+export async function processRequestedBounceSync(db, makeClient = imapClient) {
+  const claim = await db.query(`UPDATE email_bounce_sync SET request_status='running',attempted_at=now()
+    WHERE id=1 AND request_status='queued' AND request_id IS NOT NULL RETURNING request_id`)
+  const request = claim.rows[0]
+  if (!request) return { idle: true }
+  const result = await syncEmailBounces(db, makeClient())
+  const failed = result.failed || result.skipped
+  await db.query(`UPDATE email_bounce_sync SET request_status=$2,completed_request_id=$1,completed_at=now(),
+    last_error_code=CASE WHEN $3 THEN 'mailbox_check_busy' ELSE last_error_code END WHERE id=1 AND request_id=$1`,
+  [request.request_id, failed ? 'failed' : 'succeeded', !!result.skipped])
+  await db.query("SELECT pg_notify('vas_email_bounce_finished',$1)", [request.request_id])
+  return { ...result, requestId: request.request_id }
+}
+
+export async function listenForBounceRequests(db, makeClient = imapClient) {
+  let processing = false, requested = false
+  const run = async () => {
+    if (processing) return
+    processing = true
+    try {
+      do { requested = false; await processRequestedBounceSync(db, makeClient) } while (requested)
+    }
+    catch { console.error('Manual bounce request could not finish') }
+    finally { processing = false }
+  }
+  const notification = message => { if (message.channel === 'vas_email_bounce_requested') { requested = true; void run() } }
+  db.on('notification', notification)
   try {
-    do {
-      try {
-        const db = await pool.connect()
-        try { await syncEmailBounces(db, imapClient()) } finally { db.release() }
-      } catch { console.error('Email bounce monitor unavailable; will retry without stopping the site') }
-      if (process.argv.includes('--once')) break
-      await new Promise(resolve => setTimeout(resolve, 120_000))
-    } while (true)
-  } finally { await pool.end() }
+    await db.query('LISTEN vas_email_bounce_requested')
+    // Resume only an explicitly queued request; an idle startup never opens IMAP.
+    const closed = new Promise(resolve => { db.once('end', resolve); db.once('error', resolve) })
+    await run()
+    await closed
+  } finally { db.off('notification', notification) }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  do {
+    const db = new pg.Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 3000 })
+    db.on('error', () => {})
+    try {
+      await db.connect()
+      if (process.argv.includes('--once')) await processRequestedBounceSync(db)
+      else await listenForBounceRequests(db)
+    } catch { console.error('Manual bounce listener database unavailable') }
+    finally { await db.end().catch(() => {}) }
+    if (process.argv.includes('--once')) break
+    // Reconnect a broken LISTEN connection; this never schedules an IMAP scan.
+    await new Promise(resolve => setTimeout(resolve, 5000))
+  } while (true)
 }

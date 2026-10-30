@@ -4,7 +4,7 @@ import { createMemoryGate, isTrafficEntry, trafficWaitHeaders, trafficWaitHtml }
 import { NextRequest, NextResponse } from 'next/server'
 
 const administrativePath = /^\/(?:admin|api\/(?:admin|auth))(?:\/|$)/
-const panelAsset = /^\/(?:_next(?:\/|$)|favicon-mark\.png$|page-transition\.js$|operational-errors\.js$)/
+const panelAsset = /^\/(?:_next(?:\/|$)|favicon-mark\.png$|page-transition\.js$|operational-errors\.js$|404\/vamos-al-santisimo-20261030\.webp$)/
 const memoryGate = createMemoryGate()
 
 function hidden() {

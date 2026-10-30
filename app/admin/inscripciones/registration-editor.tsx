@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import type { AdminRegistration } from '../../../lib/registration-admin'
 import { ecclesialOptions, personalLabels, type PersonalFields } from '../../../lib/registration-edit-policy'
 import AccreditationEmailControls from './accreditation-email-controls'
+import RegistrationOperationsEditor from './registration-operations-editor'
 import { paymentMethodLabel } from '../../../lib/payment-method-label'
 
 const names: Record<string, string> = { pending: 'Pendiente', waiting: 'En espera', confirmed: 'Confirmada', review: 'En revisión', cancelled: 'Cancelada',
@@ -27,13 +28,14 @@ const groups: { title: string; fields: (keyof PersonalFields)[] }[] = [
   { title: 'Comunidad y actividad', fields: ['prayerGroup', 'movement', 'ecclesialState', 'occupation'] },
 ]
 
-export default function RegistrationEditor({ initial, startEditing = false }: { initial: AdminRegistration; startEditing?: boolean }) {
+export default function RegistrationEditor({ initial, startEditing = false, canAdminister = false }: { initial: AdminRegistration; startEditing?: boolean; canAdminister?: boolean }) {
   const router = useRouter()
   const [detail, setDetail] = useState(initial)
   const [fields, setFields] = useState(initial.fields)
   const [editing, setEditing] = useState(startEditing && initial.editable)
   const [busy, setBusy] = useState(false)
   const [emailBusy, setEmailBusy] = useState(false)
+  const [operationsEditing, setOperationsEditing] = useState(false)
   const [reason, setReason] = useState('')
   const [emailConfirmed, setEmailConfirmed] = useState(false)
   const [error, setError] = useState('')
@@ -78,14 +80,15 @@ export default function RegistrationEditor({ initial, startEditing = false }: { 
 
   return <div className="admin-registration-detail">
     <div className="admin-detail-toolbar"><Link href="/admin/inscripciones">← Volver a inscripciones</Link>
-      <div className="admin-accreditation-actions">{!editing && detail.editable && <button className="button button-gold" disabled={busy || emailBusy || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar inscripción</button>}
+      <div className="admin-accreditation-actions">{!editing && detail.editable && <button className="button button-gold" disabled={busy || emailBusy || operationsEditing || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar inscripción</button>}
         <Link className="button button-outline" href={`/admin/acreditacion?reference=${encodeURIComponent(detail.reference)}`}>Pagos y acreditación</Link></div></div>
     <section className="admin-card admin-detail-summary"><div><span>Referencia</span><strong>{detail.reference}</strong></div>
       <div><span>Inscripción</span><strong>{detail.deleted ? 'Eliminada' : detail.archived ? 'Archivada' : label(detail.status)}</strong></div>
-      <div><span>Medio de pago elegido</span><strong>{paymentMethodLabel(detail.payments[0]?.source, detail.paymentDifficulty)}</strong></div>
-      <div><span>Estado del pago</span><strong>{detail.payments.length ? label(detail.payments[0].status) : 'Sin pago registrado'}</strong></div>
+      <div><span>Medio de pago elegido</span><strong>{paymentMethodLabel(detail.operations?.paymentMethod, detail.paymentDifficulty)}</strong></div>
+      <div><span>Estado del pago</span><strong>{detail.operations?.paymentMethod !== 'none' ? label(detail.operations?.paymentStatus || '') : 'Sin pago registrado'}</strong></div>
       <div><span>Registrada</span><strong>{date(detail.createdAt)}</strong></div>
       <div><span>Acreditación</span><strong>{detail.credential.admittedAt ? 'Ya ingresó · ' + date(detail.credential.admittedAt) : detail.credential.issued ? 'QR emitido' : 'Sin QR vigente'}</strong></div></section>
+    {canAdminister && detail.editable && detail.operations && <RegistrationOperationsEditor reference={detail.reference} state={detail.operations} blocked={editing || busy || emailBusy || reloadRequired} refresh={refreshDetail} onEditing={setOperationsEditing} />}
     <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Ficha de la persona</p><h2>{editing ? 'Editar datos de inscripción' : 'Datos de inscripción'}</h2></div></div>
       {!detail.editable && <p className="admin-operator-notice">{detail.archived || detail.deleted
         ? 'Para editar esta inscripción, recuperala primero desde Archivadas o Eliminadas en la lista.'
@@ -117,13 +120,13 @@ export default function RegistrationEditor({ initial, startEditing = false }: { 
     <div className="admin-detail-columns"><section className="admin-card"><h2>Pagos y comprobantes</h2>
       {detail.paymentDifficulty && <p className="admin-operator-notice">Solicitó ayuda para pagar · {label(detail.credential.assistanceStatus)}<br />{detail.paymentDifficultyNotes}</p>}
       {!detail.payments.length && <p className="admin-empty">Sin intentos de pago.</p>}
-      {detail.payments.map(payment => <article className="admin-detail-payment" key={payment.id}><strong>Medio de pago: {paymentMethodLabel(payment.source)} · {label(payment.status)}</strong>
+      {detail.payments.map(payment => <article className="admin-detail-payment" key={payment.id}><strong>Medio de pago: {paymentMethodLabel(payment.source)} · {label(payment.status) + (payment.superseded ? ' · Reemplazado por corrección' : payment.administrative ? ' · Registro administrativo' : '')}</strong>
         <dl><div><dt>Importe de esta persona</dt><dd>{money(payment.amountMinor)}</dd></div>
           {payment.members > 1 && <><div><dt>Grupo</dt><dd>{payment.members} personas</dd></div><div><dt>Total de la operación</dt><dd>{money(payment.transactionAmountMinor)}</dd></div></>}
           <div><dt>Pagado en la operación</dt><dd>{money(payment.paidAmountMinor)}</dd></div><div><dt>Creado</dt><dd>{date(payment.createdAt)}</dd></div>
           {payment.verifiedAt && <div><dt>Verificado</dt><dd>{date(payment.verifiedAt)}</dd></div>}{payment.manualReference && <div><dt>Referencia bancaria / caja</dt><dd>{payment.manualReference}</dd></div>}</dl></article>)}
       <h3>Archivos recibidos</h3>{detail.proofs.length ? <ul>{detail.proofs.map(proof => <li key={proof.id}><a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">{proof.filename || 'Ver comprobante'}</a><small> · {date(proof.uploadedAt)}</small></li>)}</ul> : <p className="admin-empty">No hay comprobantes adjuntos.</p>}
-    </section><section className="admin-card"><AccreditationEmailControls detail={detail} blocked={editing || busy || reloadRequired} refresh={refreshDetail} onBusy={setEmailBusy} />
+    </section><section className="admin-card"><AccreditationEmailControls detail={detail} blocked={editing || operationsEditing || busy || reloadRequired} refresh={refreshDetail} onBusy={setEmailBusy} />
       <h3>Historial de cambios y envíos</h3>{detail.history.length ? <ul className="admin-detail-history">{detail.history.map((item, index) => <li key={index}><strong>{item.operator} · {date(item.createdAt)}</strong><span>{item.reason}</span>
         <small>{item.changes.fields?.map(key => personalLabels[key as keyof PersonalFields] || key).join(', ')}</small></li>)}</ul> : <p className="admin-empty">Todavía no hay correcciones.</p>}
     </section></div>

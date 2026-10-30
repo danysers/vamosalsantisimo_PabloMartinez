@@ -106,7 +106,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       if (replay.archivedAt) return { code: 409, body: { error: 'Esta inscripción está archivada. Contactá a la organización si necesitás recuperarla.' } }
       if (workshop.liveStartedAt && (replay.isTest || replay.createdAt < workshop.liveStartedAt)) return { code: 409, body: { error: 'Ese registro pertenece al ensayo anterior. Volvé al formulario para realizar tu inscripción actual.' } }
       const [intake] = await tx.select().from(registrationIntakes).where(eq(registrationIntakes.registrationId, replay.id)).limit(1)
-      const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.registrationId, replay.id)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
+      const [attempt] = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.registrationId, replay.id),sql`${paymentAttempts.supersededByAdmin} IS NULL`)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
       const [assistance] = await tx.select().from(assistanceRequests).where(eq(assistanceRequests.registrationId, replay.id)).limit(1)
       if (replay.workshopId !== target.id || replay.normalizedName !== identity.name || replay.normalizedEmail !== identity.email ||
           replay.normalizedPhone !== identity.phone || intake?.birthDate !== input.birthDate ||
@@ -142,7 +142,7 @@ export async function enrollWorkshop(input: EnrollmentInput): Promise<Result> {
       const [intake] = await tx.select().from(registrationIntakes).where(eq(registrationIntakes.registrationId, existing.id)).limit(1)
       if (!intake) return { code: 409, body: { error: 'La inscripción existente requiere revisión de la organización.' } }
       if (intake?.documentNumber && intake.documentNumber !== documentNumber) return { code: 409, body: { error: 'El documento no coincide con la inscripción existente.' } }
-      const [attempt] = await tx.select().from(paymentAttempts).where(eq(paymentAttempts.registrationId, existing.id)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
+      const [attempt] = await tx.select().from(paymentAttempts).where(and(eq(paymentAttempts.registrationId, existing.id),sql`${paymentAttempts.supersededByAdmin} IS NULL`)).orderBy(sql`${paymentAttempts.createdAt} DESC`).limit(1)
       if (!attempt || !['mercado_pago','bank_transfer','on_site'].includes(attempt.source)) return { code: 409, body: { error: 'Tu inscripción requiere una revisión de la organización.' } }
       if (!intake.documentNumber) await tx.update(registrationIntakes).set({ documentNumber, updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))
       if (input.nickname !== undefined) await tx.update(registrationIntakes).set({ nickname: optional(input.nickname), updatedAt: new Date() }).where(eq(registrationIntakes.registrationId, existing.id))

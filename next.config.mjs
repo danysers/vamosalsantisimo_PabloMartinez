@@ -5,7 +5,7 @@ const nextConfig = {
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
   poweredByHeader: false,
-  ...(process.env.NEXT_BUILD_CPUS ? { experimental: { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } } : {}),
+  experimental: { globalNotFound: true, ...(process.env.NEXT_BUILD_CPUS ? { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } : {}) },
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
     localPatterns: [{ pathname: '/2026/**', search: '' }, { pathname: '/_next/static/media/**', search: '' }],
@@ -56,6 +56,7 @@ const nextConfig = {
         source: '/2026/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
+      { source: '/404/vamos-al-santisimo-20261030.webp', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       ...['/formacion/comprobante', '/formacion/comprobante/:path*', '/formacion/acreditacion', '/formacion/acreditacion/:path*'].map(source => ({
         source, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }, { key: 'Cache-Control', value: 'private, no-store' }, { key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       })),

@@ -87,13 +87,13 @@ export default async function RegistrationsPage({ searchParams }: {
     const from = sql`FROM registrations r
       JOIN workshops w ON w.id = r.workshop_id JOIN events e ON e.id = w.event_id
       LEFT JOIN registration_intakes i ON i.registration_id = r.id
-      LEFT JOIN LATERAL (SELECT attempt.status, attempt.source,
+      LEFT JOIN LATERAL (SELECT attempt.status, COALESCE(attempt.reported_source,attempt.source) AS source,
         COALESCE(allocation.due_amount_minor, attempt.amount_minor) AS amount_minor,
         (SELECT count(*)::integer FROM payment_allocations member WHERE member.attempt_id = attempt.id) AS member_count
         FROM payment_attempts attempt
         LEFT JOIN payment_allocations allocation ON allocation.attempt_id = attempt.id AND allocation.registration_id = r.id
-        WHERE allocation.id IS NOT NULL OR (attempt.registration_id = r.id
-          AND NOT EXISTS (SELECT 1 FROM payment_allocations other WHERE other.attempt_id = attempt.id))
+        WHERE attempt.superseded_by_admin IS NULL AND (allocation.id IS NOT NULL OR (attempt.registration_id = r.id
+          AND NOT EXISTS (SELECT 1 FROM payment_allocations other WHERE other.attempt_id = attempt.id)))
         ORDER BY attempt.created_at DESC, attempt.id DESC LIMIT 1) p ON TRUE`
     const counts = await db.execute(sql`SELECT COUNT(*)::integer AS total ${from} WHERE ${criteria}`)
     total = Number(counts.rows[0]?.total ?? 0)

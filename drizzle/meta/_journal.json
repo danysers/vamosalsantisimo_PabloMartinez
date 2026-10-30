@@ -260,6 +260,20 @@
       "when": 1793336000000,
       "tag": "0036_operational_incidents",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793336001000,
+      "tag": "0037_manual_bounce_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793336628255,
+      "tag": "0038_admin_registration_operations",
+      "breakpoints": true
     }
   ]
 }

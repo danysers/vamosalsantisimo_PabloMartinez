@@ -38,7 +38,7 @@ test('email actions use the principal origin, fragment capabilities and clickabl
   const pass=workshopEmailUrl('pass',{...identity,credentialId:'credential-v1'},new Date(Date.now()+86_400_000))
   const confirmation=accreditationEmail({firstName:'Persona',reference:identity.reference,passUrl:pass})
   assert.match(confirmation.html,/cid:acreditacion/)
-  assert.match(confirmation.html,/>Ver mi volante 3D e imprimir<\/a>/)
+  assert.match(confirmation.html,/>Ver mi volante e imprimir<\/a>/)
   assert.match(confirmation.text,/formacion\/acreditacion/)
   assert.throws(()=>accreditationEmail({firstName:'X',reference:'Test',passUrl:'javascript:alert(1)'}))
   for(const origin of ['https://evil.invalid/path','https://user:pass@evil.invalid','http://evil.invalid']) {

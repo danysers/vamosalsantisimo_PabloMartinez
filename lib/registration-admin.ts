@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import type { getDb } from './db'
 import { normalizeIdentity } from './registration-policy'
 import { personalLabels, registrationEditSchema, type PersonalFields } from './registration-edit-policy'
+import { readRegistrationOperations } from './registration-operations'
 
 type Db = ReturnType<typeof getDb>
 const versionSql = sql`md5(r.updated_at::text || '|' || COALESCE(i.updated_at::text,''))`
@@ -18,7 +19,7 @@ function personal(row: Record<string, unknown>): PersonalFields {
 }
 
 export async function readAdminRegistration(db: Db, eventSlug: string, reference: string) {
-  const found = await db.execute(sql`SELECT r.id,r.reference,r.name,r.email,r.accreditation_email,r.phone,r.status,r.created_at AS registered_at,r.updated_at,
+  const found = await db.execute(sql`SELECT r.id,r.reference,r.name,r.email,r.accreditation_email,r.phone,r.status,COALESCE(r.registered_at_override,r.created_at) AS registered_at,r.updated_at,
     r.deleted_at,r.archived_at,i.*,i.birth_date::text AS birth_date,${versionSql} AS version,
     registration_is_current(r.id) AS current
     FROM registrations r JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
@@ -27,13 +28,13 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
   const row = found.rows[0]
   if (!row) return null
   const id = String(row.id)
-  const [payments, proofs, credentials, emails, history, bounceSync] = await Promise.all([
-    db.execute(sql`SELECT p.id,p.status,p.source,p.created_at,p.manual_verified_at,p.manual_reference,
+  const [payments, proofs, credentials, emails, history, bounceSync, operations] = await Promise.all([
+    db.execute(sql`SELECT p.id,p.status,COALESCE(p.reported_source,p.source) AS source,p.admin_change_id,p.superseded_by_admin,p.created_at,p.manual_verified_at,p.manual_reference,
       COALESCE(a.due_amount_minor,p.amount_minor) AS amount_minor,p.amount_minor AS transaction_amount_minor,
       p.paid_amount_minor,(SELECT count(*)::int FROM payment_allocations x WHERE x.attempt_id=p.id) AS members
       FROM payment_attempts p LEFT JOIN payment_allocations a ON a.attempt_id=p.id AND a.registration_id=${id}
       WHERE a.id IS NOT NULL OR (p.registration_id=${id} AND NOT EXISTS(SELECT 1 FROM payment_allocations x WHERE x.attempt_id=p.id))
-      ORDER BY p.created_at DESC,p.id DESC LIMIT 10`),
+      ORDER BY (p.superseded_by_admin IS NULL) DESC,p.created_at DESC,p.id DESC LIMIT 10`),
     db.execute(sql`SELECT id,filename,uploaded_at FROM payment_proofs WHERE registration_id=${id} ORDER BY uploaded_at DESC LIMIT 10`),
     db.execute(sql`SELECT (registration_is_current(${id}) AND EXISTS(SELECT 1 FROM registrations WHERE id=${id} AND status='confirmed') AND EXISTS(SELECT 1 FROM accreditation_credentials WHERE registration_id=${id} AND revoked_at IS NULL AND expires_at>now())) AS issued,
       (SELECT scanned_at FROM check_ins WHERE registration_id=${id} LIMIT 1) AS admitted_at,
@@ -45,14 +46,15 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
       WHERE m.registration_id=${id} ORDER BY m.created_at DESC LIMIT 20`),
     db.execute(sql`SELECT l.reason,l.changes,l.created_at,COALESCE(u.name,'Operador') AS operator_name FROM audit_log l
       LEFT JOIN admin_users o ON o.id=l.actor_id LEFT JOIN "user" u ON u.id=o.auth_user_id
-      WHERE l.subject_id=${id} AND l.action IN ('registration.updated','accreditation.email_recipient_updated','accreditation.email_resent') ORDER BY l.created_at DESC LIMIT 10`),
-    db.execute(sql`SELECT checked_at,last_error_code FROM email_bounce_sync WHERE id=1`),
+      WHERE l.subject_id=${id} AND l.action IN ('registration.updated','registration.operations_updated','accreditation.email_recipient_updated','accreditation.email_resent') ORDER BY l.created_at DESC LIMIT 20`),
+    db.execute(sql`SELECT checked_at,last_error_code,request_status FROM email_bounce_sync WHERE id=1`),
+    readRegistrationOperations(db,eventSlug,reference),
   ])
   return { reference: String(row.reference), name: String(row.name), status: String(row.status),
-    version: String(row.version), editable: row.current === true && !!row.registration_id,
+    version: String(row.version), editable: row.current === true && !!row.registration_id, operations,
     archived: !!row.archived_at, deleted: !!row.deleted_at, createdAt: dateString(row.registered_at),
     fields: personal(row), paymentDifficulty: !!row.payment_difficulty, paymentDifficultyNotes: string(row.payment_difficulty_notes),
-    payments: payments.rows.map(p => ({ id: String(p.id), status: String(p.status), source: String(p.source),
+    payments: payments.rows.map(p => ({ id: String(p.id), status: String(p.status), source: String(p.source), administrative: !!p.admin_change_id, superseded: !!p.superseded_by_admin,
       amountMinor: p.amount_minor == null ? null : Number(p.amount_minor), transactionAmountMinor: p.transaction_amount_minor == null ? null : Number(p.transaction_amount_minor),
       paidAmountMinor: Number(p.paid_amount_minor), members: Number(p.members), createdAt: dateString(p.created_at),
       verifiedAt: dateString(p.manual_verified_at), manualReference: string(p.manual_reference) })),
@@ -61,7 +63,7 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
       assistanceStatus: string(credentials.rows[0]?.assistance_status) },
     accreditationEmail: string(row.accreditation_email),
     bounceSync: { checkedAt: dateString(bounceSync.rows[0]?.checked_at), error: !!bounceSync.rows[0]?.last_error_code,
-      stale: !bounceSync.rows[0]?.checked_at || Date.now() - new Date(String(bounceSync.rows[0].checked_at)).getTime() > 15 * 60_000 },
+      stale: ['queued','running'].includes(String(bounceSync.rows[0]?.request_status)), status: String(bounceSync.rows[0]?.request_status || 'idle') },
     emails: emails.rows.map(e => ({ id: String(e.id), kind: String(e.kind), status: String(e.status), toEmail: String(e.to_email), sentAt: dateString(e.sent_at), createdAt: dateString(e.created_at),
       manualResend: !!e.manual_resend, errorCode: string(e.last_error_code), deliveryAction: string(e.delivery_action), enhancedStatus: string(e.enhanced_status),
       reasonCode: string(e.reason_code), diagnostic: string(e.diagnostic), reportedAt: dateString(e.reported_at) })),

@@ -60,13 +60,23 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
   return <>
     <h2>Correos de la inscripción</h2>
     <p className="admin-context-note">“Aceptado” significa que el proveedor recibió el mensaje para enviarlo. Los rechazos posteriores aparecen como rebotes cuando el buzón devuelve un informe; no confirman la recepción en bandeja.</p>
-    <p className="admin-context-note">Última consulta de rebotes: {date(detail.bounceSync.checkedAt)}. El servidor consulta cada dos minutos.</p>
+    <p className="admin-context-note">Última consulta manual de rebotes: {date(detail.bounceSync.checkedAt)}. Se consulta sólo cuando pulsás «Actualizar estado de correos». La consulta es compartida para todas las inscripciones.</p>
     <button type="button" className="button button-outline" disabled={busy || blocked || dirty || reload} onClick={async () => {
       setBusy(true); onBusy(true)
-      try { await refresh(); setError('') } catch { setError('No pudimos actualizar el estado. Reintentá en unos instantes.') }
+      try {
+        setError(''); setMessage('Consultando los informes de entrega…')
+        const response = await fetch('/api/admin/correos/actualizar', { method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: crypto.randomUUID() }) })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'No pudimos consultar los correos.')
+        await refresh()
+        setMessage(result.pending ? 'La consulta manual sigue en curso. Podés volver a actualizar más tarde; no se inició otra consulta.'
+          : result.status === 'failed' ? 'No se pudo completar la consulta manual. Revisá la conexión y volvé a solicitarla.'
+          : result.cached ? 'Estado actualizado con la consulta manual más reciente. No se repitió la consulta al buzón.' : 'Consulta manual completada. Los estados ya están actualizados.')
+      } catch { setError('No pudimos actualizar el estado. Reintentá en unos instantes.'); setMessage('') }
       finally { setBusy(false); onBusy(false) }
     }}>Actualizar estado de correos</button>
-    {(staleSync || detail.bounceSync.error) && <p className="admin-operator-notice">La consulta de rebotes está pendiente o incompleta. Un mensaje sin rebote registrado todavía puede no haber llegado.</p>}
+    {(staleSync || detail.bounceSync.error) && <p className="admin-operator-notice">{staleSync ? 'Hay una consulta manual de rebotes en curso.' : 'La última consulta de rebotes quedó incompleta.'} Un mensaje sin rebote registrado todavía puede no haber llegado.</p>}
     {detail.emails.length ? <ul className="admin-detail-history">{detail.emails.map(email => <li key={email.id} className={email.deliveryAction ? 'admin-email-bounce' : undefined}>
       <strong>{kinds[email.kind] || email.kind}{email.manualResend ? ' · Reenvío' : ''}</strong>
       <span>{email.deliveryAction === 'failed' ? 'Rebotó · No entregado' : email.deliveryAction === 'delayed' ? 'Entrega demorada' : statuses[email.status] || email.status}</span>
