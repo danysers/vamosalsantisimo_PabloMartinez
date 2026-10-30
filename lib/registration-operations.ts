@@ -89,10 +89,12 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
       const allocations=s.allocations, members=allocations.length?allocations.map(a=>a.registration_id):[s.id]
       if(financial&&members.length>1&&!input.confirmGroup)fail(400,'Confirmá que la corrección afecta al pago del grupo completo.')
       const affected=financial?members:[s.id]
+      // Bind one PostgreSQL array value; a JS array interpolated into Drizzle SQL becomes a row expression.
+      const affectedIds='{'+affected.join(',')+'}'
       if(financial){
         const other=await tx.execute(sql`SELECT 1 FROM payment_attempts x WHERE x.superseded_by_admin IS NULL AND x.id<>${p?.id||null}::uuid
           AND x.status IN('created','pending','approved','review') AND
-          (x.registration_id=ANY(${affected}::uuid[]) OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=x.id AND a.registration_id=ANY(${affected}::uuid[]))) LIMIT 1`)
+          (x.registration_id=ANY(${affectedIds}::uuid[]) OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=x.id AND a.registration_id=ANY(${affectedIds}::uuid[]))) LIMIT 1`)
         if(other.rows.length)fail(409,'Hay otra operación activa para esta inscripción o su grupo. Revisala antes de corregir el pago.')
       }
       const rows=await tx.execute(sql`SELECT r.id,r.status,r.accreditation_blocked,registration_is_current(r.id) AS current,
@@ -100,7 +102,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
         EXISTS(SELECT 1 FROM assistance_requests a WHERE a.registration_id=r.id AND a.status='approved') AS assisted,
         EXISTS(SELECT 1 FROM check_ins WHERE registration_id=r.id) AS admitted,
         (r.status='confirmed' OR EXISTS(SELECT 1 FROM reservations h WHERE h.registration_id=r.id AND (h.status='used' OR (h.status='held' AND h.expires_at>now())))) AS has_seat
-        FROM registrations r WHERE r.id=ANY(${affected}::uuid[]) ORDER BY r.id FOR UPDATE OF r`)
+        FROM registrations r WHERE r.id=ANY(${affectedIds}::uuid[]) ORDER BY r.id FOR UPDATE OF r`)
       if(rows.rows.length!==affected.length||rows.rows.some(r=>!r.current))fail(409,'El grupo contiene registros archivados, eliminados o históricos. Revisalos primero.')
       const nextPaid=input.paymentMethod!=='none'&&input.paymentStatus==='approved'&&input.paidAmountMinor>=(input.amountMinor||0)
       const nextWaived=input.waiver==='grant'||(input.waiver==='keep'&&s.waived)
@@ -129,7 +131,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
           ((i.document_number IS NOT NULL AND i.document_number=j.document_number) OR(a.normalized_name=b.normalized_name AND(a.normalized_email=b.normalized_email OR a.normalized_phone=b.normalized_phone))) LIMIT 1`)
         if(duplicate.rows.length)fail(409,'Ya existe otra inscripción activa de esta persona.')
       }
-      const jobs=await tx.execute(sql`SELECT status FROM email_outbox WHERE registration_id=ANY(${affected}::uuid[]) AND status IN('queued','failed','sending') FOR UPDATE`)
+      const jobs=await tx.execute(sql`SELECT status FROM email_outbox WHERE registration_id=ANY(${affectedIds}::uuid[]) AND status IN('queued','failed','sending') FOR UPDATE`)
       if(jobs.rows.some(j=>j.status==='sending'))fail(409,'Hay un correo en envío. Reintentá cuando termine.')
       if(financial&&p?.source==='mercado_pago'&&p.provider_order_id&&['created','pending','review'].includes(p.status)) {
         const config=mercadoPagoConfig(false)

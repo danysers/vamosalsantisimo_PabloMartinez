@@ -11,8 +11,8 @@ test('administrative operations preserve payment facts and enforce owner, replay
   const [{getDb},{enrollWorkshop},{readRegistrationOperations,editRegistrationOperations},{issueAccreditation}]=await Promise.all([
     import('../lib/db.ts'),import('../lib/workshop-enrollment.ts'),import('../lib/registration-operations.ts'),import('../lib/accreditation-workflow.ts')])
   const db=getDb(),pool=new pg.Pool({connectionString:process.env.DATABASE_URL}),slug='operations-'+randomUUID()
-  Object.assign(process.env,{WORKSHOP_EVENT_SLUG:slug,REGISTRATION_EMAIL_READY:'1',MP_CHECKOUT_ENABLED:'1',MP_ENVIRONMENT:'test',
-    MP_ACCESS_TOKEN:'FAKE_LOCAL_TEST_TOKEN',MP_SELLER_USER_ID:'111',MP_APPLICATION_ID:'222',MP_PUBLIC_ORIGIN:'https://example.invalid',
+  Object.assign(process.env,{WORKSHOP_EVENT_SLUG:slug,REGISTRATION_EMAIL_READY:'1',MP_CHECKOUT_ENABLED:'1',MP_ENVIRONMENT:'production',
+    MP_WEBHOOK_SECRET:'fake-local-test-secret',MP_ACCESS_TOKEN:'FAKE_LOCAL_TEST_TOKEN',MP_SELLER_USER_ID:'111',MP_APPLICATION_ID:'222',MP_PUBLIC_ORIGIN:'https://example.invalid',
     WORKSHOP_CHECKOUT_TOKEN_KEY:randomBytes(48).toString('base64url'),ACCREDITATION_TOKEN_KEY_ID:'operations-test',ACCREDITATION_TOKEN_KEY:randomBytes(32).toString('base64url')})
   try{
     const event=(await pool.query("INSERT INTO events(slug,title,starts_at) VALUES($1,'Operations test','2026-12-19T18:00:00Z') RETURNING id",[slug])).rows[0]
@@ -121,9 +121,9 @@ test('administrative operations preserve payment facts and enforce owner, replay
     await t.test('a processing Mercado Pago order cannot be replaced; a safely cancelled checkout can',async()=>{
       const reference=await enroll('mercado_pago')
       const p=(await pool.query('SELECT p.* FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id WHERE r.reference=$1',[reference])).rows[0]
-      const orderId='ORDTST'+randomBytes(12).toString('hex').toUpperCase()
+      const orderId='ORD'+randomBytes(12).toString('hex').toUpperCase()
       await pool.query('UPDATE payment_attempts SET provider_order_id=$1 WHERE id=$2',[orderId,p.id])
-      const order={id:orderId,external_reference:p.external_reference,country_code:'ARG',currency:'ARS',total_amount:(p.amount_minor/100).toFixed(2),total_paid_amount:'0.00',status:'processing',user_id:'111',integration_data:{application_id:'222'},live_mode:false}
+      const order={id:orderId,external_reference:p.external_reference,country_code:'ARG',currency:'ARS',total_amount:(p.amount_minor/100).toFixed(2),total_paid_amount:'0.00',status:'processing',user_id:'111',integration_data:{application_id:'222'},live_mode:true}
       let cancellations=0
       const provider={load:async()=>order,cancel:async()=>{cancellations++;order.status='canceled'}}
       const input=await payload(reference,{paymentMethod:'bank_transfer',confirmPayment:true})
