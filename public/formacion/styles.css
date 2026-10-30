@@ -257,6 +257,18 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
 .cash-payment-notice #cash-payment-terms{font:15px/1.7 var(--sans);margin:0 0 24px}
 .cash-payment-notice .button{width:100%;justify-content:center;cursor:pointer}
 .cash-payment-notice .button:focus-visible{outline:3px solid var(--wine);outline-offset:4px}
+.registration-condition-notice{width:min(520px,calc(100% - 32px));text-align:left}
+.registration-condition-notice .cash-payment-notice__icon{margin-left:0}
+.registration-condition-notice h2{font-size:clamp(30px,4vw,39px)}
+.registration-condition-notice #registration-condition-description{font:15px/1.7 var(--sans);color:var(--ink);margin:20px 0}
+.registration-condition-consent{display:flex;align-items:flex-start;gap:11px;padding:16px;border:1px solid #e1c797;border-radius:12px;background:#fffaf0;font:500 15px/1.5 var(--sans);cursor:pointer}
+.registration-condition-consent input{width:20px;height:20px;min-height:20px;flex:none;margin:2px 0 0;accent-color:var(--wine)}
+.registration-condition-actions{display:flex;gap:11px;margin-top:22px}
+.registration-condition-actions .button{width:auto;flex:1;padding:12px 16px;font-size:14px}
+.registration-condition-back{padding:12px 15px;border:1px solid #d8b577;border-radius:50px;background:transparent;color:var(--wine);font:500 14px var(--sans);cursor:pointer}
+.registration-condition-actions button:focus-visible,.registration-condition-consent input:focus-visible{outline:3px solid var(--wine);outline-offset:3px}
+.registration-condition-actions .button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:500px){.registration-condition-notice{padding:25px}.registration-condition-actions{flex-direction:column-reverse}.registration-condition-actions .button,.registration-condition-back{width:100%}}
 @media(max-width:700px){
   #payment-method-field .payment-options{grid-template-columns:1fr}
   #checkout-controls .button{width:100%;justify-content:center}

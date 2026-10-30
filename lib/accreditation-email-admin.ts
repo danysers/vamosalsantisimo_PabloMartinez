@@ -54,9 +54,6 @@ export async function manageAccreditationEmail(db: Db, eventSlug: string, operat
     const pending = await tx.execute(sql`SELECT 1 FROM email_outbox WHERE registration_id=${id} AND kind='accreditation_ready'
       AND status IN ('queued','sending','failed') AND attempt_count<10 LIMIT 1`)
     if (pending.rows.length) return { code: 409, body: { error: 'Ya hay una acreditación pendiente de envío. Esperá su resultado antes de reenviar.' } }
-    const limits = await tx.execute(sql`SELECT count(*)::int AS total,MAX(created_at)>now()-interval '5 minutes' AS recent
-      FROM email_outbox WHERE registration_id=${id} AND kind='accreditation_ready' AND manual_resend AND created_at>now()-interval '24 hours'`)
-    if (limits.rows[0]?.recent || Number(limits.rows[0]?.total) >= 5) return { code: 429, body: { error: 'Esperá cinco minutos entre reenvíos. Se permiten hasta cinco en 24 horas por inscripción.' } }
     const jobId = randomUUID()
     await tx.execute(sql`INSERT INTO email_outbox(id,dedupe_key,kind,to_email,registration_id,credential_id,manual_resend)
       VALUES(${jobId},${dedupe},'accreditation_ready',${String(row.accreditation_email || row.email)},${id},${String(credential.rows[0].id)},true)`)

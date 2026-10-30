@@ -122,6 +122,44 @@ function validateRegistration(form) {
     ? 'Contanos el motivo por el que necesitás ayuda para pagar.' : '');
   return form.reportValidity();
 }
+function confirmRegistrationCondition(form) {
+  const method=form.querySelector('[name="formaPago"]:checked')?.value;
+  if (method!=='bank_transfer_alias' && method!=='bank_transfer_qr') return Promise.resolve(true);
+  let dialog=document.getElementById('registration-condition-notice');
+  if (!dialog) {
+    dialog=document.createElement('dialog');
+    dialog.id='registration-condition-notice';
+    dialog.className='cash-payment-notice registration-condition-notice';
+    dialog.setAttribute('aria-labelledby','registration-condition-title');
+    dialog.setAttribute('aria-describedby','registration-condition-description');
+    dialog.innerHTML='<span class="cash-payment-notice__icon" aria-hidden="true">✓</span>'
+      +'<p class="cash-payment-notice__eyebrow">Antes de guardar</p><h2 id="registration-condition-title">Confirmá tu inscripción</h2>'
+      +'<p id="registration-condition-description"></p>'
+      +'<label class="registration-condition-consent"><input id="registration-condition-agree" type="checkbox"><span>Estoy de acuerdo con esta condición.</span></label>'
+      +'<div class="registration-condition-actions"><button type="button" class="registration-condition-back">No estoy de acuerdo</button>'
+      +'<button type="button" class="button gold registration-condition-accept" disabled>Acepto y guardo mi inscripción</button></div>';
+    document.body.append(dialog);
+    const checkbox=dialog.querySelector('#registration-condition-agree');
+    const accept=dialog.querySelector('.registration-condition-accept');
+    checkbox.addEventListener('change',()=>{ accept.disabled=!checkbox.checked; });
+    dialog.querySelector('.registration-condition-back').addEventListener('click',()=>dialog.close('cancel'));
+    accept.addEventListener('click',()=>{ if(checkbox.checked) dialog.close('accept'); });
+  }
+  const descriptions={
+    bank_transfer_alias:'Tu inscripción se guardará. La confirmación de tu lugar estará sujeta al pago del importe indicado por transferencia y al envío del comprobante para verificarlo.',
+    bank_transfer_qr:'Tu inscripción se guardará. La confirmación de tu lugar estará sujeta al pago del importe indicado con QR y al envío del comprobante para verificarlo.',
+  };
+  dialog.querySelector('#registration-condition-description').textContent=descriptions[method]||'';
+  const checkbox=dialog.querySelector('#registration-condition-agree');
+  checkbox.checked=false;
+  dialog.querySelector('.registration-condition-accept').disabled=true;
+  dialog.returnValue='';
+  return new Promise(resolve=>{
+    dialog.addEventListener('close',()=>resolve(dialog.returnValue==='accept'),{once:true});
+    dialog.showModal();
+    checkbox.focus();
+  });
+}
 function showRegistrationResult(form, receipt) {
   const result = document.getElementById('registration-result');
   result.querySelector('.result-intro').textContent=receipt.paymentStatus==='approved' ? 'Tu inscripción está confirmada. Conservá tu referencia para cualquier consulta.'
@@ -169,11 +207,16 @@ function showRegistrationResult(form, receipt) {
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   result.focus({ preventScroll: true });
 }
+let registrationSubmitting=false;
 document.addEventListener('submit', async event => {
   if (event.target.id !== 'registration') return;
   event.preventDefault();
   const form = event.target;
+  if (registrationSubmitting) return;
   if (!validateRegistration(form)) return;
+  registrationSubmitting=true;
+  const agreed=await confirmRegistrationCondition(form);
+  if (!agreed || !form.isConnected) { registrationSubmitting=false; return; }
   const data = new FormData(form);
   const error = document.getElementById('registration-error');
   const button = form.querySelector('button[type="submit"]');
@@ -212,7 +255,7 @@ document.addEventListener('submit', async event => {
   } catch (cause) {
     error.textContent = cause instanceof Error ? cause.message : 'No pudimos registrar tu inscripción. Intentá nuevamente.';
     error.hidden = false;
-  } finally { button.disabled = false; }
+  } finally { button.disabled = false; registrationSubmitting=false; }
 });
 // Cada URL conserva su HTML completo. La navegación interna reutiliza los recursos.
 const routes = new Set(['/formacion', ...['inscripcion','comprobante','contacto','recursos','preguntas-frecuentes'].map(r => '/formacion/'+r)]);

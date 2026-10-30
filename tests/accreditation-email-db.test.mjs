@@ -78,7 +78,9 @@ test('manual accreditation resends and reported bounces preserve the existing pa
       const detail = await read()
       assert.equal(detail.emails.find(email => email.id === jobs[0].id).deliveryAction, '')
       assert.equal(detail.emails.find(email => email.id === initial.id).deliveryAction, 'failed')
-      assert.equal((await call(resend())).code, 429, 'cooldown remains in the database across requests')
+      assert.equal((await call(resend())).code, 202, 'a new request can be sent immediately after the previous one finishes')
+      const next = (await pool.query("SELECT * FROM email_outbox WHERE registration_id=$1 AND manual_resend AND status='queued' ORDER BY created_at DESC LIMIT 1", [registration.id])).rows[0]
+      assert.equal(await processEmailJob(pool, transport, next, 'contactos@vamosalsantisimo.com'), 'sent')
     })
     await t.test('archival, stale recipient, revocation and cross-event access block sending; queued overrides can be cancelled safely', async () => {
       await pool.query("UPDATE email_outbox SET created_at=now()-interval '10 minutes' WHERE registration_id=$1 AND manual_resend", [registration.id])
@@ -92,7 +94,8 @@ test('manual accreditation resends and reported bounces preserve the existing pa
       for (let i = 0; i < 3; i++) await pool.query(`INSERT INTO email_outbox(dedupe_key,kind,status,to_email,registration_id,credential_id,manual_resend,created_at)
         VALUES($1,'accreditation_ready','cancelled',$2,$3,$4,true,now()-interval '10 minutes')`, [randomUUID(), registration.email, registration.id, initial.credential_id])
       await pool.query("UPDATE email_outbox SET created_at=now()-interval '10 minutes' WHERE registration_id=$1 AND manual_resend", [registration.id])
-      assert.equal((await call(resend())).code, 429, 'daily limit persists independently of cooldown and cancelled messages')
+      assert.equal((await call(resend())).code, 202, 'cancelled or earlier messages do not impose a daily limit')
+      await pool.query("UPDATE email_outbox SET status='cancelled' WHERE registration_id=$1 AND manual_resend AND status='queued'", [registration.id])
       assert.equal((await manageAccreditationEmail(db, 'another-event', operator.id, { reference, version: (await read()).version, ...resend() })).code, 404)
       await pool.query('UPDATE registrations SET archived_at=now(),archived_by=$2 WHERE id=$1', [registration.id, operator.id])
       assert.equal((await call(resend())).code, 409)

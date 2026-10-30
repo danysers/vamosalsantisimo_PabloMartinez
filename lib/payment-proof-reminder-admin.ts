@@ -54,11 +54,6 @@ export async function managePaymentProofReminder(db: Db, eventSlug: string, oper
     const pending = await tx.execute(sql`SELECT 1 FROM email_outbox WHERE registration_id=${id} AND kind='payment_proof_reminder'
       AND status IN ('queued','sending','failed') AND attempt_count<10 LIMIT 1`)
     if (pending.rows.length) return { code: 409, body: { error: 'Ya hay un aviso pendiente de envío. Esperá su resultado antes de reenviar.' } }
-    const limits = await tx.execute(sql`SELECT count(*)::int AS total,MAX(created_at)>now()-interval '5 minutes' AS recent
-      FROM email_outbox WHERE registration_id=${id} AND kind='payment_proof_reminder' AND created_at>now()-interval '24 hours'`)
-    if (limits.rows[0]?.recent || Number(limits.rows[0]?.total) >= 5) {
-      return { code: 429, body: { error: 'Esperá cinco minutos entre avisos. Se permiten hasta cinco en 24 horas por inscripción.' } }
-    }
     const jobId = randomUUID()
     await tx.execute(sql`INSERT INTO email_outbox(id,dedupe_key,kind,to_email,registration_id,payment_attempt_id)
       VALUES(${jobId},${dedupe},'payment_proof_reminder',${String(row.email)},${id},${String(row.attempt_id)})`)

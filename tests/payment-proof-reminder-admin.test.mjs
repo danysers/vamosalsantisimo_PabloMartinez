@@ -38,18 +38,18 @@ test('proof link is private, purpose-bound and only issued to an eligible payer'
   assert.equal(allowed.calls.length, 3)
 })
 
-test('resend queues once, confirms recipient and rejects pending or too-frequent reminders', async () => {
+test('resend confirms recipient and deduplicates a request without time or daily limits', async () => {
   const { managePaymentProofReminder } = await import('../lib/payment-proof-reminder-admin.ts')
   const invalid = fakeDb()
   assert.equal((await managePaymentProofReminder(invalid.db, 'event', id, { ...input('resend'), confirmRecipient: false })).code, 400)
   assert.equal(invalid.calls.length, 0)
-  const queued = fakeDb([{ id }], [eligible], [], [], [{ total: 0, recent: false }], [], [])
+  const queued = fakeDb([{ id }], [eligible], [], [], [], [])
   assert.equal((await managePaymentProofReminder(queued.db, 'event', id, input('resend'))).code, 202)
-  assert.equal(queued.calls.length, 7)
+  assert.equal(queued.calls.length, 6)
   const duplicate = fakeDb([{ id }], [eligible], [{ id: 'existing' }])
   assert.equal((await managePaymentProofReminder(duplicate.db, 'event', id, input('resend'))).body.alreadyQueued, true)
   const pending = fakeDb([{ id }], [eligible], [], [{ id: 'pending' }])
   assert.equal((await managePaymentProofReminder(pending.db, 'event', id, input('resend'))).code, 409)
-  const limited = fakeDb([{ id }], [eligible], [], [], [{ total: 5, recent: false }])
-  assert.equal((await managePaymentProofReminder(limited.db, 'event', id, input('resend'))).code, 429)
+  const repeated = fakeDb([{ id }], [eligible], [], [], [], [])
+  assert.equal((await managePaymentProofReminder(repeated.db, 'event', id, input('resend'))).code, 202)
 })

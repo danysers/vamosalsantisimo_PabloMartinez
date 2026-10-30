@@ -139,7 +139,7 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
         onChange={event => setConfirmed(event.target.checked)} />Confirmé el destinatario y, si el buzón estaba lleno, que la persona ya liberó espacio.</label>
       <button type="button" className="button button-gold" disabled={busy || inactive || blocked || dirty || reload || !confirmed || !detail.credential.issued}
         onClick={() => sendAction('resend')}>{busy ? 'Procesando…' : 'Reenviar acreditación con el mismo QR'}</button>
-      <p className="admin-context-note">Máximo un reenvío cada cinco minutos y cinco en 24 horas. No modifica el pago ni emite un nuevo QR. {blocked ? 'Terminá o cancelá la edición de datos antes de continuar.' : dirty ? 'Guardá el correo alternativo antes de reenviar.' : ''}</p>
+      <p className="admin-context-note">No modifica el pago ni emite un nuevo QR. {blocked ? 'Terminá o cancelá la edición de datos antes de continuar.' : dirty ? 'Guardá el correo alternativo antes de reenviar.' : ''}</p>
     </div>
     <div className="admin-detail-save"><h3>Comprobante de pago pendiente</h3>
       <p className="admin-context-note">Si la persona pagó por transferencia o QR y aún no pudo adjuntar el comprobante, podés reenviarle el aviso o copiar su enlace personal. El mensaje se envía a <strong>{detail.fields.email}</strong>, no al correo alternativo del QR.</p>
@@ -157,7 +157,7 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
           onChange={event => setProofConfirmed(event.target.checked)} />Confirmé que falta el comprobante y que el correo de la inscripción es correcto.</label>
         <button type="button" className="button button-gold" disabled={busy || blocked || inactive || reload || !proofConfirmed}
           onClick={() => proofAction('resend')}>{busy ? 'Procesando…' : 'Reenviar aviso de comprobante pendiente'}</button>
-        <p className="admin-context-note">Máximo un aviso cada cinco minutos y cinco en 24 horas. No cambia el estado del pago. Si el comprobante se carga antes de que el trabajador procese el aviso, éste se cancela.</p>
+        <p className="admin-context-note">No cambia el estado del pago. Si el comprobante se carga antes de que el trabajador procese el aviso, éste se cancela.</p>
       </> : <p className="admin-context-note">El enlace y el aviso sólo están disponibles mientras la transferencia del pagador siga pendiente y aún no haya un comprobante cargado.</p>}
     </div>
   </>

@@ -107,3 +107,14 @@ test('registration validates typed fields and submits only to the gated workshop
   assert.doesNotMatch(script, /La recepción de inscripciones se habilitará próximamente/)
   assert.doesNotMatch(script, /fetch\(['"]\/api\/inscripciones/)
 })
+
+test('only alias and QR payments request explicit agreement before saving', async () => {
+  const script = await readFile(path.join(formation, 'app.js'), 'utf8')
+  const styles = await readFile(path.join(formation, 'styles.css'), 'utf8')
+  assert.match(script, /if \(method!=='bank_transfer_alias' && method!=='bank_transfer_qr'\) return Promise\.resolve\(true\)/)
+  assert.match(script, /Estoy de acuerdo con esta condición/)
+  assert.match(script, /No estoy de acuerdo/)
+  assert.match(script, /registration-condition-accept[^']*" disabled/)
+  assert.ok(script.indexOf('const agreed=await confirmRegistrationCondition(form)') < script.indexOf("('/api/taller/inscripciones'"))
+  assert.match(styles, /\.registration-condition-notice/)
+})
