@@ -144,5 +144,13 @@ test('administrative operations preserve payment facts and enforce owner, replay
       const changed=await editRegistrationOperations(db,slug,owner.id,input,provider)
       assert.equal(changed.code,200,JSON.stringify(changed.body));assert.equal(cancellations,1);assert.equal((await read(reference)).paymentMethod,'bank_transfer')
     })
+    await t.test('legacy unpriced cash permits registration edits without inventing a charge',async()=>{
+      await pool.query('UPDATE workshop_payment_settings SET on_site_price_minor=NULL WHERE workshop_id=$1',[workshop.id])
+      const reference=await enroll('on_site')
+      assert.equal((await read(reference)).amountMinor,null)
+      const result=await edit(await payload(reference,{registrationStatus:'cancelled'}))
+      assert.equal(result.code,200,JSON.stringify(result.body))
+      assert.equal((await read(reference)).amountMinor,null)
+    })
   }finally{await pool.end();await db.$client.end()}
 })

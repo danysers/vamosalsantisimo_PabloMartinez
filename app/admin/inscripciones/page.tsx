@@ -104,7 +104,7 @@ export default async function RegistrationsPage({ searchParams }: {
       EXISTS(SELECT 1 FROM payment_proofs proof WHERE proof.registration_id=r.id) AS has_proof,
       EXISTS(SELECT 1 FROM email_delivery_reports d WHERE d.email_id=(SELECT m.id FROM email_outbox m
         WHERE m.registration_id=r.id AND m.kind='accreditation_ready' ORDER BY m.created_at DESC LIMIT 1) AND d.action='failed') AS email_bounced,
-      r.status AS registration_status, r.created_at, p.status AS payment_status,
+      r.status AS registration_status, COALESCE(r.registered_at_override,r.created_at) AS created_at, p.status AS payment_status,
       p.source AS payment_source, p.amount_minor, p.member_count ${from} WHERE ${criteria}
       ORDER BY r.created_at DESC, r.id DESC LIMIT 25 OFFSET ${(currentPage - 1) * 25}`)
     rows = result.rows as Row[]

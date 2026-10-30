@@ -84,6 +84,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
         input.paymentStatus!==p?.status || input.amountMinor!==p?.amount_minor || input.paidAmountMinor!==Number(p?.paid_amount_minor||0)
         || input.feeMinor!==Number(p?.reported_fee_minor||p?.provider_fee_minor||0) || input.manualReference!==(p?.manual_reference||'')))
       if(financial&&!input.confirmPayment)fail(400,'Confirmá la corrección del registro de pago.')
+      if(financial&&input.paymentMethod!=='none'&&input.amountMinor===null)fail(400,'Definí el importe antes de corregir el pago.')
       if((input.qrAction!=='keep'||input.undoAdmission)&&!input.confirmQrChange)fail(400,'Confirmá el cambio de acreditación o ingreso.')
       if(input.paymentMethod==='none'&&(input.paidAmountMinor||input.feeMinor))fail(400,'Sin pago no puede quedar un importe abonado.')
       const allocations=s.allocations, members=allocations.length?allocations.map(a=>a.registration_id):[s.id]

@@ -14,7 +14,7 @@ export const registrationOperationSchema = z.object({
   confirmGroup: z.boolean(), confirmPayment: z.boolean(), confirmQrChange: z.boolean(), notify: z.boolean(),
   reason: z.string().trim().min(5).max(500),
 }).strict().superRefine((input,ctx)=>{
-  if(input.paymentMethod!=='none'&&input.amountMinor===null)ctx.addIssue({code:'custom',path:['amountMinor'],message:'Ingresá el importe de la operación.'})
+  if(input.paymentMethod!=='none'&&input.amountMinor===null&&!(input.paymentMethod==='on_site'&&input.paymentStatus!=='approved'))ctx.addIssue({code:'custom',path:['amountMinor'],message:'Ingresá el importe de la operación.'})
   if(input.paymentMethod!=='none'&&input.paymentStatus==='approved'&&input.paidAmountMinor<(input.amountMinor||0))ctx.addIssue({code:'custom',path:['paidAmountMinor'],message:'Para aprobar, el importe abonado debe cubrir la operación.'})
   if(input.feeMinor&&(input.paymentMethod!=='mercado_pago'||input.feeMinor>=(input.amountMinor||0)))ctx.addIssue({code:'custom',path:['feeMinor'],message:'Revisá el gasto de plataforma.'})
 })
