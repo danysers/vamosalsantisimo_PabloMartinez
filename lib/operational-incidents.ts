@@ -6,6 +6,15 @@ import { hasCheckoutAccess } from './checkout-access'
 import { hasEmailLink } from './email-link-token'
 import { incidentSchema, type IncidentInput } from './incident-policy'
 
+let recording = false, recordingWindow = -1, recordingCount = 0, intakeWindow = -1, intakeCount = 0
+// Reject excess diagnostics before allocating a PostgreSQL connection. The
+// durable limits below still apply across replicas and process restarts.
+export function admitIncidentReport() {
+  const minute = Math.floor(Date.now() / 60_000)
+  if (intakeWindow !== minute) { intakeWindow = minute; intakeCount = 0 }
+  return ++intakeCount <= 60
+}
+
 export function incidentId(request: { headers: Headers }) {
   const id = request.headers.get('x-vas-request-id') || ''
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ? id : randomUUID()
@@ -31,6 +40,10 @@ export async function recordIncident(input: IncidentInput, source: 'client' | 's
   const parsed = incidentSchema.safeParse(input)
   if (!parsed.success || !process.env.WORKSHOP_EVENT_SLUG) return false
   const event = parsed.data
+  const minute = Math.floor(Date.now() / 60_000)
+  if (recordingWindow !== minute) { recordingWindow = minute; recordingCount = 0 }
+  if (recording || recordingCount >= 120) return false
+  recording = true; recordingCount++
   try {
     return await getDb().transaction(async tx => {
       await tx.execute(sql`SET LOCAL statement_timeout='1500ms'`)
@@ -53,7 +66,7 @@ export async function recordIncident(input: IncidentInput, source: 'client' | 's
   } catch {
     console.error(JSON.stringify({ kind: 'incident_store_unavailable', correlationId: event.correlationId, operation: event.operation, code: event.code }))
     return false
-  }
+  } finally { recording = false }
 }
 export async function observePublicRequest(request: { headers: Headers }, operation: IncidentInput['operation'], handler: () => Promise<Response>) {
   const correlationId = incidentId(request)
