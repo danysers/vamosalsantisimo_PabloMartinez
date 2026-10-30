@@ -9,6 +9,8 @@ const policies = {
   'payment-method': 60,
   'payment-status': 3000,
   'payment-return': 300,
+  'email-link': 600,
+  'incident-report': 60,
 } as const
 
 export async function allowPublicOperation(operation: keyof typeof policies): Promise<boolean> {

@@ -1,3 +1,4 @@
+import { observePublicRequest } from '../../../../../lib/operational-incidents'
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
@@ -12,7 +13,7 @@ const reply = (body: object, status: number) => Response.json(body, { status, he
   'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow',
 } })
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   let input: z.infer<typeof schema>
@@ -21,4 +22,8 @@ export async function POST(request: NextRequest) {
     if (!await allowPublicOperation('payment-return')) return tooManyRequests()
     return reply(await restoreWorkshopPaymentReturn(input), 200)
   } catch { return reply({ error: 'Recuperá el acceso con el código enviado a tu correo. Tu inscripción sigue registrada.' }, 401) }
+}
+
+export async function POST(request: NextRequest) {
+  return observePublicRequest(request, 'payment_status', () => handlePost(request))
 }

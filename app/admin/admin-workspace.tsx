@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { BadgeCheck, ClipboardList, CreditCard, LayoutDashboard, Settings2, UsersRound } from 'lucide-react'
+import { BadgeCheck, ClipboardList, CreditCard, LayoutDashboard, Settings2, UsersRound, TriangleAlert } from 'lucide-react'
 import { SignOut } from './login-form'
 
-export type AdminSection = 'overview' | 'registrations' | 'payments' | 'workshop'
+export type AdminSection = 'overview' | 'registrations' | 'payments' | 'workshop' | 'incidents'
 
 const roleLabels = {
   configuration: 'Configuración',
@@ -27,6 +27,7 @@ export default function AdminWorkspace({ children, title, description, section, 
       { href: '/admin/acreditacion', label: 'Pagos y acreditación', icon: CreditCard, key: 'payments' },
     ] : []),
     ...(canManageWorkshop ? [{ href: '/admin/taller', label: 'Precios y grupos', icon: Settings2, key: 'workshop' }] : []),
+    ...(['configuration', 'registration_operator'].includes(role) ? [{ href: '/admin/incidencias', label: 'Errores e incidencias', icon: TriangleAlert, key: 'incidents' }] : []),
   ] as const
 
   return <div className="admin-workspace">

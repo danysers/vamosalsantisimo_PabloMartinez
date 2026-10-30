@@ -15,11 +15,16 @@
   const money=minor => '$'+(minor/100).toLocaleString('es-AR');
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
   async function json(url,body,signal) {
-    const response=await fetch(url,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
+    const access=body.reference && (body.accessToken||body.token) ? {reference:body.reference,token:body.accessToken||body.token,...(body.purpose?{purpose:body.purpose}:{})} : undefined;
+    const response=await (window.VASErrors?.fetch||fetch)(url,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal},access);
     const result=await response.json();
-    if (!response.ok) throw new Error(result.error || 'No pudimos completar la consulta. Intentá nuevamente.');
+    if (!response.ok) { const error=new Error(result.error || 'No pudimos completar la consulta. Intentá nuevamente.');error.status=response.status;throw error; }
     return result;
   }
+  const readState=(access,signal)=>access.scope ? json('/api/taller/enlace',{reference:access.reference,token:access.accessToken,purpose:access.scope},signal)
+    : json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken},signal);
+  const emailPage=()=>location.pathname.replace(/\/index\.html$|\/$/g,'')==='/formacion/acreditacion'?'pass'
+    : location.pathname.replace(/\/index\.html$|\/$/g,'')==='/formacion/comprobante'?'proof':null;
   function remember(receipt) {
     current={reference:receipt.reference,accessToken:receipt.paymentAccessToken,payment:receipt.payment,transferMode:receipt.transferMode||'alias',testMode:receipt.testMode===true};
     try { sessionStorage.setItem('vas-workshop-payment:'+receipt.reference,JSON.stringify(current)); } catch { /* Current tab remains usable. */ }
@@ -70,7 +75,7 @@
       price:document.getElementById('checkout-breakdown'),link:document.getElementById('checkout-pay'),retry:document.getElementById('checkout-retry'),edit:document.getElementById('checkout-edit'),proof:document.getElementById('checkout-proof'),help:document.getElementById('checkout-help'),alias:document.getElementById('checkout-transfer-alias'),transferQr:document.getElementById('checkout-transfer-qr'),editor:document.getElementById('checkout-method-editor'),status:document.getElementById('checkout-status')};
   }
   async function openMethodEditor() {
-    if (!current || savingMethod) return;
+    if (!current || current.scope || emailPage()==='proof' || savingMethod) return;
     const access=current, ui=controls(); if(!ui) return;
     ui.edit.disabled=true;
     try {
@@ -93,7 +98,7 @@
     finally { ui.edit.disabled=false; }
   }
   async function saveMethod(event) {
-    event.preventDefault(); if(!current || savingMethod) return;
+    event.preventDefault(); if(!current || current.scope || emailPage()==='proof' || savingMethod) return;
     const ui=controls(), access=current;
     const choice=['mercado_pago','bank_transfer_alias','bank_transfer_qr','on_site'].find(value => document.getElementById('payment-choice-'+value).checked);
     if(!choice || !ui.editor.dataset.attemptId) return;
@@ -132,10 +137,16 @@
     if(!file || !file.size || file.size>5*1024*1024) { feedback.textContent='Elegí una imagen o PDF de hasta 5 MB.'; return; }
     uploading=access; clearTimeout(timer);
     const button=ui.proof.querySelector('button'); button.disabled=true; feedback.textContent='Subiendo comprobante…';
-    let serverMessage='';
+    let serverMessage='', failureCode='upload_network', httpStatus;
+    const correlationId=window.VASErrors?.newId();
+    const report=outcome=>window.VASErrors?.report({correlationId,operation:'proof_upload',code:failureCode,...(httpStatus>=400?{httpStatus}:{}),
+      fileSize:Math.min(file.size,100*1024*1024),fileType:['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type)?file.type:'other',
+      online:typeof navigator==='undefined'||navigator.onLine!==false,outcome},
+    {reference:access.reference,token:access.accessToken,...(access.scope?{purpose:access.scope}:{})});
     try {
-      const body=new FormData(); body.set('reference',access.reference); body.set('accessToken',access.accessToken); body.set('comprobante',file);
-      const response=await fetch('/api/taller/pagos/comprobante',{method:'POST',body,cache:'no-store'});
+      const body=new FormData(); body.set('reference',access.reference); body.set(access.scope==='proof'?'emailToken':'accessToken',access.accessToken); body.set('comprobante',file);
+      const response=await fetch('/api/taller/pagos/comprobante',{method:'POST',body,cache:'no-store',...(correlationId?{headers:{'X-VAS-Request-ID':correlationId}}:{})});
+      httpStatus=response.status;failureCode=response.ok?'upload_response':'upload_http';
       const result=await response.json().catch(()=>null);
       if(!response.ok) {
         serverMessage=typeof result?.error==='string' ? result.error : response.status===413 ? 'El archivo supera el límite de 5 MB.'
@@ -153,21 +164,24 @@
       // the selected file arrived merely because a request was attempted.
       const controller=new AbortController(), timeout=setTimeout(()=>controller.abort(),8000);
       try {
-        const state=await json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken},controller.signal);
+        const state=await readState(access,controller.signal);
         if(current!==access || !ui.host.isConnected) return;
         if(state.proofSubmitted) {
+          report('saved');
           renderState(state);
           if(state.paymentMethod==='bank_transfer' && state.status==='pending') ui.status.textContent='Ya hay un comprobante guardado para esta inscripción y está en revisión. No vuelvas a pagar.';
           return;
         }
-      } catch { /* Keep the original file selected for an explicit retry. */ }
+        report('missing');
+      } catch { report('unavailable'); /* Keep the original file selected for an explicit retry. */ }
       finally { clearTimeout(timeout); }
       if(current===access && ui.host.isConnected) feedback.textContent=(serverMessage || 'No pudimos comunicarnos para confirmar la subida. Revisá tu conexión y volvé a intentar.')
-        +' El archivo seleccionado se conserva. No necesitás inscribirte ni pagar otra vez.';
+        +' El archivo seleccionado se conserva. No necesitás inscribirte ni pagar otra vez.'+(correlationId?' Seguimiento: '+correlationId:'');
     }
     finally { if(uploading===access) uploading=null; button.disabled=false; if(current===access) schedule(5000); }
   }
   async function preparePayment() {
+    if(current?.scope) { current.linkRejected=false;refreshPayment(); return; }
     if (!current || preparing===current || !(lastState?.onlineCheckoutReady ?? onlineCheckoutReady)) return;
     const access=current, ui=controls(); if (!ui) return;
     preparing=access; ui.retry.disabled=true; ui.status.textContent='Preparando tu pago…';
@@ -255,6 +269,7 @@
   function renderState(result) {
     const root=shell(), ui=controls(); if (!ui || !root) return false;
     lastState=result;
+    if(current?.scope || emailPage()==='proof') return renderEmailState(result);
     const recovery=document.getElementById('payment-recovery'); if(recovery) recovery.hidden=true;
     if (result.deleted || result.archived) {
       const confirmed=document.getElementById('registration-confirmed');if(confirmed)confirmed.hidden=true;
@@ -280,10 +295,12 @@
     if(result.testMode) current.testMode=true;
     try { sessionStorage.setItem('vas-workshop-payment:'+current.reference,JSON.stringify(current)); } catch { /* Current tab remains usable. */ }
     if(method!=='on_site' || result.status==='approved') document.getElementById('checkout-controls').append(ui.editor);
-    if (result.status==='approved' && result.registrationStatus==='confirmed') { ui.editor.hidden=true; return !renderConfirmation(result) || result.emailStatus!=='sent'; }
-    if(method==='on_site' && ['pending','created'].includes(result.status) && result.registrationStatus==='pending') {
-      if(!ui.editor.hidden && ui.editor.dataset.attemptId!==result.attemptId) ui.editor.hidden=true;
-      renderConfirmation(result,false); return true;
+    if (result.status==='approved' && result.registrationStatus==='confirmed') {
+      ui.editor.hidden=true;
+      if(method!=='on_site') return !renderConfirmation(result) || result.emailStatus!=='sent';
+      hidePass();root.dataset.state='confirmed';document.getElementById('registration-result-title').textContent='Pago registrado';
+      root.querySelector('.result-intro').textContent='Tu pago en ventanilla quedó registrado. Conservá tu referencia para cualquier consulta.';
+      ui.host.hidden=true;return false;
     }
     const section=document.getElementById('registration-confirmed');
     if (section) { section.hidden=true; const qr=section.querySelector('#pass-qr'); qr.hidden=true; qr.removeAttribute('src'); }
@@ -353,12 +370,50 @@
     if (!current || uploading===current || checking===current || document.hidden || !document.getElementById('payment-next')) return;
     const access=current; checking=access; let again=true;
     try {
-      const result=await json('/api/taller/pagos/estado',{reference:access.reference,accessToken:access.accessToken});
+      const result=await readState(access);
       if (current!==access || !document.getElementById('payment-next')) return;
       again=renderState(result);
     } catch (error) {
-      if (current===access) { const ui=controls(); if (ui && !ui.host.hidden) ui.status.textContent=error.message+' Vamos a volver a consultar automáticamente.'; }
-    } finally { if (checking===access) checking=null; if (current===access) { checks++; schedule(again ? (checks<12 ? 5000 : 15000) : 60000); } }
+      if (current===access) {
+        if(access.scope) { access.linkRejected=[400,403,404].includes(error.status);showEmailLinkFailure(error instanceof TypeError ? 'No pudimos consultar tu inscripción. Revisá tu conexión y volvé a intentar.' : error.message); }
+        else { const ui=controls(); if (ui && !ui.host.hidden) ui.status.textContent=(error instanceof TypeError?'No pudimos consultar el pago. Revisá tu conexión.':error.message)+' Vamos a volver a consultar automáticamente.'; }
+      }
+    } finally { if (checking===access) checking=null; if (current===access) { if(access.linkRejected)clearTimeout(timer);else { checks++; schedule(access.scope ? (again?30000:60000) : again ? (checks<12 ? 5000 : 15000) : 60000); } } }
+  }
+  function hidePass() {
+    const section=document.getElementById('registration-confirmed');if(section)section.hidden=true;
+    const qr=document.getElementById('pass-qr');if(qr){qr.hidden=true;qr.removeAttribute('src');}
+  }
+  function renderEmailState(result) {
+    const root=shell(),ui=controls();if(!root||!ui)return false;
+    if(current.scope==='pass' && result.passAvailable && result.accreditation) return !renderConfirmation(result);
+    hidePass();root.dataset.state='receipt';ui.host.hidden=false;
+    for(const element of [ui.link,ui.retry,ui.edit,ui.editor,ui.alias,ui.transferQr,ui.price])element.hidden=true;
+    document.getElementById('checkout-test-notice').hidden=true;document.getElementById('checkout-method-warning').hidden=true;
+    document.getElementById('registration-reference').hidden=false;
+    const canUpload=result.canUpload ?? (!result.deleted&&!result.archived&&!result.historical&&result.paymentMethod==='bank_transfer'&&result.status==='pending'&&result.registrationStatus==='pending');
+    const confirmed=result.registrationStatus==='confirmed';
+    document.getElementById('registration-result-title').textContent=result.proofSubmitted?'Comprobante recibido':confirmed?'Inscripción confirmada':'Subí tu comprobante';
+    root.querySelector('.result-intro').textContent='Este acceso es personal. Tu inscripción ya está cargada; no necesitás completar tus datos otra vez.';
+    ui.title.textContent=result.proofSubmitted?'Tu comprobante está en revisión':canUpload?'Adjuntá el comprobante de tu pago':confirmed?'Tu inscripción ya está confirmada':'No hace falta adjuntar un archivo en este estado';
+    ui.description.textContent=result.proofSubmitted?'Recibimos un comprobante para esta inscripción. No vuelvas a pagar. Te avisaremos por correo después de revisarlo.'
+      : canUpload?'Elegí una imagen JPG, PNG, WebP o un PDF de hasta 5 MB. Después pulsá «Subir comprobante».'
+      : confirmed?'Buscá el correo de acreditación para abrir tu volante, cuando corresponda.'
+      : result.paymentMethod==='on_site'?'Elegiste abonar en efectivo en el taller. No necesitás adjuntar comprobante.'
+      : result.paymentMethod==='mercado_pago'?'Mercado Pago confirma el pago automáticamente. No necesitás subir comprobante.'
+      : 'Contactá a la organización si necesitás consultar tu inscripción.';
+    ui.proof.hidden=!canUpload||!!result.proofSubmitted;
+    ui.help.href=helpUrl(result);ui.help.hidden=false;
+    ui.status.textContent=canUpload?'El envío no confirma el pago: la organización revisará el comprobante.':'';
+    return canUpload;
+  }
+  function showEmailLinkFailure(message='Abrí el enlace personal del correo más reciente. Si no lo encontrás, contactá a la organización.') {
+    const root=shell(),ui=controls();if(!root||!ui)return;
+    hidePass();root.dataset.state='access-unavailable';ui.host.hidden=false;
+    document.getElementById('registration-result-title').textContent='No pudimos abrir tu acceso';root.querySelector('.result-intro').textContent=message;
+    for(const element of [ui.link,ui.edit,ui.editor,ui.alias,ui.transferQr,ui.price,ui.proof])element.hidden=true;
+    ui.title.textContent='Conservás tu inscripción';ui.description.textContent='No te inscribas ni pagues nuevamente. Podés volver a abrir el enlace de tu correo.';
+    ui.retry.hidden=!current?.scope;ui.retry.textContent='Volver a intentar la consulta';ui.status.textContent='';ui.help.href=helpUrl();ui.help.hidden=false;
   }
   async function configureForm() {
     const form=document.getElementById('registration'); if (!form) return;
@@ -402,6 +457,19 @@
     if(restoringReturn) return;
     clearTimeout(timer); current=null;
     const url=new URL(location.href), reference=url.searchParams.get('reference');
+    const purpose=emailPage(), emailToken=purpose&&new URLSearchParams(url.hash.slice(1)).get(purpose);
+    if(emailToken) { url.hash='';history.replaceState({...history.state},'',url); }
+    if(purpose && reference && /^[A-Za-z0-9_-]{10,80}$/.test(reference)) {
+      let saved;
+      try { saved=JSON.parse(sessionStorage.getItem('vas-email-link:'+purpose+':'+reference)||'null'); } catch { /* Ignore damaged local state. */ }
+      const token=emailToken||saved?.token;
+      if(typeof token==='string'&&/^v1\.\d{10}\.[A-Za-z0-9_-]{43}$/.test(token)) {
+        current={reference,accessToken:token,scope:purpose};
+        try { sessionStorage.setItem('vas-email-link:'+purpose+':'+reference,JSON.stringify({token})); } catch { /* The current page remains usable. */ }
+        shell();checks=0;refreshPayment();return;
+      }
+    }
+    if(purpose==='pass' || emailToken) { showEmailLinkFailure(); return; }
     const returnToken=new URLSearchParams(url.hash.slice(1)).get('return');
     if(returnToken) { url.hash=''; history.replaceState({...history.state},'',url); }
     if (!document.getElementById('payment-next') || (!reference && !document.querySelector('[data-payment-return]'))) return;

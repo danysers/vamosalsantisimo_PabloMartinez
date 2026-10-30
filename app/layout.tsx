@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const nonce = (await headers()).get('x-nonce') ?? undefined
   return <html lang="es-AR" data-scroll-behavior="smooth" suppressHydrationWarning><head>
+    <script nonce={nonce} src="/operational-errors.js?v=20261030-accesos" defer />
     <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `try{const k='vas-page-transition',v=JSON.parse(sessionStorage.getItem(k)||'null');sessionStorage.removeItem(k);if(v&&Date.now()-v.at<10000&&v.path.replace(/\\/$/,'')===location.pathname.replace(/\\/$/,'')&&!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.dataset.siteNavigation='entering'}catch{}` }} />
     <script nonce={nonce} src="/page-transition.js" defer />
   </head><body>{children}</body></html>

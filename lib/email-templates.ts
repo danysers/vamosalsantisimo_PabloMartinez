@@ -61,6 +61,7 @@ export function registrationEmail(input: {
   transferHolder?: string | null
   transferDocument?: string | null
   proofWhatsappE164?: string | null
+  proofUrl?: string
 }) {
   const name = input.firstName.trim()
   const amount = input.amountMinor == null ? null : `$${(input.amountMinor / 100).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -79,7 +80,8 @@ export function registrationEmail(input: {
     if (input.transferProvider) lines.push(`Billetera: ${input.transferProvider}.`)
     if (input.transferHolder) lines.push(`Titular: ${input.transferHolder}.`)
     if (input.transferDocument) lines.push(`DNI del titular: ${input.transferDocument}.`)
-    lines.push('Una vez que hiciste el pago, no pagues dos veces: subí el comprobante para que podamos verificarlo. Podés volver desde la opción «Enviar comprobante» de la página del taller, con tu DNI o número de gestión y el código que enviamos a tu correo.')
+    lines.push('Una vez que hiciste el pago, no pagues dos veces: subí el comprobante para que podamos verificarlo.')
+    if (!input.proofUrl) lines.push('Podés volver desde la opción «Enviar comprobante» de la página del taller, con tu DNI o número de gestión y el código que enviamos a tu correo.')
     if (input.proofWhatsappE164) lines.push('Si tenés dificultades para subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.reference))
   } else if (input.choice === 'on_site') {
     lines.push('Registramos tu inscripción con pago en efectivo en el taller. Abonarás a precio de ventanilla el día del encuentro; tu pago todavía está PENDIENTE. No aplican los precios de los lotes ni las promociones.')
@@ -95,10 +97,12 @@ export function registrationEmail(input: {
   } else {
     lines.push('La organización aprobó tu exención de pago. No tenés que abonar la inscripción.')
   }
-  if (input.choice !== 'mercado_pago') lines.push('', 'El volante de acreditación con QR se enviará por separado después de verificar el pago o aprobar la excepción.')
+  if (input.proofUrl) lines.push('', 'Tu acceso personal para enviar el comprobante, sin volver a cargar tus datos:', input.proofUrl,
+    'Usalo si pagaste por transferencia o QR. Mercado Pago se verifica automáticamente; en efectivo no hace falta adjuntar comprobante. No compartas este enlace.')
+  if (!['mercado_pago', 'on_site'].includes(input.choice)) lines.push('', 'El volante de acreditación con QR se enviará por separado después de verificar el pago o aprobar la excepción.')
   lines.push('', 'Vamos al Santísimo')
   const text = lines.join('\n')
-  return { subject: `Inscripción registrada · ${input.reference}`, text, html: brandedEmailHtml(text) }
+  return { subject: `Inscripción registrada · ${input.reference}`, text, html: actionEmailHtml(text, input.proofUrl, 'Subir mi comprobante') }
 }
 
 export function registrationAccessEmail(input:{firstName:string;code:string}) {
@@ -113,7 +117,7 @@ export function groupPaymentEmail(input: {
   isPayer: boolean; memberCount: number; amountMinor: number; status: 'pending' | 'approved';
   source: 'bank_transfer' | 'on_site'; transferAlias?: string | null;
   transferProvider?: string | null; transferHolder?: string | null;
-  transferDocument?: string | null; proofWhatsappE164?: string | null
+  transferDocument?: string | null; proofWhatsappE164?: string | null; proofUrl?: string
 }) {
   const lines = [
     `Hola ${input.firstName.trim()}:`, '',
@@ -131,7 +135,8 @@ export function groupPaymentEmail(input: {
       if (input.transferProvider) lines.push(`Billetera: ${input.transferProvider}.`)
       if (input.transferHolder) lines.push(`Titular: ${input.transferHolder}.`)
       if (input.transferDocument) lines.push(`DNI del titular: ${input.transferDocument}.`)
-      lines.push('Después de pagar, adjuntá el comprobante desde tu inscripción en el mismo navegador.')
+      lines.push(input.proofUrl ? 'Después de pagar, subí el comprobante con tu acceso personal, sin volver a cargar datos:' : 'Después de pagar, adjuntá el comprobante desde tu inscripción en el mismo navegador.')
+      if (input.proofUrl) lines.push(input.proofUrl, 'No compartas este enlace.')
       if (input.proofWhatsappE164) lines.push('Si no podés subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.payerReference))
       lines.push('El comprobante debe ser revisado por una persona de la organización.')
     } else lines.push('El pago se registra en el lugar el día del taller.')
@@ -141,7 +146,7 @@ export function groupPaymentEmail(input: {
   }
   lines.push('', 'Vamos al Santísimo')
   const text = lines.join('\n')
-  return { subject: `Inscripción grupal · ${input.reference}`, text, html: brandedEmailHtml(text) }
+  return { subject: `Inscripción grupal · ${input.reference}`, text, html: actionEmailHtml(text, input.proofUrl, 'Subir el comprobante del grupo') }
 }
 
 export function assistanceReviewEmail(input: { fullName: string; reference: string; email: string; phone: string; reason: string | null }) {
@@ -181,7 +186,15 @@ export function assistanceDeclinedEmail(input: { firstName: string; reference: s
   return { subject: `Respuesta a tu solicitud de ayuda · ${input.reference}`, text, html: brandedEmailHtml(text) }
 }
 
-export function accreditationEmail(input: { firstName: string; reference: string; paymentConfirmed?: boolean }) {
+function actionEmailHtml(text: string, url?: string, label = 'Abrir', cid?: string) {
+  const html = brandedEmailHtml(text, cid)
+  if (!url) return html
+  const parsed = new URL(url)
+  if (parsed.username || parsed.password || (parsed.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(parsed.hostname))) throw new Error('Invalid email action URL')
+  return html.replace(escapeHtml(url), `<a href="${escapeHtml(url)}" style="display:inline-block;padding:14px 22px;background:#701c2d;color:#ffffff;border-radius:8px;font-weight:bold;text-decoration:none">${escapeHtml(label)}</a>`)
+}
+
+export function accreditationEmail(input: { firstName: string; reference: string; paymentConfirmed?: boolean; passUrl?: string }) {
   const message = {
     subject: `Tu acreditación al taller · ${input.reference}`,
     text: [
@@ -191,10 +204,11 @@ export function accreditationEmail(input: { firstName: string; reference: string
       `Referencia: ${input.reference}.`,
       'Presentá este mensaje o el volante impreso al ingresar. El QR identifica una sola inscripción y no debe compartirse.',
       'Taller: sábado 19 de diciembre de 2026, 15:00 h, Parroquia San Luis de Francia, Formosa.',
+      ...(input.passUrl ? ['', 'Abrí tu volante personal en 3D y elegí «Imprimir mi acreditación»:', input.passUrl, 'Este enlace es personal; no lo compartas.'] : []),
       '', 'Vamos al Santísimo',
     ].join('\n'),
   }
-  return { ...message, html: brandedEmailHtml(message.text, 'acreditacion') }
+  return { ...message, html: actionEmailHtml(message.text, input.passUrl, 'Ver mi volante 3D e imprimir', 'acreditacion') }
 }
 
 export function paymentProofReviewEmail(input: { fullName: string; reference: string; amountMinor: number; proofUrl: string; panelUrl: string }) {

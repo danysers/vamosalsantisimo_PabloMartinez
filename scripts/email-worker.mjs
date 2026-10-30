@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditation-token.ts'
 import { decryptRecoveryCode } from '../lib/recovery-code.ts'
+import { workshopEmailUrl } from '../lib/email-link-token.ts'
 import { processLotAutomation } from './lot-automation.mjs'
 import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, lotChangedEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
@@ -61,7 +62,7 @@ async function render(pool, job) {
     })
   }
   const result = await pool.query(`
-    SELECT r.email,r.accreditation_email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,
+    SELECT r.id,r.creation_key,r.email,r.accreditation_email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,w.starts_at,
       registration_is_current(r.id) AS current_registration,
       p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.transfer_holder,s.transfer_document,
       s.proof_whatsapp_e164,s.reminder_email,
@@ -74,12 +75,15 @@ async function render(pool, job) {
     LEFT JOIN fee_waivers fw ON fw.registration_id=r.id AND fw.revoked_at IS NULL
     LEFT JOIN LATERAL (
       SELECT source,amount_minor FROM payment_attempts
-      WHERE registration_id=r.id ORDER BY created_at DESC LIMIT 1
+      WHERE registration_id=r.id OR EXISTS(SELECT 1 FROM payment_allocations own WHERE own.attempt_id=payment_attempts.id AND own.registration_id=r.id)
+      ORDER BY created_at DESC,id DESC LIMIT 1
     ) p ON true
     WHERE r.id=$1
   `, [job.registration_id])
   const registration = result.rows[0]
   if (!registration || registration.current_registration === false) return null
+  const emailIdentity = { id: registration.id, reference: registration.reference, creationKey: registration.creation_key, email: registration.email }
+  const linkEndsAt = new Date(new Date(registration.starts_at).getTime() + 3 * 86_400_000)
   if (job.kind === 'assistance_review_request') {
     if (!registration.payment_difficulty || !registration.reminder_email ||
       registration.reminder_email.toLowerCase() !== job.to_email.toLowerCase()) return null
@@ -129,7 +133,9 @@ async function render(pool, job) {
       amountMinor: group.amount_minor, status: group.status, source: group.source,
       transferAlias: registration.transfer_alias, transferProvider: registration.transfer_provider,
       transferHolder: registration.transfer_holder, transferDocument: registration.transfer_document,
-      proofWhatsappE164: registration.proof_whatsapp_e164 })
+      proofWhatsappE164: registration.proof_whatsapp_e164,
+      proofUrl: group.status === 'pending' && group.payer_id === job.registration_id && group.source === 'bank_transfer'
+        ? workshopEmailUrl('proof', emailIdentity, linkEndsAt) : undefined })
   }
   if (job.kind === 'assistance_approved') {
     if (!registration.payment_difficulty || registration.assistance_status !== 'approved') return null
@@ -162,13 +168,14 @@ async function render(pool, job) {
       transferHolder: registration.transfer_holder,
       transferDocument: registration.transfer_document,
       proofWhatsappE164: registration.proof_whatsapp_e164,
+      proofUrl: !['paid', 'waived'].includes(choice) ? workshopEmailUrl('proof', emailIdentity, linkEndsAt) : undefined,
     })
   }
   if (job.kind === 'accreditation_ready') {
     if (registration.status !== 'confirmed' || !job.credential_id ||
         !(registration.paid || registration.assistance_status === 'approved' || registration.waived)) return null
     const credentialResult = await pool.query(`
-      SELECT version,token_hash,token_ciphertext,token_iv,token_auth_tag,encryption_key_id
+      SELECT version,token_hash,token_ciphertext,token_iv,token_auth_tag,encryption_key_id,expires_at
       FROM accreditation_credentials
       WHERE id=$1 AND registration_id=$2 AND revoked_at IS NULL AND expires_at>now()
     `, [job.credential_id, job.registration_id])
@@ -180,8 +187,12 @@ async function render(pool, job) {
       tokenAuthTag: credential.token_auth_tag,
     }, process.env.ACCREDITATION_TOKEN_KEY, job.registration_id, credential.version)
     if (hashAccreditationQr(qrValue) !== credential.token_hash) throw new Error('accreditation_hash_mismatch')
+    const cash = registration.source === 'on_site' && !registration.waived && registration.assistance_status !== 'approved'
     const email = accreditationEmail({ firstName: registration.first_name, reference: registration.reference,
-      paymentConfirmed: registration.paid })
+      paymentConfirmed: registration.paid,
+      passUrl: cash ? undefined : workshopEmailUrl('pass', { ...emailIdentity,
+        email: `${registration.email}|${registration.accreditation_email || ''}`, credentialId: job.credential_id },
+      new Date(Math.min(new Date(credential.expires_at || linkEndsAt).getTime(), linkEndsAt.getTime()))) })
     const png = await QRCode.toBuffer(qrValue, { width: 480, margin: 2, errorCorrectionLevel: 'M' })
     return { ...email, attachments: [{ filename: 'acreditacion.png', content: png, cid: 'acreditacion', contentType: 'image/png' }] }
   }

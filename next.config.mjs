@@ -33,7 +33,7 @@ const nextConfig = {
         // Keep the image in previously delivered workshop emails available.
         { source: '/logo-vamos.png', destination: '/eventos-anteriores/logo-vamos.png' },
       ],
-      afterFiles: ['', 'inscripcion', 'pago', 'comprobante', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
+      afterFiles: ['', 'inscripcion', 'pago', 'comprobante', 'acreditacion', 'contacto', 'recursos', 'preguntas-frecuentes'].map(page => ({
         source: page ? `/formacion/${page}` : '/formacion',
         destination: page ? `/formacion/${page}/index.html` : '/formacion/index.html',
       })),
@@ -56,6 +56,9 @@ const nextConfig = {
         source: '/2026/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
+      ...['/formacion/comprobante', '/formacion/comprobante/:path*', '/formacion/acreditacion', '/formacion/acreditacion/:path*'].map(source => ({
+        source, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }, { key: 'Cache-Control', value: 'private, no-store' }, { key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      })),
       ...['/admin', '/admin/:path*', '/api/admin/:path*', '/api/auth/:path*'].map(source => ({
         source,
         headers: [

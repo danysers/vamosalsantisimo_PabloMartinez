@@ -12,7 +12,7 @@ export function privateReply(body: object, status: number) {
 }
 
 export async function authorizeOperator(request: NextRequest, roles: OperatorRole[], requireOrigin = true): Promise<
-  { operatorId: string; eventSlug: string } | { response: NextResponse }
+  { operatorId: string; eventSlug: string; role: OperatorRole } | { response: NextResponse }
 > {
   if (process.env.APP_SURFACE !== 'panel') return { response: privateReply({ error: 'No disponible.' }, 404) }
   const base = process.env.BETTER_AUTH_URL
@@ -36,5 +36,5 @@ export async function authorizeOperator(request: NextRequest, roles: OperatorRol
   if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' || !roles.includes(operator.role)) {
     return { response: privateReply({ error: 'Acceso no autorizado.' }, 403) }
   }
-  return { operatorId: operator.id, eventSlug }
+  return { operatorId: operator.id, eventSlug, role: operator.role }
 }

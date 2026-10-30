@@ -11,7 +11,6 @@ import { organizationWhatsApp } from './whatsapp-link'
 import { projectMercadoPagoOrder } from './mercado-pago-reconciliation'
 import { issueAccreditationAfterApproval } from './accreditation-workflow'
 import { decryptAccreditationQr, hashAccreditationQr } from './accreditation-token'
-import { createRegistrationQr } from './registration-qr'
 import QRCode from 'qrcode'
 import { accreditationCredentials, auditLog, emailOutbox, paymentAllocations, paymentAttempts, paymentTransactions, paymentRefunds, paymentChargebacks, registrations, reservations, webhookEvents, workshopLots, workshopPaymentSettings } from './schema'
 
@@ -197,15 +196,10 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
       WHERE a.registration_id=${attempt.registration_id} AND p.id<>${attempt.id} AND p.status IN ('created','pending','approved')) AS other_active`)
   const profile = await getDb().execute(sql`SELECT i.nickname,w.starts_at FROM registration_intakes i
     JOIN registrations r ON r.id=i.registration_id JOIN workshops w ON w.id=r.workshop_id WHERE r.id=${attempt.registration_id}`)
-  const startsAt = profile.rows[0]?.starts_at
-  const registrationCard = attempt.source === 'on_site' && attempt.status === 'pending' && attempt.registration_status === 'pending' &&
-    startsAt && new Date(String(startsAt)).getTime()+86_400_000 > Date.now() ? {
-      qrDataUrl: await QRCode.toDataURL(createRegistrationQr(attempt.registration_id, attempt.reference, attempt.creation_key), { width: 480, margin: 2, errorCorrectionLevel: 'M' }),
-      startsAt: new Date(String(startsAt)).toISOString(), venue: 'Parroquia San Luis de Francia',
-    } : null
+  const registrationCard = null // Ventanilla no entrega un volante 3D, ni siquiera antes del pago.
   // Reuse the credential delivered by email. A status read never issues a QR.
   let accreditation: { qrDataUrl: string; startsAt: string; venue: string } | null = null
-  if (attempt.status === 'approved' && attempt.registration_status === 'confirmed') {
+  if (attempt.source !== 'on_site' && attempt.status === 'approved' && attempt.registration_status === 'confirmed') {
     const credentials = await getDb().execute(sql`
       SELECT c.*,w.starts_at FROM accreditation_credentials c
       JOIN registrations r ON r.id=c.registration_id JOIN workshops w ON w.id=r.workshop_id

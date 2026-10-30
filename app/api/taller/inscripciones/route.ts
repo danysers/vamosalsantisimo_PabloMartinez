@@ -1,3 +1,4 @@
+import { observePublicRequest } from '../../../../lib/operational-incidents'
 import { publicRequestOrigin } from '../../../../lib/public-site-origin'
 import { randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,7 +15,7 @@ function reply(body: object, status: number) {
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   // The mail worker is a separate process: operators must verify SMTP delivery
   // before explicitly enabling public registrations. Never acknowledge receipt
   // while knowingly unable to send the promised confirmation.
@@ -41,4 +42,8 @@ export async function POST(request: NextRequest) {
     console.error(`workshop_enrollment_unavailable correlation=${correlation}`)
     return reply({ error: 'Servicio temporalmente no disponible.', correlation }, 503)
   }
+}
+
+export async function POST(request: NextRequest) {
+  return observePublicRequest(request, 'registration', () => handlePost(request))
 }

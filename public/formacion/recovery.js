@@ -16,7 +16,7 @@
   }
   document.addEventListener('workshop:recovery-needed',showReturnRecovery);
   async function request(body) {
-    const response=await fetch('/api/taller/inscripciones/recuperar',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const response=await (window.VASErrors?.fetch||fetch)('/api/taller/inscripciones/recuperar',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const value=await response.json();
     if(!response.ok) throw new Error(value.error||'No pudimos completar la solicitud. Intentá nuevamente.');
     return value;
