@@ -152,5 +152,25 @@ test('administrative operations preserve payment facts and enforce owner, replay
       assert.equal(result.code,200,JSON.stringify(result.body))
       assert.equal((await read(reference)).amountMinor,null)
     })
+    await t.test('editing an unpaid quote still allows normal payment approval, QR issuance and email',async()=>{
+      const {verifyManualPayment}=await import('../lib/accreditation-workflow.ts')
+      const reference=await enroll()
+      const correction=await edit(await payload(reference,{amountMinor:1200000,confirmPayment:true}))
+      assert.equal(correction.code,200,JSON.stringify(correction.body))
+      assert.equal((await read(reference)).qrBlocked,false)
+      const result=await verifyManualPayment(db,{eventSlug:slug,operatorId:owner.id,reference,note:'Aprobación ficticia después de corregir el importe',manualReference:'TEST-LOCAL'})
+      assert.equal(result.code,200);assert.equal(result.body.accreditedPeople,1);assert.equal(result.body.emailQueued,true)
+      assert.equal((await read(reference)).registrationStatus,'confirmed')
+      const row=(await pool.query("SELECT count(*)::int n FROM email_outbox WHERE registration_id IN(SELECT id FROM registrations WHERE reference=$1) AND kind='accreditation_ready'",[reference])).rows[0]
+      assert.equal(row.n,1)
+    })
+    await t.test('explicitly blocked unpaid registration records approval without claiming that a QR email was queued',async()=>{
+      const {verifyManualPayment}=await import('../lib/accreditation-workflow.ts')
+      const reference=await enroll()
+      assert.equal((await edit(await payload(reference,{qrAction:'revoke',confirmQrChange:true}))).code,200)
+      const result=await verifyManualPayment(db,{eventSlug:slug,operatorId:owner.id,reference,note:'Pago ficticio con bloqueo administrativo explícito',manualReference:'TEST-LOCAL-BLOCK'})
+      assert.equal(result.code,200);assert.equal(result.body.accreditedPeople,0);assert.equal(result.body.emailQueued,false);assert.equal(result.body.accreditationBlocked,true)
+      assert.equal((await read(reference)).qrBlocked,true)
+    })
   }finally{await pool.end();await db.$client.end()}
 })

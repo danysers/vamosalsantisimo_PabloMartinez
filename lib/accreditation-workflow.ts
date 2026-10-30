@@ -137,15 +137,18 @@ export function verifyManualPayment(db: Db, input: {
       JOIN registrations r ON r.id=a.registration_id WHERE a.attempt_id=${attempt.id} AND registration_is_current(r.id)`)
     const members = [...new Set((allocated.rows.length ? allocated.rows : [{ registration_id: attempt.registration_id }])
       .map(row => String(row.registration_id)))]
+    let accreditedPeople = 0, emailQueued = false
     for (const registrationId of members) {
       const issued = await issueInTransaction(tx, registrationId, input.eventSlug, input.operatorId)
       if (issued.code !== 201 && issued.code !== 200) throw new Error('payment_accreditation_inconsistent')
+      if (issued.body.credentialId) accreditedPeople++
+      if (issued.body.emailQueued) emailQueued = true
     }
     await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'payment.manually_verified',
       subjectId: attempt.id, reason: input.note,
-      changes: { source: attempt.source, amountMinor: attempt.amount_minor, manualReference: input.manualReference || null, accreditedPeople: members.length } })
+      changes: { source: attempt.source, amountMinor: attempt.amount_minor, manualReference: input.manualReference || null, accreditedPeople } })
     await tx.execute(sql`SELECT advance_workshop_lot(${String(workshop.rows[0].id)})`)
-    return { code: 200, body: { status: 'approved', accreditedPeople: members.length, emailQueued: true } }
+    return { code: 200, body: { status: 'approved', accreditedPeople, emailQueued, accreditationBlocked: accreditedPeople < members.length } }
   })
 }
 

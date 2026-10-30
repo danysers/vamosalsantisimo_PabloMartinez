@@ -74,7 +74,9 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
     setPaymentBusy(true); setPaymentMessage('')
     try {
       const { ok, result } = await post('/api/admin/payments/verify', { reference: reference.trim(), note: note.trim(), manualReference: manualReference.trim() })
-      setPaymentMessage(ok ? `Pago confirmado. Se acreditaron ${result.accreditedPeople} persona(s) y el QR quedó en cola de correo.` : result.error)
+      setPaymentMessage(ok ? result.accreditationBlocked
+        ? `Pago confirmado. Se acreditaron ${result.accreditedPeople} persona(s). Hay acreditaciones bloqueadas; revisalas desde la ficha administrativa.`
+        : `Pago confirmado. Se acreditaron ${result.accreditedPeople} persona(s).${result.emailQueued ? ' El QR quedó en cola de correo.' : ''}` : result.error)
       if (ok) void loadProofs()
     } catch { setPaymentMessage('No pudimos conectar. Consultá el estado antes de reintentar.') }
     finally { setPaymentBusy(false) }
