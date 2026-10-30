@@ -17,3 +17,5 @@ La migración 0035 es aditiva: agrega el correo alternativo vacío, la marca de 
 Las pruebas usan mensajes DSN sintéticos, transporte SMTP simulado y PostgreSQL descartable. Cubren asociación exacta, dirección incorrecta, buzón lleno/demorado/inexistente, tamaños, lectura IMAP sin cambios, cursores, fallos de consulta, permisos HTTP, concurrencia/idempotencia, correo alternativo sin modificar el original, límites, archivo/revocación y QR binariamente idéntico. No se hacen pagos, altas ni reenvíos reales para probar la función.
 
 Referencias de implementación: [ImapFlow](https://imapflow.com/docs/api/imapflow-client/) y [MailParser](https://nodemailer.com/extras/mailparser).
+
+Cada mensaje admite hasta veinte informes distintos; los bloques repetidos no multiplican consultas a la base. Un MIME que no se pueda analizar queda advertido y no impide avanzar a los mensajes posteriores.

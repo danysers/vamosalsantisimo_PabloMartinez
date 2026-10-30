@@ -26,6 +26,15 @@ test('delayed and nonexistent mailbox reports remain distinct from permanent mai
   assert.equal(delayed[0].reasonCode, 'temporary_failure'); assert.equal(delayed[0].action, 'delayed')
   assert.equal((await parseDeliveryReport(deliveryFixture({ status: '5.1.1', diagnostic: 'smtp; User unknown' })))[0].reasonCode, 'invalid_recipient')
 })
+test('one mail cannot duplicate a report or cause unbounded database work with many recipients', async () => {
+  const source = deliveryFixture().toString()
+  const block = 'Final-Recipient: rfc822; person@example.invalid\r\nAction: failed\r\nStatus: 5.0.0\r\nDiagnostic-Code: smtp; 550-5.2.2 insufficient storage.\r\n'
+  const insertion = source.indexOf('--report\r\nContent-Type: message/rfc822')
+  const repeated = source.slice(0, insertion) + (block + '\r\n').repeat(50) + source.slice(insertion)
+  assert.equal((await parseDeliveryReport(Buffer.from(repeated))).length, 1)
+  const many = Array.from({ length: 60 }, (_, i) => block.replace('person@', `recipient${i}@`)).join('\r\n')
+  assert.equal((await parseDeliveryReport(Buffer.from(source.slice(0, insertion) + many + source.slice(insertion)))).length, 20)
+})
 test('monitor opens mailboxes read-only, bounds fetching, persists UID cursor and retries failures without deleting or marking messages', async () => {
   let cursors = {}, records = 0, queried = false, released = false
   const db = { query: async (query, values) => {

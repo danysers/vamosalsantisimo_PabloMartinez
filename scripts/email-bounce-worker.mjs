@@ -17,7 +17,7 @@ export async function syncEmailBounces(db, client) {
     const folders = available.filter(folder => !folder.flags?.has('\\Noselect') &&
       (folder.path.toUpperCase() === 'INBOX' || /(?:^|[./])(spam|junk|promociones|trash)$/i.test(folder.path))).slice(0, 8)
     if (!folders.some(folder => folder.path.toUpperCase() === 'INBOX')) throw Error('mailbox_missing')
-    let recorded = 0, oversized = false
+    let recorded = 0, warning = null
     for (const folder of folders) {
       const lock = await client.getMailboxLock(folder.path, { readOnly: true })
       try {
@@ -32,10 +32,12 @@ export async function syncEmailBounces(db, client) {
         for (const uid of uids) {
           const meta = await client.fetchOne(String(uid), { size: true }, { uid: true })
           if (!meta) { last = uid; continue }
-          if (meta.size > MAX_BOUNCE_BYTES) { oversized = true; last = uid; continue }
+          if (meta.size > MAX_BOUNCE_BYTES) { warning = 'report_too_large'; last = uid; continue }
           const message = await client.fetchOne(String(uid), { source: { maxLength: MAX_BOUNCE_BYTES } }, { uid: true })
           if (message?.source) {
-            const reports = await parseDeliveryReport(message.source)
+            let reports
+            try { reports = await parseDeliveryReport(message.source) }
+            catch { warning = 'invalid_report'; last = uid; continue }
             for (const report of reports) {
               const key = createHash('sha256').update(`${folder.path}|${validity}|${uid}|${report.emailId}|${report.recipient}|${report.action}`).digest('hex')
               if (await recordDeliveryReport(db, report, key)) recorded++
@@ -49,7 +51,7 @@ export async function syncEmailBounces(db, client) {
         await db.query('UPDATE email_bounce_sync SET cursors=$1::jsonb WHERE id=1', [JSON.stringify(cursors)])
       } finally { lock.release() }
     }
-    await db.query('UPDATE email_bounce_sync SET checked_at=now(),last_error_code=$1 WHERE id=1', [oversized ? 'report_too_large' : null])
+    await db.query('UPDATE email_bounce_sync SET checked_at=now(),last_error_code=$1 WHERE id=1', [warning])
     if (recorded) console.log(`Email delivery reports recorded: ${recorded}`)
     return { recorded }
   } catch {
