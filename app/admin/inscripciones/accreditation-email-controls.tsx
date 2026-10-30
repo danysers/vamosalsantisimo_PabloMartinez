@@ -22,12 +22,12 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
 }) {
   const [alternate, setAlternate] = useState(detail.accreditationEmail)
   const [reason, setReason] = useState('')
-  const [confirmed, setConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [reload, setReload] = useState(false)
   const [requestId, setRequestId] = useState('')
+  const [passLinkData, setPassLinkData] = useState<{ url: string; version: string; email: string; alternate: string } | null>(null)
   const [proofLinkData, setProofLinkData] = useState<{ url: string; version: string; email: string } | null>(null)
   const [proofConfirmed, setProofConfirmed] = useState(false)
   const [proofRequestId, setProofRequestId] = useState('')
@@ -39,6 +39,8 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
   const staleSync = detail.bounceSync.stale
   const proofLink = proofLinkData?.version === detail.version && proofLinkData.email === detail.fields.email && detail.proofReminderEligible
     ? proofLinkData.url : ''
+  const passLink = passLinkData?.version === detail.version && passLinkData.email === detail.fields.email &&
+    passLinkData.alternate === detail.accreditationEmail && detail.credential.issued ? passLinkData.url : ''
 
   async function proofAction(action: 'link' | 'resend') {
     if (busy || reload || blocked || inactive || !detail.proofReminderEligible || (action === 'resend' && !proofConfirmed)) return
@@ -68,10 +70,10 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
     } finally { setBusy(false); onBusy(false) }
   }
 
-  async function sendAction(action: 'recipient' | 'resend', event?: FormEvent) {
+  async function sendAction(action: 'recipient' | 'resend' | 'link', event?: FormEvent) {
     event?.preventDefault()
     if (busy || reload || blocked) return
-    if (action === 'resend' && (!confirmed || dirty)) return
+    if (action !== 'recipient' && (dirty || inactive || !detail.credential.issued)) return
     setBusy(true); onBusy(true); setMessage(''); setError('')
     let accepted = false
     const nextId = requestId || crypto.randomUUID()
@@ -79,12 +81,17 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
     try {
       const response = await fetch('/api/admin/inscripciones/correo', { method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, reference: detail.reference, version: detail.version,
-          ...(action === 'recipient' ? { alternateEmail: alternate.trim(), reason } : { requestId: nextId, confirmRecipient: confirmed }) }) })
+          ...(action === 'recipient' ? { alternateEmail: alternate.trim(), reason } : action === 'resend' ? { requestId: nextId, confirmRecipient: true } : {}) }) })
       const data = await response.json()
       if (!response.ok) { setError(data.error || 'No pudimos completar la operación.'); if (data.conflict) setReload(true); return }
       accepted = true
+      if (action === 'link') {
+        setPassLinkData({ url: data.url, version: detail.version, email: detail.fields.email, alternate: detail.accreditationEmail })
+        setMessage('Enlace personal disponible para copiar. Compartilo sólo con la persona inscripta.')
+        return
+      }
       setMessage(action === 'recipient' ? 'Correo alternativo guardado. No se envió ningún mensaje.' : 'Acreditación en cola para el destinatario indicado. Se reutiliza el mismo QR; la recepción aún no está confirmada.')
-      setConfirmed(false); setReason('')
+      setReason('')
       await refresh()
       setRequestId('')
     } catch {
@@ -128,18 +135,28 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
       <form onSubmit={event => sendAction('recipient', event)}>
         <fieldset disabled={busy || inactive || blocked || reload} className="admin-detail-fieldset"><legend>Correo alternativo opcional</legend>
           <label htmlFor="accreditation-alternate-email">Correo alternativo para el QR<input id="accreditation-alternate-email" type="email" maxLength={254} value={alternate}
-            onChange={event => { setAlternate(event.target.value); setConfirmed(false) }} placeholder="Sin cargar · se usa el correo original" /></label>
+            onChange={event => setAlternate(event.target.value)} placeholder="Sin cargar · se usa el correo original" /></label>
           {dirty && <><label htmlFor="accreditation-email-reason">Motivo<textarea id="accreditation-email-reason" minLength={5} maxLength={500} required value={reason}
             onChange={event => setReason(event.target.value)} rows={2} placeholder="Ej.: dirección alternativa confirmada por la persona" /></label>
             <button type="submit" className="button button-outline" disabled={reason.trim().length < 5}>Guardar correo alternativo</button></>}
         </fieldset>
       </form>
       <p><strong>Se reenviará a: {recipient}</strong></p>
-      <label className="admin-detail-email-confirm"><input type="checkbox" checked={confirmed} disabled={busy || inactive || blocked || dirty || reload}
-        onChange={event => setConfirmed(event.target.checked)} />Confirmé el destinatario y, si el buzón estaba lleno, que la persona ya liberó espacio.</label>
-      <button type="button" className="button button-gold" disabled={busy || inactive || blocked || dirty || reload || !confirmed || !detail.credential.issued}
-        onClick={() => sendAction('resend')}>{busy ? 'Procesando…' : 'Reenviar acreditación con el mismo QR'}</button>
-      <p className="admin-context-note">No modifica el pago ni emite un nuevo QR. {blocked ? 'Terminá o cancelá la edición de datos antes de continuar.' : dirty ? 'Guardá el correo alternativo antes de reenviar.' : ''}</p>
+      {detail.credential.issued ? <>
+        <div className="admin-accreditation-actions">
+          <button type="button" className="button button-outline" disabled={busy || inactive || blocked || dirty || reload}
+            onClick={() => sendAction('link')}>{busy ? 'Procesando…' : 'Mostrar enlace de acreditación'}</button>
+          <button type="button" className="button button-gold" disabled={busy || inactive || blocked || dirty || reload}
+            onClick={() => sendAction('resend')}>{busy ? 'Procesando…' : 'Reenviar acreditación con el mismo QR'}</button>
+        </div>
+        {passLink && <div className="admin-proof-link"><label htmlFor="personal-pass-link">Enlace personal de acreditación
+          <input id="personal-pass-link" type="text" readOnly value={passLink} onFocus={event => event.target.select()} /></label>
+          <button type="button" className="button button-outline" onClick={async () => {
+            try { await navigator.clipboard.writeText(passLink); setMessage('Enlace copiado. Compartilo sólo con la persona inscripta.') }
+            catch { setError('No se pudo copiar automáticamente. Seleccioná y copiá el enlace del campo.') }
+          }}>Copiar enlace</button></div>}
+      </> : <p className="admin-context-note">Aún no hay una acreditación con QR vigente. Primero debe confirmarse el pago o aprobarse la excepción y emitirse el QR.</p>}
+      <p className="admin-context-note">El reenvío no modifica el pago ni emite un nuevo QR. {blocked ? 'Terminá o cancelá la edición de datos antes de continuar.' : dirty ? 'Guardá el correo alternativo antes de continuar.' : ''}</p>
     </div>
     <div className="admin-detail-save"><h3>Comprobante de pago pendiente</h3>
       <p className="admin-context-note">Si la persona pagó por transferencia o QR y aún no pudo adjuntar el comprobante, podés reenviarle el aviso o copiar su enlace personal. El mensaje se envía a <strong>{detail.fields.email}</strong>, no al correo alternativo del QR.</p>

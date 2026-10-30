@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { getDb } from './db'
+import { workshopEmailUrl } from './email-link-token'
 
 type Db = ReturnType<typeof getDb>
 const common = { reference: z.string().regex(/^[A-Za-z0-9_-]{10,80}$/), version: z.string().regex(/^[a-f0-9]{32}$/) }
@@ -11,6 +12,7 @@ export const accreditationEmailAction = z.discriminatedUnion('action', [
     alternateEmail: z.union([z.literal(''), z.string().trim().pipe(z.email().max(254))]).transform(value => value.toLowerCase()),
     reason: z.string().trim().min(5).max(500) }).strict(),
   z.object({ ...common, action: z.literal('resend'), requestId: z.uuid(), confirmRecipient: z.literal(true) }).strict(),
+  z.object({ ...common, action: z.literal('link') }).strict(),
 ])
 
 export async function manageAccreditationEmail(db: Db, eventSlug: string, operatorId: string, data: unknown) {
@@ -20,9 +22,10 @@ export async function manageAccreditationEmail(db: Db, eventSlug: string, operat
   return db.transaction(async tx => {
     const workshop = await tx.execute(sql`SELECT w.id FROM workshops w JOIN events e ON e.id=w.event_id WHERE e.slug=${eventSlug} FOR UPDATE OF w`)
     if (!workshop.rows[0]) return { code: 404, body: { error: 'Inscripción no encontrada.' } }
-    const found = await tx.execute(sql`SELECT r.id,r.email,r.accreditation_email,r.status,registration_is_current(r.id) AS current,
+    const found = await tx.execute(sql`SELECT r.id,r.reference,r.creation_key,r.email,r.accreditation_email,r.status,w.starts_at,
+      registration_is_current(r.id) AS current,
       md5(r.updated_at::text || '|' || COALESCE(i.updated_at::text,'')) AS version
-      FROM registrations r LEFT JOIN registration_intakes i ON i.registration_id=r.id
+      FROM registrations r JOIN workshops w ON w.id=r.workshop_id LEFT JOIN registration_intakes i ON i.registration_id=r.id
       WHERE r.reference=${input.reference} AND r.workshop_id=${String(workshop.rows[0].id)} FOR UPDATE OF r`)
     const row = found.rows[0]
     if (!row) return { code: 404, body: { error: 'Inscripción no encontrada.' } }
@@ -45,12 +48,21 @@ export async function manageAccreditationEmail(db: Db, eventSlug: string, operat
         VALUES(${operatorId},'accreditation.email_recipient_updated',${id},${input.reason},${JSON.stringify({ alternateConfigured: !!input.alternateEmail })}::jsonb)`)
       return { code: 200, body: { ok: true } }
     }
-    const credential = await tx.execute(sql`SELECT c.id FROM accreditation_credentials c WHERE c.registration_id=${id}
+    const credential = await tx.execute(sql`SELECT c.id,c.expires_at FROM accreditation_credentials c WHERE c.registration_id=${id}
       AND c.revoked_at IS NULL AND c.expires_at>now() AND ${String(row.status)}='confirmed'
       AND (registration_has_approved_payment(${id}) OR EXISTS(SELECT 1 FROM assistance_requests WHERE registration_id=${id} AND status='approved')
         OR EXISTS(SELECT 1 FROM fee_waivers WHERE registration_id=${id} AND revoked_at IS NULL))
       ORDER BY c.version DESC LIMIT 1`)
-    if (!credential.rows[0]) return { code: 409, body: { error: 'No hay una acreditación vigente para reenviar. Revisá el pago y el QR.' } }
+    if (!credential.rows[0]) return { code: 409, body: { error: 'No hay una acreditación vigente para compartir o reenviar. Revisá el pago y el QR.' } }
+    if (input.action === 'link') {
+      const active = credential.rows[0]
+      const endsAt = new Date(Math.min(new Date(String(active.expires_at)).getTime(), new Date(String(row.starts_at)).getTime() + 3 * 86_400_000))
+      const url = workshopEmailUrl('pass', { id, reference: String(row.reference), creationKey: String(row.creation_key),
+        email: `${row.email}|${row.accreditation_email || ''}`, credentialId: String(active.id) }, endsAt)
+      await tx.execute(sql`INSERT INTO audit_log(actor_id,action,subject_id,reason,changes)
+        VALUES(${operatorId},'accreditation.pass_link_viewed',${id},'Enlace personal consultado desde el panel','{}'::jsonb)`)
+      return { code: 200, body: { ok: true, url } }
+    }
     const pending = await tx.execute(sql`SELECT 1 FROM email_outbox WHERE registration_id=${id} AND kind='accreditation_ready'
       AND status IN ('queued','sending','failed') AND attempt_count<10 LIMIT 1`)
     if (pending.rows.length) return { code: 409, body: { error: 'Ya hay una acreditación pendiente de envío. Esperá su resultado antes de reenviar.' } }

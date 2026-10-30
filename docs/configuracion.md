@@ -40,11 +40,11 @@ El reproductor de YouTube intenta comenzar cuando termina el círculo de apertur
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL privado. En Dokploy debe usar el host `postgres` de la red `vas_workshop_private`. |
 | `WORKSHOP_EVENT_SLUG` | `formacion-catolica-2026` para el taller sembrado. |
-| `SITE_ORIGIN` | Origen HTTPS exacto de la web pública; controla solicitudes del formulario. Solo servicio `app`. |
+| `SITE_ORIGIN` | Origen HTTPS exacto de la web pública; controla solicitudes del formulario en `app` y permite generar enlaces personales de acreditación desde `panel`. |
 | `REGISTRATION_EMAIL_READY` | `0` por defecto; `1` **solo después de verificar entrega SMTP real**. |
 | `MP_CHECKOUT_ENABLED`, `MP_ENVIRONMENT` | `1` habilita crear checkouts si el medio está activo en la base. Entorno explícito `test` o `production`; no mezclarlos. |
 | `MP_ACCESS_TOKEN`, `MP_SELLER_USER_ID`, `MP_APPLICATION_ID` | Credencial del servidor e identidad verificada del vendedor/aplicación. En pruebas, el ID de aplicación de la API puede diferir del panel. |
-| `WORKSHOP_CHECKOUT_TOKEN_KEY` | Secreto aleatorio estable de al menos 32 caracteres para autorizar consultas y reintentos de pago. |
+| `WORKSHOP_CHECKOUT_TOKEN_KEY` | Secreto aleatorio estable de al menos 32 caracteres para autorizar consultas, reintentos de pago y enlaces personales. El servicio `panel` debe usar el mismo valor privado que `app` para copiar enlaces de acreditación. |
 | `MP_WEBHOOK_SECRET`, `MP_PUBLIC_ORIGIN` | Secreto de firma y origen público HTTPS para el retorno. El receptor es `/api/mercado-pago/webhook`; nunca apuntar a localhost. |
 | `WORKSHOP_LOCAL_TEST_MODE` | Excepción solo de desarrollo loopback + `MP_ENVIRONMENT=test` para inscribir localmente sin requerir que el correo SMTP esté habilitado. El formulario guarda datos en PostgreSQL y deja el correo en cola. Permite recorrer la opción de Mercado Pago y registrar un pago pendiente sin credenciales; no crea una orden ni cobra hasta que se configure el proveedor. En producción no se habilita esta excepción. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | DonWeb Correo Profesional: `a0151359.ferozo.com`, puerto `465` con SSL, usuario `contactos@vamosalsantisimo.com`. Para desarrollo, `SMTP_PASS` va en `.env` local (ignorado por Git); al desplegar, cargarlo como variable secreta en Dokploy. |

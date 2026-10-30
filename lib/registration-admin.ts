@@ -46,7 +46,7 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
       WHERE m.registration_id=${id} ORDER BY m.created_at DESC LIMIT 20`),
     db.execute(sql`SELECT l.reason,l.changes,l.created_at,COALESCE(u.name,'Operador') AS operator_name FROM audit_log l
       LEFT JOIN admin_users o ON o.id=l.actor_id LEFT JOIN "user" u ON u.id=o.auth_user_id
-      WHERE l.subject_id=${id} AND l.action IN ('registration.updated','registration.operations_updated','accreditation.email_recipient_updated','accreditation.email_resent','registration.proof_link_viewed','registration.proof_reminder_queued') ORDER BY l.created_at DESC LIMIT 20`),
+      WHERE l.subject_id=${id} AND l.action IN ('registration.updated','registration.operations_updated','accreditation.email_recipient_updated','accreditation.email_resent','accreditation.pass_link_viewed','registration.proof_link_viewed','registration.proof_reminder_queued') ORDER BY l.created_at DESC LIMIT 20`),
     db.execute(sql`SELECT checked_at,last_error_code,request_status FROM email_bounce_sync WHERE id=1`),
     readRegistrationOperations(db,eventSlug,reference),
     db.execute(sql`SELECT EXISTS(SELECT 1 FROM registrations r JOIN LATERAL(
