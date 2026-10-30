@@ -10,6 +10,7 @@ import { getDb } from '../../lib/db'
 import AdminLogin, { SignOut } from './login-form'
 import AssistanceReview, { type PendingAssistance } from './assistance-review'
 import AdminWorkspace from './admin-workspace'
+import { paymentMethodLabel } from '../../lib/payment-method-label'
 import './admin.css'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export const metadata: Metadata = { title: 'Administración local', robots: { in
 type AdminState = { kind: 'login' } | { kind: 'denied' } | { kind: 'unavailable' } | {
   kind: 'dashboard'; events: number; registrations: number; confirmed: number; reviewEnabled: boolean;
   role: 'configuration' | 'registration_operator' | 'admission_operator' | 'unlinked';
-  recent: Array<{ reference: string; name: string; status: string; createdAt: string; historical: boolean }>;
+  recent: Array<{ reference: string; name: string; status: string; createdAt: string; historical: boolean; paymentSource: string | null; paymentDifficulty: boolean }>;
   requests: PendingAssistance[]
 }
 
@@ -50,7 +51,11 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
         .where(and(eq(events.slug, eventSlug), eq(registrations.status, 'confirmed'), sql`registration_is_current(${registrations.id})`))
       : [{ total: 0 }]
     const recent = eventSlug && role !== 'unlinked' ? await db.select({ reference: registrations.reference, name: registrations.name,
-      status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})` }).from(registrations)
+      status: registrations.status, createdAt: registrations.createdAt, historical: sql<boolean>`NOT registration_is_current(${registrations.id})`,
+      paymentSource: sql<string | null>`(SELECT p.source::text FROM payment_attempts p WHERE p.registration_id=${registrations.id}
+        OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=p.id AND a.registration_id=${registrations.id})
+        ORDER BY p.created_at DESC,p.id DESC LIMIT 1)`,
+      paymentDifficulty: sql<boolean>`EXISTS(SELECT 1 FROM registration_intakes i WHERE i.registration_id=${registrations.id} AND i.payment_difficulty)` }).from(registrations)
       .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
       .innerJoin(events, eq(events.id, workshops.eventId)).where(and(eq(events.slug, eventSlug), sql`${registrations.deletedAt} IS NULL AND ${registrations.archivedAt} IS NULL`))
       .orderBy(desc(registrations.createdAt)).limit(8) : []
@@ -106,8 +111,10 @@ export default async function AdminPage() {
       </dl>
       {state.role !== 'unlinked' && <div className="admin-dashboard-grid">
         <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Actividad reciente</p><h2>Últimas inscripciones</h2></div><Link href="/admin/inscripciones">Ver todas →</Link></div>
-          {state.recent.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Persona</th><th>Referencia</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
-            {state.recent.map(item => <tr key={item.reference}><td>{item.name}{item.historical && <small>Ensayo anterior</small>}</td><td><a href={`/admin/acreditacion?reference=${encodeURIComponent(item.reference)}`}>{item.reference}</a></td>
+          {state.recent.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Persona</th><th>Medio de pago elegido</th><th>Referencia</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+            {state.recent.map(item => <tr key={item.reference}><td>{item.name}{item.historical && <small>Ensayo anterior</small>}
+              {state.reviewEnabled && !item.historical && <Link className="button button-outline admin-inline-edit" href={`/admin/inscripciones/${encodeURIComponent(item.reference)}?editar=1`} aria-label={`Editar inscripción de ${item.name}`}>Editar</Link>}</td>
+              <td>{paymentMethodLabel(item.paymentSource, item.paymentDifficulty)}</td><td><a href={`/admin/acreditacion?reference=${encodeURIComponent(item.reference)}`}>{item.reference}</a></td>
               <td>{new Date(item.createdAt).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</td><td><span className={`admin-status admin-status-${item.status}`}>{item.status === 'confirmed' ? 'Confirmada' : item.status === 'pending' ? 'Registrada' : item.status}</span></td></tr>)}</tbody></table></div>
             : <p className="admin-empty">Aún no hay inscripciones para este taller.</p>}
         </section>

@@ -136,6 +136,18 @@ test('registration detail and edits preserve financial history, enforce conflict
       const result = await fetch(origin + query, { headers: { cookie } })
       assert.equal(result.status, 200); assert.match(result.headers.get('cache-control'), /private.*no-store/)
       assert.equal((await fetch(origin + '/admin/inscripciones/' + reference, { headers: { cookie } })).status, 200)
+      const list = await (await fetch(origin + '/admin/inscripciones', { headers: { cookie } })).text()
+      assert.match(list, /Medio de pago elegido/); assert.match(list, /Transferencia \(alias \/ QR\)/)
+      assert.match(list, new RegExp(`/admin/inscripciones/${reference}\\?editar=1`))
+      const editPage = await (await fetch(origin + '/admin/inscripciones/' + reference + '?editar=1', { headers: { cookie } })).text()
+      assert.match(editPage, /Editar datos de inscripción/); assert.match(editPage, /Guardar cambios/)
+      const editableInput = editPage.match(/<input[^>]*id="edit-firstName"[^>]*>/)?.[0]
+      assert.ok(editableInput); assert.doesNotMatch(editableInput, /readonly/)
+      const overview = await (await fetch(origin + '/admin', { headers: { cookie } })).text()
+      assert.match(overview, /Medio de pago elegido/); assert.match(overview, /Transferencia \(alias \/ QR\)/)
+      const proofList = await fetch(origin + '/api/admin/taller/comprobantes', { headers: { cookie } })
+      assert.equal(proofList.status, 200)
+      assert.equal((await proofList.json()).proofs.find(proof => proof.reference === reference).payment_source, 'bank_transfer')
       const payload = { ...input((await result.json()).registration), nickname: 'Corrección desde el panel' }
       const post = (body, change = {}) => fetch(origin + path, { method: 'PATCH', headers: { ...headers, ...change }, body: JSON.stringify(body) })
       assert.equal((await post(payload, { origin: 'https://evil.invalid' })).status, 403)

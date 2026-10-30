@@ -15,7 +15,9 @@ import '../../admin.css'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Ficha de inscripción', robots: { index: false, follow: false } }
 
-export default async function RegistrationPage({ params }: { params: Promise<{ reference: string }> }) {
+export default async function RegistrationPage({ params, searchParams }: {
+  params: Promise<{ reference: string }>; searchParams: Promise<{ editar?: string | string[] }>
+}) {
   if (process.env.APP_SURFACE !== 'panel' || !process.env.DATABASE_URL || !process.env.BETTER_AUTH_URL || !process.env.BETTER_AUTH_SECRET) notFound()
   const { reference } = await params
   if (!/^[A-Za-z0-9_-]{10,80}$/.test(reference)) notFound()
@@ -44,6 +46,6 @@ export default async function RegistrationPage({ params }: { params: Promise<{ r
   if (!registration) notFound()
   return <AdminWorkspace title={registration.name} description="Ficha completa de la inscripción. Podés corregir los datos personales y de contacto."
     section="registrations" role={role} canManageWorkshop>
-    <RegistrationEditor initial={registration} />
+    <RegistrationEditor initial={registration} startEditing={(await searchParams).editar === '1'} />
   </AdminWorkspace>
 }

@@ -2,7 +2,14 @@
 
 La lista del panel muestra teléfono, procedencia, comprobantes adjuntos, estado
 del QR e ingreso, además de los datos previos. El filtro de búsqueda incluye el
-teléfono. “Ver ficha y editar” abre `/admin/inscripciones/[referencia]`.
+teléfono. La columna **Medio de pago elegido** distingue transferencia (alias / QR),
+Mercado Pago, efectivo en el taller, registro manual o solicitud de ayuda. El
+estado del pago figura por separado. **Editar**, junto al nombre y sin desplazar
+la grilla, abre `/admin/inscripciones/[referencia]?editar=1` con el formulario
+habilitado para una inscripción vigente. **Ver ficha** conserva el modo de consulta.
+El resumen del panel y los comprobantes también muestran el medio y un acceso a
+editar. Al consultar una referencia en Pagos y acreditación se muestra su medio
+actual, leído de la ficha privada; cada comprobante identifica su propio intento.
 
 La ficha reúne los datos personales, contacto, procedencia, comunidad, intentos
 de pago, comprobantes, acreditación, estado de correos y últimas correcciones.
@@ -16,6 +23,10 @@ una cuenta administrativa activa, pueden corregir nombre, apellido, D.N.I.,
 nombre del volante, nacimiento, correo, teléfono, país, provincia, localidad,
 grupo/comunidad, movimiento, estado eclesial y ocupación. Es necesario indicar
 el motivo. El rol de admisión no obtiene acceso a esta ficha ni a su API.
+En la ficha, **Medio de pago elegido** está en el resumen superior y **Editar
+inscripción** aparece en la barra de acciones. El medio mostrado es el del
+último intento registrado; el historial conserva los anteriores. Se muestra
+para consulta y no se modifica desde la edición de datos personales.
 
 Cada guardado valida los campos, verifica duplicados y registra operador,
 fecha, motivo y nombres de los campos modificados en `audit_log`. No duplica

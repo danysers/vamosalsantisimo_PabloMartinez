@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const result = await getDb().execute(sql`
       SELECT proof.id,proof.uploaded_at,proof.filename,proof.size_bytes,
         r.reference,r.name,r.status AS registration_status,NOT registration_is_current(r.id) AS historical,
-        p.status AS payment_status,p.amount_minor
+        p.status AS payment_status,p.source AS payment_source,p.amount_minor
       FROM payment_proofs proof
       JOIN payment_attempts p ON p.id=proof.payment_attempt_id
       JOIN registrations r ON r.id=proof.registration_id
