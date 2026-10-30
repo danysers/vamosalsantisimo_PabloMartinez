@@ -82,6 +82,17 @@ test('administrative operations preserve payment facts and enforce owner, replay
       const p=(await pool.query('SELECT p.* FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id WHERE r.reference=$1 AND p.superseded_by_admin IS NULL',[mp])).rows[0]
       assert.equal(p.source,'manual');assert.equal(p.reported_source,'mercado_pago');assert.equal(p.provider_order_id,null);assert.ok(p.manual_verified_by)
     })
+    await t.test('undoing admission requires confirmation and retains the previous entry in the audit',async()=>{
+      const credential=(await pool.query('SELECT id FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[original.registration_id])).rows[0]
+      await pool.query('INSERT INTO check_ins(registration_id,credential_id,scanned_by,entry_point) VALUES($1,$2,$3,\'Prueba local\')',[original.registration_id,credential.id,owner.id])
+      assert.equal((await edit(await payload(ref,{registrationStatus:'cancelled'}))).code,409)
+      const input=await payload(ref,{undoAdmission:true,confirmQrChange:true})
+      assert.equal((await edit(input)).code,200)
+      assert.equal((await read(ref)).admitted,false)
+      const change=(await pool.query('SELECT changes FROM registration_admin_changes WHERE id=$1',[input.requestId])).rows[0]
+      assert.equal(change.changes.before.previousAdmission.entry_point,'Prueba local')
+      assert.ok(change.changes.before.previousAdmission.scanned_at)
+    })
     await t.test('none plus a waiver enables free accreditation; revoke or in-flight mail conflicts roll back',async()=>{
       const free=await enroll(),id=(await pool.query('SELECT id FROM registrations WHERE reference=$1',[free])).rows[0].id
       assert.equal((await edit(await payload(free,{paymentMethod:'none',amountMinor:null,registrationStatus:'confirmed',waiver:'grant',confirmPayment:true}))).code,200)

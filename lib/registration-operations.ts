@@ -133,6 +133,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
       }
       const jobs=await tx.execute(sql`SELECT status FROM email_outbox WHERE registration_id=ANY(${affectedIds}::uuid[]) AND status IN('queued','failed','sending') FOR UPDATE`)
       if(jobs.rows.some(j=>j.status==='sending'))fail(409,'Hay un correo en envío. Reintentá cuando termine.')
+      const previousAdmission=input.undoAdmission?(await tx.execute(sql`SELECT scanned_at,scanned_by,entry_point FROM check_ins WHERE registration_id=${s.id} FOR UPDATE`)).rows[0]||null:null
       if(financial&&p?.source==='mercado_pago'&&p.provider_order_id&&['created','pending','review'].includes(p.status)) {
         const config=mercadoPagoConfig(false)
         assertOrderEnvironment(p.provider_order_id,config.liveMode)
@@ -150,7 +151,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
       const newId=financial&&input.paymentMethod!=='none'?randomUUID():null
       const fields=['estado de inscripción','fecha registrada',...(financial?['medio y estado de pago','importes']:[]),...(input.qrAction!=='keep'?['acreditación']:[]),...(input.waiver!=='keep'?['exención']:[]),...(input.undoAdmission?['ingreso']:[])]
       await tx.execute(sql`INSERT INTO registration_admin_changes(id,registration_id,operator_id,payload_hash,previous_attempt_id,new_attempt_id,reason,changes)
-        VALUES(${input.requestId},${s.id},${operatorId},${hash},${financial?p?.id||null:null},${newId},${input.reason},${JSON.stringify({fields,before:{status:s.status,method,paymentStatus:p?.status,amount:p?.amount_minor,paid:p?.paid_amount_minor,registeredAt:iso(s.registered_at),waived:s.waived,blocked:s.accreditation_blocked,admitted:s.admitted},after:{...input,version:undefined,requestId:undefined,reference:undefined},members:affected.length})}::jsonb)`)
+        VALUES(${input.requestId},${s.id},${operatorId},${hash},${financial?p?.id||null:null},${newId},${input.reason},${JSON.stringify({fields,before:{status:s.status,method,paymentStatus:p?.status,amount:p?.amount_minor,paid:p?.paid_amount_minor,registeredAt:iso(s.registered_at),waived:s.waived,blocked:s.accreditation_blocked,admitted:s.admitted,previousAdmission},after:{...input,version:undefined,requestId:undefined,reference:undefined},members:affected.length})}::jsonb)`)
       if(financial&&p)await tx.execute(sql`UPDATE payment_attempts SET superseded_by_admin=${input.requestId},updated_at=now() WHERE id=${p.id}`)
       if(newId) {
         const source=input.paymentMethod==='mercado_pago'&&!['created','pending'].includes(input.paymentStatus)?'manual':input.paymentMethod
