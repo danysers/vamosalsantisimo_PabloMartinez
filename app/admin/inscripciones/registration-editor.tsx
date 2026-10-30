@@ -11,7 +11,8 @@ const names: Record<string, string> = { pending: 'Pendiente', waiting: 'En esper
   mercado_pago: 'Mercado Pago', bank_transfer: 'Transferencia', on_site: 'Efectivo en el taller', manual: 'Manual',
   queued: 'En cola', sending: 'Enviando', sent: 'Aceptado por el servidor de correo', failed: 'Error de entrega', requested: 'Solicitada', declined: 'Rechazada',
   registration_received: 'Inscripción', payment_instructions: 'Instrucciones de pago', accreditation_ready: 'Acreditación con QR',
-  registration_access: 'Recuperación de acceso', group_payment_notice: 'Pago de grupo', payment_proof_submitted: 'Aviso de comprobante' }
+  registration_access: 'Recuperación de acceso', group_payment_notice: 'Pago de grupo', payment_proof_submitted: 'Aviso de comprobante',
+  assistance_review_request: 'Solicitud de ayuda a la organización', assistance_approved: 'Ayuda aprobada', assistance_declined: 'Respuesta de ayuda' }
 const label = (value: string) => names[value] || value || '—'
 const date = (value: string | null) => value ? new Date(value).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }) : '—'
 const money = (value: number | null) => value == null ? 'A definir' : (value / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })
@@ -115,7 +116,7 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
           {payment.verifiedAt && <div><dt>Verificado</dt><dd>{date(payment.verifiedAt)}</dd></div>}{payment.manualReference && <div><dt>Referencia bancaria / caja</dt><dd>{payment.manualReference}</dd></div>}</dl></article>)}
       <h3>Archivos recibidos</h3>{detail.proofs.length ? <ul>{detail.proofs.map(proof => <li key={proof.id}><a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">{proof.filename || 'Ver comprobante'}</a><small> · {date(proof.uploadedAt)}</small></li>)}</ul> : <p className="admin-empty">No hay comprobantes adjuntos.</p>}
     </section><section className="admin-card"><h2>Correos de la inscripción</h2><p className="admin-context-note">“Aceptado” indica que el servidor de correo lo recibió para enviarlo.</p>
-      {detail.emails.length ? <ul className="admin-detail-history">{detail.emails.map((email, index) => <li key={index}><strong>{label(email.kind)}</strong><span>{label(email.status)}</span><small>{date(email.sentAt || email.createdAt)}</small></li>)}</ul> : <p className="admin-empty">Sin correos registrados.</p>}
+      {detail.emails.length ? <ul className="admin-detail-history">{detail.emails.map((email, index) => <li key={index}><strong>{label(email.kind)}</strong><span>{label(email.status)}</span><small>Para: {email.toEmail}</small><small>{date(email.sentAt || email.createdAt)}</small></li>)}</ul> : <p className="admin-empty">Sin correos registrados.</p>}
       <h3>Historial de correcciones</h3>{detail.history.length ? <ul className="admin-detail-history">{detail.history.map((item, index) => <li key={index}><strong>{item.operator} · {date(item.createdAt)}</strong><span>{item.reason}</span>
         <small>{item.changes.fields?.map(key => personalLabels[key as keyof PersonalFields] || key).join(', ')}</small></li>)}</ul> : <p className="admin-empty">Todavía no hay correcciones.</p>}
     </section></div>

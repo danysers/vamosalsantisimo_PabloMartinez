@@ -38,7 +38,7 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
     db.execute(sql`SELECT (registration_is_current(${id}) AND EXISTS(SELECT 1 FROM registrations WHERE id=${id} AND status='confirmed') AND EXISTS(SELECT 1 FROM accreditation_credentials WHERE registration_id=${id} AND revoked_at IS NULL AND expires_at>now())) AS issued,
       (SELECT scanned_at FROM check_ins WHERE registration_id=${id} LIMIT 1) AS admitted_at,
       (SELECT status FROM assistance_requests WHERE registration_id=${id} LIMIT 1) AS assistance_status`),
-    db.execute(sql`SELECT kind,status,sent_at,created_at,last_error_code FROM email_outbox WHERE registration_id=${id} ORDER BY created_at DESC LIMIT 8`),
+    db.execute(sql`SELECT kind,status,to_email,sent_at,created_at,last_error_code FROM email_outbox WHERE registration_id=${id} ORDER BY created_at DESC LIMIT 8`),
     db.execute(sql`SELECT l.reason,l.changes,l.created_at,COALESCE(u.name,'Operador') AS operator_name FROM audit_log l
       LEFT JOIN admin_users o ON o.id=l.actor_id LEFT JOIN "user" u ON u.id=o.auth_user_id
       WHERE l.subject_id=${id} AND l.action='registration.updated' ORDER BY l.created_at DESC LIMIT 10`),
@@ -54,7 +54,7 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
     proofs: proofs.rows.map(p => ({ id: String(p.id), filename: string(p.filename), uploadedAt: dateString(p.uploaded_at) })),
     credential: { issued: credentials.rows[0]?.issued === true, admittedAt: dateString(credentials.rows[0]?.admitted_at),
       assistanceStatus: string(credentials.rows[0]?.assistance_status) },
-    emails: emails.rows.map(e => ({ kind: String(e.kind), status: String(e.status), sentAt: dateString(e.sent_at), createdAt: dateString(e.created_at) })),
+    emails: emails.rows.map(e => ({ kind: String(e.kind), status: String(e.status), toEmail: String(e.to_email), sentAt: dateString(e.sent_at), createdAt: dateString(e.created_at) })),
     history: history.rows.map(h => ({ reason: string(h.reason), changes: h.changes as { fields?: string[] }, createdAt: dateString(h.created_at), operator: string(h.operator_name) })),
   }
 }

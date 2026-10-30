@@ -21,12 +21,16 @@ test('registration detail and edits preserve financial history, enforce conflict
     ACCREDITATION_TOKEN_KEY: randomBytes(32).toString('base64url') })
   const servers = []
   const origin = 'http://localhost:31751'
+  // This disposable server trusts a simulated proxy. Its client bucket is
+  // separate from auth-login-db, which intentionally exhausts the shared
+  // no-trusted-IP bucket. Production configuration is never changed.
+  const proxyHeaders = { 'x-real-ip': '198.51.100.197' }
   const pause = () => new Promise(resolve => setTimeout(resolve, 100))
   let cookie = ''
   async function start(surface, port) {
     const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', 'localhost', '-p', String(port)], {
       stdio: 'ignore', windowsHide: true, env: { ...process.env, APP_SURFACE: surface, BETTER_AUTH_URL: origin,
-        BETTER_AUTH_SECRET: randomBytes(48).toString('hex'), TRAFFIC_GUARD_ENABLED: '0' },
+        BETTER_AUTH_SECRET: randomBytes(48).toString('hex'), TRAFFIC_GUARD_ENABLED: '0', TRUST_REVERSE_PROXY: '1' },
     })
     servers.push(child)
     for (let i = 0; i < 100; i++) {
@@ -121,10 +125,10 @@ test('registration detail and edits preserve financial history, enforce conflict
       await start('panel', 31751)
       const path = '/api/admin/inscripciones/ficha', query = path + '?reference=' + encodeURIComponent(reference)
       assert.equal((await fetch(origin + query)).status, 401)
-      const login = await fetch(origin + '/api/auth/sign-in/username', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) })
+      const login = await fetch(origin + '/api/auth/sign-in/username', { method: 'POST', headers: { ...proxyHeaders, origin, 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) })
       assert.equal(login.status, 200)
       cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
-      const headers = { origin, cookie, 'content-type': 'application/json' }
+      const headers = { ...proxyHeaders, origin, cookie, 'content-type': 'application/json' }
       const result = await fetch(origin + query, { headers: { cookie } })
       assert.equal(result.status, 200); assert.match(result.headers.get('cache-control'), /private.*no-store/)
       assert.equal((await fetch(origin + '/admin/inscripciones/' + reference, { headers: { cookie } })).status, 200)
