@@ -52,16 +52,38 @@ export async function readWorkshopPricing(db: Db, eventSlug: string) {
   const workshop = found.rows[0] as { id: string; active_lot: number; registration_open: boolean; capacity: number | null;
     lot_automation_enabled: boolean; lot_notification_email: string | null } | undefined
   if (!workshop) return null
-  const [lots, promotions, settings, history] = await Promise.all([
+  const [lots, promotions, settings, history, lotCounts] = await Promise.all([
     db.select({ id: workshopLots.id, number: workshopLots.number, amountMinor: workshopLots.amountMinor,
       advanceAfter: workshopLots.advanceAfter,
-      paidPlaces: sql<number>`workshop_lot_paid_places(${workshop.id},${workshopLots.number})`,
       updatedAt: workshopLots.updatedAt }).from(workshopLots).where(eq(workshopLots.workshopId, workshop.id)).orderBy(workshopLots.number),
     db.select().from(workshopPromotions).where(eq(workshopPromotions.workshopId, workshop.id)).orderBy(workshopPromotions.code),
     db.execute(sql`SELECT transfer_enabled,on_site_enabled,online_service_fee_minor,on_site_price_minor,reminder_email FROM workshop_payment_settings WHERE workshop_id=${workshop.id}`),
     db.execute(sql`SELECT c.id,c.from_lot,c.to_lot,c.threshold,c.paid_places,c.to_email,c.created_at,o.status AS email_status
       FROM workshop_lot_changes c LEFT JOIN email_outbox o ON o.lot_change_id=c.id AND o.kind='lot_changed'
       WHERE c.workshop_id=${workshop.id} ORDER BY c.created_at DESC,c.id DESC LIMIT 10`),
+    // Same eligibility as workshop_lot_paid_places. Deduplicate people before
+    // grouping by source, so the breakdown and total come from one snapshot.
+    db.execute(sql`WITH paid AS (
+      SELECT DISTINCT ON (a.lot_number,r.id) a.lot_number,r.id,p.source
+      FROM registrations r JOIN payment_allocations a ON a.registration_id=r.id JOIN payment_attempts p ON p.id=a.attempt_id
+      WHERE r.workshop_id=${workshop.id} AND r.status='confirmed' AND registration_is_current(r.id)
+        AND p.source IN ('mercado_pago','bank_transfer','manual') AND p.status='approved'
+        AND p.amount_minor IS NOT NULL AND p.paid_amount_minor>=p.amount_minor
+      ORDER BY a.lot_number,r.id,p.created_at DESC,p.id DESC
+    ), cash AS (
+      SELECT DISTINCT a.lot_number,r.id FROM registrations r
+      JOIN payment_allocations a ON a.registration_id=r.id JOIN payment_attempts p ON p.id=a.attempt_id
+      WHERE r.workshop_id=${workshop.id} AND registration_is_current(r.id) AND r.status<>'cancelled'
+        AND p.source='on_site' AND p.status IN ('created','pending','approved')
+    ), places AS (
+      SELECT lot_number,source::text AS source FROM paid UNION ALL SELECT lot_number,'cash_excluded' FROM cash
+    ) SELECT lot_number,
+      count(*) FILTER(WHERE source<>'cash_excluded')::int AS paid_places,
+      count(*) FILTER(WHERE source='bank_transfer')::int AS bank_transfer,
+      count(*) FILTER(WHERE source='mercado_pago')::int AS mercado_pago,
+      count(*) FILTER(WHERE source='manual')::int AS manual,
+      count(*) FILTER(WHERE source='cash_excluded')::int AS excluded_cash
+      FROM places GROUP BY lot_number`),
   ])
   const serviceFeeMinor = Number(settings.rows[0]?.online_service_fee_minor ?? 0)
   return { workshopId: workshop.id, activeLot: workshop.active_lot, registrationOpen: workshop.registration_open,
@@ -72,7 +94,12 @@ export async function readWorkshopPricing(db: Db, eventSlug: string) {
         threshold: Number(row.threshold), paidPlaces: Number(row.paid_places), toEmail: String(row.to_email),
         createdAt: new Date(String(row.created_at)).toISOString(), emailStatus: String(row.email_status ?? 'queued') })) },
     serviceFeeMinor, onSitePriceMinor: settings.rows[0]?.on_site_price_minor == null ? null : Number(settings.rows[0].on_site_price_minor),
-    lots: lots.map(lot => ({ ...lot, serviceFeeMinor, onlineAmountMinor: lot.amountMinor + serviceFeeMinor })),
+    lots: lots.map(lot => {
+      const counts = lotCounts.rows.find(row => Number(row.lot_number) === lot.number)
+      return { ...lot, serviceFeeMinor, onlineAmountMinor: lot.amountMinor + serviceFeeMinor,
+        paidPlaces: Number(counts?.paid_places ?? 0), excludedCash: Number(counts?.excluded_cash ?? 0),
+        paidByMethod: { bankTransfer: Number(counts?.bank_transfer ?? 0), mercadoPago: Number(counts?.mercado_pago ?? 0), manual: Number(counts?.manual ?? 0) } }
+    }),
     promotions: promotions.map(p => ({ ...p, startsAt: p.startsAt?.toISOString() ?? null,
       endsAt: p.endsAt?.toISOString() ?? null, createdAt: p.createdAt.toISOString(), updatedAt: p.updatedAt.toISOString() })),
     paymentMethods: { bankTransfer: settings.rows[0]?.transfer_enabled === true, onSite: settings.rows[0]?.on_site_enabled === true } }

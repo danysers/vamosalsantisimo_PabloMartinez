@@ -142,7 +142,7 @@ test('registration detail and edits preserve financial history, enforce conflict
       const editPage = await (await fetch(origin + '/admin/inscripciones/' + reference + '?editar=1', { headers: { cookie } })).text()
       assert.match(editPage, /Editar datos de inscripción/); assert.match(editPage, /Guardar cambios/)
       const editableInput = editPage.match(/<input[^>]*id="edit-firstName"[^>]*>/)?.[0]
-      assert.ok(editableInput); assert.doesNotMatch(editableInput, /readonly/)
+      assert.ok(editableInput); assert.doesNotMatch(editableInput, /readonly/i)
       const overview = await (await fetch(origin + '/admin', { headers: { cookie } })).text()
       assert.match(overview, /Medio de pago elegido/); assert.match(overview, /Transferencia \(alias \/ QR\)/)
       const proofList = await fetch(origin + '/api/admin/taller/comprobantes', { headers: { cookie } })
