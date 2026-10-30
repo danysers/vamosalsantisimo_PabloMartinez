@@ -59,6 +59,7 @@ test('paid-place thresholds advance lots atomically, preserve quotes and queue r
     assert.equal(after.lotAutomation.history.length, 1)
     assert.equal(after.lotAutomation.history[0].emailStatus, 'queued')
     assert.equal(after.lots[0].paidPlaces, 2)
+    assert.deepEqual(after.lots[0].paidByMethod, { bankTransfer: 2, mercadoPago: 0, manual: 0 })
     const oldAllocation = (await pool.query(`SELECT a.base_amount_minor FROM payment_allocations a
       JOIN registrations r ON r.id=a.registration_id WHERE r.reference=$1`, [oldPending.body.reference])).rows[0]
     assert.equal(oldAllocation.base_amount_minor, 1_000_000, 'already issued quotes are frozen')
@@ -71,6 +72,14 @@ test('paid-place thresholds advance lots atomically, preserve quotes and queue r
     const onsite = await enrollWorkshop({ ...person(), paymentMethod: 'on_site' }); assert.equal(onsite.code, 201)
     assert.equal((await approve(onsite.body.reference)).code, 200)
     assert.equal(await count(2), 0, 'ventanilla payments do not consume lots')
+    const secondCash = await enrollWorkshop({ ...person(), paymentMethod: 'on_site' }); assert.equal(secondCash.code, 201)
+    let cashCount = (await admin.readWorkshopPricing(db, slug)).lots.find(lot => lot.number === 2)
+    assert.equal(cashCount.excludedCash, 2, 'pending and confirmed cash are explicitly shown as excluded')
+    assert.equal((await approve(secondCash.body.reference)).code, 200)
+    assert.equal(await count(2), 0); assert.equal(await active(), 2, 'two confirmed cash payments cannot advance a lot')
+    cashCount = (await admin.readWorkshopPricing(db, slug)).lots.find(lot => lot.number === 2)
+    assert.equal(cashCount.paidPlaces, await count(2), 'the displayed count matches the actual automatic transition rule')
+    assert.deepEqual(cashCount.paidByMethod, { bankTransfer: 0, mercadoPago: 0, manual: 0 }); assert.equal(cashCount.excludedCash, 2)
     const secondLot = await enrollWorkshop(person()); assert.equal(secondLot.body.amountMinor, 1_500_000)
     assert.equal((await config(false)).code, 200)
     assert.equal((await approve(secondLot.body.reference)).code, 200)

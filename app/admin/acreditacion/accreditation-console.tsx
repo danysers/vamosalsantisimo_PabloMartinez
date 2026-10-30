@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import Link from 'next/link'
+import { paymentMethodLabel } from '../../../lib/payment-method-label'
 
 type ScanResult = { result?: string; name?: string; reference?: string; error?: string; firstEntryAt?: string }
 type ProofRow = { id: string; uploaded_at: string; reference: string; name: string;
-  registration_status: string; payment_status: string; amount_minor: number; filename: string; historical?: boolean }
+  registration_status: string; payment_status: string; payment_source: string; amount_minor: number; filename: string; historical?: boolean }
 const registrationLabel = (status: string) => status === 'confirmed' ? 'Confirmada' : status === 'pending' ? 'Registrada' : status
 const paymentLabel = (status: string) => status === 'approved' ? 'Pagado' : status === 'pending' ? 'Pendiente de confirmación' : status
 
@@ -16,6 +18,7 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
   const [paymentBusy, setPaymentBusy] = useState(false)
   const [proofs, setProofs] = useState<ProofRow[]>([])
   const [proofsError, setProofsError] = useState('')
+  const [paymentSelection, setPaymentSelection] = useState<{ reference: string; source: string | null; difficulty: boolean; error: boolean } | null>(null)
   const [qrValue, setQrValue] = useState('')
   const [entryPoint, setEntryPoint] = useState('Ingreso principal')
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
@@ -29,6 +32,25 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
     if (canVerify) void loadProofs()
     return () => { controls.current?.stop() }
   }, [canVerify])
+
+  useEffect(() => {
+    const value = reference.trim()
+    if (!canVerify || !/^[A-Za-z0-9_-]{10,80}$/.test(value)) return
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/admin/inscripciones/ficha?reference=' + encodeURIComponent(value), {
+          credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+        })
+        if (!response.ok) throw Error('unavailable')
+        const { registration } = await response.json()
+        if (!controller.signal.aborted) setPaymentSelection({ reference: value, source: registration.payments[0]?.source || null, difficulty: registration.paymentDifficulty, error: false })
+      } catch {
+        if (!controller.signal.aborted) setPaymentSelection({ reference: value, source: null, difficulty: false, error: true })
+      }
+    }, 300)
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [reference, canVerify])
 
   async function loadProofs() {
     try {
@@ -103,6 +125,8 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
   function stopCamera() { controls.current?.stop(); controls.current = null; setCameraOn(false) }
   function onManualScan(event: FormEvent) { event.preventDefault(); void submitQr(qrValue) }
   const printable = /^[A-Za-z0-9_-]{6,80}$/.test(reference.trim())
+  const validReference = /^[A-Za-z0-9_-]{10,80}$/.test(reference.trim())
+  const selected = paymentSelection?.reference === reference.trim() ? paymentSelection : null
 
   return <>
     {canVerify && <section className="admin-accreditation-block" id="comprobantes" aria-labelledby="proofs-title">
@@ -115,7 +139,9 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
         <strong>{proof.name}</strong><span> · {proof.reference} · {new Date(proof.uploaded_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</span>
         {proof.historical && <p><strong>Ensayo anterior · conservado para consulta</strong></p>}
         <p>Inscripción: {registrationLabel(proof.registration_status)} · Pago: {paymentLabel(proof.payment_status)} · Importe: ${(proof.amount_minor / 100).toLocaleString('es-AR')}</p>
+        <p><strong>Medio de pago del comprobante: {paymentMethodLabel(proof.payment_source)}</strong></p>
         <a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">Ver comprobante</a>
+        <Link className="button button-outline admin-inline-edit" href={`/admin/inscripciones/${encodeURIComponent(proof.reference)}${proof.historical ? '' : '?editar=1'}`}>{proof.historical ? 'Ver ficha de inscripción' : 'Editar inscripción'}</Link>
         {proof.payment_status === 'pending' && !proof.historical && <button type="button" className="button button-outline" onClick={() => { setReference(proof.reference); setNote(''); document.getElementById('payment-title')?.scrollIntoView({ behavior: 'smooth' }) }}>Revisar pago</button>}
       </article>)}</div>
     </section>}
@@ -123,6 +149,8 @@ export default function AccreditationConsole({ canVerify, scanEnabled, initialRe
       <h2 id="payment-title">Verificar pago y emitir volante</h2>
       <p>Solo confirmá una transferencia después de verificarla, o efectivo después de cobrarlo en el taller. El efectivo usa el precio de ventanilla, no lotes ni promociones; si todavía está a definir, el sistema no permite marcarlo como pagado. La aprobación de una excepción emite el QR automáticamente.</p>
       <label>Referencia de inscripción<input value={reference} onChange={event => setReference(event.target.value)} maxLength={80} autoComplete="off" /></label>
+      {validReference && <p className="admin-operator-notice"><strong>Medio de pago elegido: </strong>{selected ? selected.error ? 'No pudimos consultarlo. Abrí la ficha para revisar.' : paymentMethodLabel(selected.source, selected.difficulty) : 'Consultando…'}</p>}
+      {validReference && <Link className="button button-outline" href={`/admin/inscripciones/${encodeURIComponent(reference.trim())}?editar=1`}>Editar inscripción</Link>}
       <label>Nota interna de verificación<textarea value={note} onChange={event => setNote(event.target.value)} rows={2} maxLength={1000} placeholder="Ej.: comprobante revisado o efectivo recibido" /></label>
       <label>Referencia bancaria o de caja (opcional)<input value={manualReference} onChange={event => setManualReference(event.target.value)} maxLength={120} /></label>
       <div className="admin-accreditation-actions">

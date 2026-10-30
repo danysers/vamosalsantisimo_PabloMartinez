@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import SettlementPlanner from './settlement-planner'
-import LotAutomation, { type LotAutomationSettings } from './lot-automation'
+import LotAutomation, { type LotAutomationSettings, type LotCount } from './lot-automation'
 
-type Lot = { id: string; number: number; amountMinor: number; serviceFeeMinor: number; onlineAmountMinor: number;
-  advanceAfter: number | null; paidPlaces: number }
+type Lot = LotCount & { id: string; amountMinor: number; serviceFeeMinor: number; onlineAmountMinor: number }
 type Promo = { id: string; code: string; kind: 'bundle' | 'group_fixed'; active: boolean;
   bundleSize: number | null; payablePeople: number | null; minPeople: number | null; maxPeople: number | null;
   groupTotalMinor: number | null; startsAt: string | null; endsAt: string | null; updatedAt: string }

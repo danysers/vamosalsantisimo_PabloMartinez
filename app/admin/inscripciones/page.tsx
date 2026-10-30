@@ -9,6 +9,7 @@ import { getDb } from '../../../lib/db'
 import { adminUsers } from '../../../lib/schema'
 import AdminWorkspace from '../admin-workspace'
 import RegistrationDeleteAction from './registration-delete-action'
+import { paymentMethodLabel } from '../../../lib/payment-method-label'
 import '../admin.css'
 
 export const dynamic = 'force-dynamic'
@@ -21,12 +22,9 @@ const statusNames: Record<string, string> = {
   created: 'Iniciado', approved: 'Pagado', rejected: 'Rechazado', refunded: 'Reintegrado', partially_refunded: 'Reintegro parcial',
   charged_back: 'Revertido', none: 'Sin intento',
 }
-const sourceNames: Record<string, string> = {
-  mercado_pago: 'Mercado Pago', bank_transfer: 'Transferencia', on_site: 'En el taller', manual: 'Manual',
-}
 type Row = { reference: string; name: string; email: string; document_number: string | null; registration_status: string;
   phone: string; nickname: string | null; country: string | null; province: string | null; locality: string | null;
-  qr_issued: boolean; admitted_at: Date | string | null; has_proof: boolean; email_bounced: boolean;
+  qr_issued: boolean; admitted_at: Date | string | null; has_proof: boolean; email_bounced: boolean; payment_difficulty: boolean;
   created_at: Date | string; payment_status: string | null; payment_source: string | null; amount_minor: number | null;
   member_count: number | null; historical: boolean; deleted_at: Date | string | null; archived_at: Date | string | null }
 
@@ -100,7 +98,7 @@ export default async function RegistrationsPage({ searchParams }: {
     const counts = await db.execute(sql`SELECT COUNT(*)::integer AS total ${from} WHERE ${criteria}`)
     total = Number(counts.rows[0]?.total ?? 0)
     currentPage = Math.min(page, Math.max(1, Math.ceil(total / 25)))
-    const result = await db.execute(sql`SELECT r.reference, r.name, r.email, r.phone,i.nickname,i.country,i.province,i.locality, i.document_number, r.deleted_at, r.archived_at, NOT registration_is_live(r.id) AS historical,
+    const result = await db.execute(sql`SELECT r.reference, r.name, r.email, r.phone,i.nickname,i.country,i.province,i.locality, i.document_number,i.payment_difficulty, r.deleted_at, r.archived_at, NOT registration_is_live(r.id) AS historical,
       (registration_is_current(r.id) AND r.status='confirmed' AND EXISTS(SELECT 1 FROM accreditation_credentials c WHERE c.registration_id=r.id AND c.revoked_at IS NULL AND c.expires_at>now())) AS qr_issued,
       (SELECT scanned_at FROM check_ins c WHERE c.registration_id=r.id LIMIT 1) AS admitted_at,
       EXISTS(SELECT 1 FROM payment_proofs proof WHERE proof.registration_id=r.id) AS has_proof,
@@ -138,15 +136,18 @@ export default async function RegistrationsPage({ searchParams }: {
     </form>
     <section className="admin-card" aria-label="Resultados de inscripciones"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Base del taller</p><h2>{total} {archived ? (total === 1 ? 'registro archivado' : 'registros archivados') : deleted ? (total === 1 ? 'registro eliminado' : 'registros eliminados') : total === 1 ? 'inscripción' : 'inscripciones'}</h2></div><span>25 por página</span></div>
       {rows.length > 0 && <p className="admin-context-note">{role !== 'admission_operator' ? 'Hacé clic en el nombre para abrir su ficha. ' : ''}Podés desplazar la grilla hacia los costados para ver todas las columnas.</p>}
-      {rows.length ? <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="Grilla de inscripciones; desplazá horizontalmente para ver todas las columnas"><table className="admin-table admin-registration-table"><thead><tr><th>Persona</th><th>D.N.I</th><th>Contacto y procedencia</th><th>Inscripción</th><th>Pago</th><th>Importe</th><th>Acreditación</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>
-        {rows.map(row => <tr key={row.reference}><td><strong>{role !== 'admission_operator' ? <Link href={`/admin/inscripciones/${encodeURIComponent(row.reference)}`}>{row.name}</Link> : row.name}</strong><small>{row.email}</small>{row.nickname && <small>Volante: {row.nickname}</small>}{row.historical && <small>Ensayo anterior · conservado para consulta</small>}</td><td>{row.document_number ?? '—'}</td>
-          <td><span>{row.phone || '—'}</span><small>{[row.locality,row.province,row.country].filter(Boolean).join(' · ') || 'Procedencia sin informar'}</small></td>
+      {rows.length ? <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="Grilla de inscripciones; desplazá horizontalmente para ver todas las columnas"><table className="admin-table admin-registration-table"><thead><tr><th>Persona</th><th>Medio de pago elegido</th><th>D.N.I</th><th>Contacto y procedencia</th><th>Inscripción</th><th>Estado del pago</th><th>Importe</th><th>Acreditación</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>
+        {rows.map(row => <tr key={row.reference}><td><strong>{role !== 'admission_operator' ? <Link href={`/admin/inscripciones/${encodeURIComponent(row.reference)}`}>{row.name}</Link> : row.name}</strong><small>{row.email}</small>{row.nickname && <small>Volante: {row.nickname}</small>}{row.historical && <small>Ensayo anterior · conservado para consulta</small>}
+          <small className="admin-mobile-payment">Medio: {paymentMethodLabel(row.payment_source, row.payment_difficulty)}</small>
+          {role !== 'admission_operator' && !deleted && !archived && !row.historical && <Link className="button button-outline admin-inline-edit" href={`/admin/inscripciones/${encodeURIComponent(row.reference)}?editar=1`} aria-label={`Editar inscripción de ${row.name}`}>Editar</Link>}</td>
+          <td><strong>{paymentMethodLabel(row.payment_source, row.payment_difficulty)}</strong>{Number(row.member_count) > 1 && <small>Pago grupal</small>}</td><td>{row.document_number ?? '—'}</td>
+          <td className="admin-registration-contact"><span>{row.phone || '—'}</span><small>{[row.locality,row.province,row.country].filter(Boolean).join(' · ') || 'Procedencia sin informar'}</small></td>
           <td><span className={`admin-status admin-status-${row.deleted_at ? 'cancelled' : row.archived_at ? 'archived' : row.registration_status}`}>{row.deleted_at ? 'Eliminada' : row.archived_at ? 'Archivada' : label(row.registration_status)}</span></td>
-          <td><span className={`admin-status admin-status-${row.payment_status ?? 'none'}`}>{row.payment_status === 'pending' ? 'Pendiente' : label(row.payment_status ?? 'none')}</span><small>{row.payment_source ? `${sourceNames[row.payment_source] ?? row.payment_source}${Number(row.member_count) > 1 ? ' · Grupo' : ''}` : ''}</small>{row.has_proof && <small>Comprobante adjunto</small>}</td>
+          <td><span className={`admin-status admin-status-${row.payment_status ?? 'none'}`}>{row.payment_status === 'pending' ? 'Pendiente' : label(row.payment_status ?? 'none')}</span>{row.has_proof && <small>Comprobante adjunto</small>}</td>
           <td>{row.amount_minor == null ? 'A definir' : (row.amount_minor / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
           <td><span>{row.admitted_at ? 'Ya ingresó' : row.qr_issued ? 'QR emitido' : 'Sin QR'}</span>{row.email_bounced && <small className="admin-status admin-status-rejected">Correo rebotado</small>}{row.admitted_at && <small>{new Date(row.admitted_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</small>}</td>
           <td><time dateTime={new Date(row.created_at).toISOString()}>{new Date(row.created_at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}<small>{new Date(row.created_at).toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit' })}</small></time></td>
-          <td>{role !== 'admission_operator' && <Link className="admin-edit-link" href={`/admin/inscripciones/${encodeURIComponent(row.reference)}`}>{!deleted && !archived && !row.historical ? 'Ver ficha y editar →' : 'Ver ficha →'}</Link>}
+          <td>{role !== 'admission_operator' && <Link className="admin-edit-link" href={`/admin/inscripciones/${encodeURIComponent(row.reference)}`}>Ver ficha →</Link>}
             {!deleted && !archived && <Link className="admin-text-action" href={`/admin/acreditacion?reference=${encodeURIComponent(row.reference)}`}>Pagos y QR</Link>}
             {role !== 'admission_operator' && <RegistrationDeleteAction reference={row.reference} name={row.name} deleted={!!row.deleted_at} archived={!!row.archived_at} />}
             <small>{row.reference}</small></td></tr>)}</tbody></table></div>

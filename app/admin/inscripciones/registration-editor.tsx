@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import type { AdminRegistration } from '../../../lib/registration-admin'
 import { ecclesialOptions, personalLabels, type PersonalFields } from '../../../lib/registration-edit-policy'
 import AccreditationEmailControls from './accreditation-email-controls'
+import { paymentMethodLabel } from '../../../lib/payment-method-label'
 
 const names: Record<string, string> = { pending: 'Pendiente', waiting: 'En espera', confirmed: 'Confirmada', review: 'En revisión', cancelled: 'Cancelada',
   created: 'Iniciado', approved: 'Aprobado', rejected: 'Rechazado', refunded: 'Reintegrado', partially_refunded: 'Reintegro parcial', charged_back: 'Revertido',
@@ -26,11 +27,11 @@ const groups: { title: string; fields: (keyof PersonalFields)[] }[] = [
   { title: 'Comunidad y actividad', fields: ['prayerGroup', 'movement', 'ecclesialState', 'occupation'] },
 ]
 
-export default function RegistrationEditor({ initial }: { initial: AdminRegistration }) {
+export default function RegistrationEditor({ initial, startEditing = false }: { initial: AdminRegistration; startEditing?: boolean }) {
   const router = useRouter()
   const [detail, setDetail] = useState(initial)
   const [fields, setFields] = useState(initial.fields)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(startEditing && initial.editable)
   const [busy, setBusy] = useState(false)
   const [emailBusy, setEmailBusy] = useState(false)
   const [reason, setReason] = useState('')
@@ -77,13 +78,15 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
 
   return <div className="admin-registration-detail">
     <div className="admin-detail-toolbar"><Link href="/admin/inscripciones">← Volver a inscripciones</Link>
-      <Link className="button button-outline" href={`/admin/acreditacion?reference=${encodeURIComponent(detail.reference)}`}>Pagos y acreditación</Link></div>
+      <div className="admin-accreditation-actions">{!editing && detail.editable && <button className="button button-gold" disabled={busy || emailBusy || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar inscripción</button>}
+        <Link className="button button-outline" href={`/admin/acreditacion?reference=${encodeURIComponent(detail.reference)}`}>Pagos y acreditación</Link></div></div>
     <section className="admin-card admin-detail-summary"><div><span>Referencia</span><strong>{detail.reference}</strong></div>
       <div><span>Inscripción</span><strong>{detail.deleted ? 'Eliminada' : detail.archived ? 'Archivada' : label(detail.status)}</strong></div>
+      <div><span>Medio de pago elegido</span><strong>{paymentMethodLabel(detail.payments[0]?.source, detail.paymentDifficulty)}</strong></div>
+      <div><span>Estado del pago</span><strong>{detail.payments.length ? label(detail.payments[0].status) : 'Sin pago registrado'}</strong></div>
       <div><span>Registrada</span><strong>{date(detail.createdAt)}</strong></div>
       <div><span>Acreditación</span><strong>{detail.credential.admittedAt ? 'Ya ingresó · ' + date(detail.credential.admittedAt) : detail.credential.issued ? 'QR emitido' : 'Sin QR vigente'}</strong></div></section>
-    <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Ficha de la persona</p><h2>Datos de inscripción</h2></div>
-      {!editing && detail.editable && <button className="button button-gold" disabled={busy || emailBusy || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar datos</button>}</div>
+    <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Ficha de la persona</p><h2>{editing ? 'Editar datos de inscripción' : 'Datos de inscripción'}</h2></div></div>
       {!detail.editable && <p className="admin-operator-notice">{detail.archived || detail.deleted
         ? 'Para editar esta inscripción, recuperala primero desde Archivadas o Eliminadas en la lista.'
         : 'Este registro pertenece a una etapa anterior o no tiene el formulario completo. Se conserva para consulta.'}</p>}
@@ -114,7 +117,7 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
     <div className="admin-detail-columns"><section className="admin-card"><h2>Pagos y comprobantes</h2>
       {detail.paymentDifficulty && <p className="admin-operator-notice">Solicitó ayuda para pagar · {label(detail.credential.assistanceStatus)}<br />{detail.paymentDifficultyNotes}</p>}
       {!detail.payments.length && <p className="admin-empty">Sin intentos de pago.</p>}
-      {detail.payments.map(payment => <article className="admin-detail-payment" key={payment.id}><strong>{label(payment.source)} · {label(payment.status)}</strong>
+      {detail.payments.map(payment => <article className="admin-detail-payment" key={payment.id}><strong>Medio de pago: {paymentMethodLabel(payment.source)} · {label(payment.status)}</strong>
         <dl><div><dt>Importe de esta persona</dt><dd>{money(payment.amountMinor)}</dd></div>
           {payment.members > 1 && <><div><dt>Grupo</dt><dd>{payment.members} personas</dd></div><div><dt>Total de la operación</dt><dd>{money(payment.transactionAmountMinor)}</dd></div></>}
           <div><dt>Pagado en la operación</dt><dd>{money(payment.paidAmountMinor)}</dd></div><div><dt>Creado</dt><dd>{date(payment.createdAt)}</dd></div>

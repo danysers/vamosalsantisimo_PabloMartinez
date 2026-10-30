@@ -7,10 +7,11 @@ export type LotAutomationSettings = {
   history: Array<{ id: string; fromLot: number; toLot: number; threshold: number; paidPlaces: number;
     toEmail: string; createdAt: string; emailStatus: string }>
 }
-type Lot = { number: number; advanceAfter: number | null; paidPlaces: number }
+export type LotCount = { number: number; advanceAfter: number | null; paidPlaces: number; excludedCash: number;
+  paidByMethod: { bankTransfer: number; mercadoPago: number; manual: number } }
 
 export default function LotAutomation({ settings, lots, canConfigure, onSaved }: {
-  settings: LotAutomationSettings; lots: Lot[]; canConfigure: boolean; onSaved: () => Promise<void>
+  settings: LotAutomationSettings; lots: LotCount[]; canConfigure: boolean; onSaved: () => Promise<void>
 }) {
   const [enabled, setEnabled] = useState(settings.enabled)
   const [email, setEmail] = useState(settings.notificationEmail)
@@ -44,18 +45,24 @@ export default function LotAutomation({ settings, lots, canConfigure, onSaved }:
     <h3>Cambio automático y aviso por correo</h3>
     <p>Cuando un lote alcanza su límite de lugares con pago confirmado, se activa el siguiente y se envía un aviso.
       Cada integrante de un grupo pagado cuenta como un lugar. Los pendientes, las ayudas, los registros históricos
-      de prueba y el efectivo a precio de ventanilla quedan fuera del conteo.</p>
+      de prueba quedan fuera del conteo. <strong>El efectivo a precio de ventanilla nunca suma al cambio de lote,
+      aunque el pago se confirme.</strong></p>
     <form onSubmit={save}>
       <label className="admin-check"><input type="checkbox" disabled={!canConfigure || busy}
         checked={enabled} onChange={event => setEnabled(event.target.checked)} /> Activar cambio automático de lote</label>
       <div className="admin-form-grid">
-        {[1, 2].map(number => <label key={number}>Lote {number} → lote {number + 1} · límite de lugares pagados
+        {[1, 2].map(number => {
+          const lot = lots.find(lot => lot.number === number)
+          return <label key={number}>Lote {number} → lote {number + 1} · límite de lugares pagados sin efectivo
           <input type="number" min="1" max="1000000" step="1" inputMode="numeric" disabled={!canConfigure || busy}
             value={limits[number] ?? ''} placeholder="Sin cambio automático"
             onChange={event => setLimits(current => ({ ...current, [number]: event.target.value }))} />
-          <small>Confirmados en este lote: <strong>{lots.find(lot => lot.number === number)?.paidPlaces ?? 0}</strong>.
-            Dejá vacío para detener el avance automático en este lote.</small>
-        </label>)}
+          <small>Pagados que cuentan en este lote: <strong>{lot?.paidPlaces ?? 0}</strong>.</small>
+          <small>Transferencia: <strong>{lot?.paidByMethod?.bankTransfer ?? 0}</strong> · Mercado Pago: <strong>{lot?.paidByMethod?.mercadoPago ?? 0}</strong>
+            {!!lot?.paidByMethod?.manual && <> · Registro manual: <strong>{lot.paidByMethod.manual}</strong></>}</small>
+          <small><strong>Efectivo excluido: {lot?.excludedCash ?? 0}</strong> (pendiente o confirmado; no suma al lote).</small>
+          <small>Dejá vacío para detener el avance automático en este lote.</small>
+        </label>})}
         <label>Correo que recibe el aviso<input type="email" maxLength={254} required={enabled}
           autoComplete="email" disabled={!canConfigure || busy} value={email} onChange={event => setEmail(event.target.value)} /></label>
       </div>
