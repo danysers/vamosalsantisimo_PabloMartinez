@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { AdminRegistration } from '../../../lib/registration-admin'
 import { ecclesialOptions, personalLabels, type PersonalFields } from '../../../lib/registration-edit-policy'
+import AccreditationEmailControls from './accreditation-email-controls'
 
 const names: Record<string, string> = { pending: 'Pendiente', waiting: 'En espera', confirmed: 'Confirmada', review: 'En revisión', cancelled: 'Cancelada',
   created: 'Iniciado', approved: 'Aprobado', rejected: 'Rechazado', refunded: 'Reintegrado', partially_refunded: 'Reintegro parcial', charged_back: 'Revertido',
@@ -31,6 +32,7 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
   const [fields, setFields] = useState(initial.fields)
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [emailBusy, setEmailBusy] = useState(false)
   const [reason, setReason] = useState('')
   const [emailConfirmed, setEmailConfirmed] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +40,13 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
   const [reloadRequired, setReloadRequired] = useState(false)
   const dirty = JSON.stringify(fields) !== JSON.stringify(detail.fields)
   const emailChanged = fields.email.trim().toLowerCase() !== detail.fields.email.trim().toLowerCase()
+  async function refreshDetail() {
+    const fresh = await fetch('/api/admin/inscripciones/ficha?reference=' + encodeURIComponent(detail.reference), { credentials: 'same-origin', cache: 'no-store' })
+    if (!fresh.ok) throw Error('refresh')
+    const data = await fresh.json()
+    setDetail(data.registration); setFields(data.registration.fields)
+    router.refresh()
+  }
   useEffect(() => {
     if (!editing || !dirty) return
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -59,11 +68,7 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
       saved = true
       setEditing(false); setReason(''); setEmailConfirmed(false)
       setMessage('Cambios guardados. La corrección quedó registrada con tu usuario.')
-      const fresh = await fetch('/api/admin/inscripciones/ficha?reference=' + encodeURIComponent(detail.reference), { credentials: 'same-origin', cache: 'no-store' })
-      if (!fresh.ok) throw Error('refresh')
-      const data = await fresh.json()
-      setDetail(data.registration); setFields(data.registration.fields)
-      router.refresh()
+      await refreshDetail()
     } catch {
       setError(saved ? 'La corrección se guardó. Recargá la ficha para ver el estado actualizado.' : 'No pudimos confirmar el guardado. Recargá la ficha antes de reintentar.')
       setReloadRequired(true)
@@ -78,7 +83,7 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
       <div><span>Registrada</span><strong>{date(detail.createdAt)}</strong></div>
       <div><span>Acreditación</span><strong>{detail.credential.admittedAt ? 'Ya ingresó · ' + date(detail.credential.admittedAt) : detail.credential.issued ? 'QR emitido' : 'Sin QR vigente'}</strong></div></section>
     <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Ficha de la persona</p><h2>Datos de inscripción</h2></div>
-      {!editing && detail.editable && <button className="button button-gold" disabled={busy || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar datos</button>}</div>
+      {!editing && detail.editable && <button className="button button-gold" disabled={busy || emailBusy || reloadRequired} onClick={() => { setEditing(true); setError(''); setMessage('') }}>Editar datos</button>}</div>
       {!detail.editable && <p className="admin-operator-notice">{detail.archived || detail.deleted
         ? 'Para editar esta inscripción, recuperala primero desde Archivadas o Eliminadas en la lista.'
         : 'Este registro pertenece a una etapa anterior o no tiene el formulario completo. Se conserva para consulta.'}</p>}
@@ -115,9 +120,8 @@ export default function RegistrationEditor({ initial }: { initial: AdminRegistra
           <div><dt>Pagado en la operación</dt><dd>{money(payment.paidAmountMinor)}</dd></div><div><dt>Creado</dt><dd>{date(payment.createdAt)}</dd></div>
           {payment.verifiedAt && <div><dt>Verificado</dt><dd>{date(payment.verifiedAt)}</dd></div>}{payment.manualReference && <div><dt>Referencia bancaria / caja</dt><dd>{payment.manualReference}</dd></div>}</dl></article>)}
       <h3>Archivos recibidos</h3>{detail.proofs.length ? <ul>{detail.proofs.map(proof => <li key={proof.id}><a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">{proof.filename || 'Ver comprobante'}</a><small> · {date(proof.uploadedAt)}</small></li>)}</ul> : <p className="admin-empty">No hay comprobantes adjuntos.</p>}
-    </section><section className="admin-card"><h2>Correos de la inscripción</h2><p className="admin-context-note">“Aceptado” indica que el servidor de correo lo recibió para enviarlo.</p>
-      {detail.emails.length ? <ul className="admin-detail-history">{detail.emails.map((email, index) => <li key={index}><strong>{label(email.kind)}</strong><span>{label(email.status)}</span><small>Para: {email.toEmail}</small><small>{date(email.sentAt || email.createdAt)}</small></li>)}</ul> : <p className="admin-empty">Sin correos registrados.</p>}
-      <h3>Historial de correcciones</h3>{detail.history.length ? <ul className="admin-detail-history">{detail.history.map((item, index) => <li key={index}><strong>{item.operator} · {date(item.createdAt)}</strong><span>{item.reason}</span>
+    </section><section className="admin-card"><AccreditationEmailControls detail={detail} blocked={editing || busy || reloadRequired} refresh={refreshDetail} onBusy={setEmailBusy} />
+      <h3>Historial de cambios y envíos</h3>{detail.history.length ? <ul className="admin-detail-history">{detail.history.map((item, index) => <li key={index}><strong>{item.operator} · {date(item.createdAt)}</strong><span>{item.reason}</span>
         <small>{item.changes.fields?.map(key => personalLabels[key as keyof PersonalFields] || key).join(', ')}</small></li>)}</ul> : <p className="admin-empty">Todavía no hay correcciones.</p>}
     </section></div>
   </div>

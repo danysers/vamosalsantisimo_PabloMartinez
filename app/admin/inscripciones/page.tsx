@@ -26,7 +26,7 @@ const sourceNames: Record<string, string> = {
 }
 type Row = { reference: string; name: string; email: string; document_number: string | null; registration_status: string;
   phone: string; nickname: string | null; country: string | null; province: string | null; locality: string | null;
-  qr_issued: boolean; admitted_at: Date | string | null; has_proof: boolean;
+  qr_issued: boolean; admitted_at: Date | string | null; has_proof: boolean; email_bounced: boolean;
   created_at: Date | string; payment_status: string | null; payment_source: string | null; amount_minor: number | null;
   member_count: number | null; historical: boolean; deleted_at: Date | string | null; archived_at: Date | string | null }
 
@@ -104,6 +104,8 @@ export default async function RegistrationsPage({ searchParams }: {
       (registration_is_current(r.id) AND r.status='confirmed' AND EXISTS(SELECT 1 FROM accreditation_credentials c WHERE c.registration_id=r.id AND c.revoked_at IS NULL AND c.expires_at>now())) AS qr_issued,
       (SELECT scanned_at FROM check_ins c WHERE c.registration_id=r.id LIMIT 1) AS admitted_at,
       EXISTS(SELECT 1 FROM payment_proofs proof WHERE proof.registration_id=r.id) AS has_proof,
+      EXISTS(SELECT 1 FROM email_delivery_reports d WHERE d.email_id=(SELECT m.id FROM email_outbox m
+        WHERE m.registration_id=r.id AND m.kind='accreditation_ready' ORDER BY m.created_at DESC LIMIT 1) AND d.action='failed') AS email_bounced,
       r.status AS registration_status, r.created_at, p.status AS payment_status,
       p.source AS payment_source, p.amount_minor, p.member_count ${from} WHERE ${criteria}
       ORDER BY r.created_at DESC, r.id DESC LIMIT 25 OFFSET ${(currentPage - 1) * 25}`)
@@ -142,7 +144,7 @@ export default async function RegistrationsPage({ searchParams }: {
           <td><span className={`admin-status admin-status-${row.deleted_at ? 'cancelled' : row.archived_at ? 'archived' : row.registration_status}`}>{row.deleted_at ? 'Eliminada' : row.archived_at ? 'Archivada' : label(row.registration_status)}</span></td>
           <td><span className={`admin-status admin-status-${row.payment_status ?? 'none'}`}>{row.payment_status === 'pending' ? 'Pendiente' : label(row.payment_status ?? 'none')}</span><small>{row.payment_source ? `${sourceNames[row.payment_source] ?? row.payment_source}${Number(row.member_count) > 1 ? ' · Grupo' : ''}` : ''}</small>{row.has_proof && <small>Comprobante adjunto</small>}</td>
           <td>{row.amount_minor == null ? 'A definir' : (row.amount_minor / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-          <td><span>{row.admitted_at ? 'Ya ingresó' : row.qr_issued ? 'QR emitido' : 'Sin QR'}</span>{row.admitted_at && <small>{new Date(row.admitted_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</small>}</td>
+          <td><span>{row.admitted_at ? 'Ya ingresó' : row.qr_issued ? 'QR emitido' : 'Sin QR'}</span>{row.email_bounced && <small className="admin-status admin-status-rejected">Correo rebotado</small>}{row.admitted_at && <small>{new Date(row.admitted_at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</small>}</td>
           <td><time dateTime={new Date(row.created_at).toISOString()}>{new Date(row.created_at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}<small>{new Date(row.created_at).toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit' })}</small></time></td>
           <td>{role !== 'admission_operator' && <Link className="admin-edit-link" href={`/admin/inscripciones/${encodeURIComponent(row.reference)}`}>{!deleted && !archived && !row.historical ? 'Ver ficha y editar →' : 'Ver ficha →'}</Link>}
             {!deleted && !archived && <Link className="admin-text-action" href={`/admin/acreditacion?reference=${encodeURIComponent(row.reference)}`}>Pagos y QR</Link>}

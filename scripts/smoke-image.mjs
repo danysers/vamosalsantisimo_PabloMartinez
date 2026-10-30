@@ -69,7 +69,7 @@ try {
   assert.equal(login.status,401,'auth runtime must load successfully and reject invalid credentials')
   const check=`const fs=require('node:fs');if(fs.existsSync('/bin/sh')||fs.existsSync('/usr/local/bin/npm'))throw Error('Unexpected runtime tools');
     if(process.getuid()===0)throw Error('Unexpected root user');
-    Promise.all(['email-worker','drive-proof-worker','sponsor-sync-worker','traffic-monitor'].map(x=>import('./scripts/'+x+'.mjs'))).then(()=>console.log('Runtime and workers OK'));`
+    Promise.all(['email-worker','email-bounce-worker','drive-proof-worker','sponsor-sync-worker','traffic-monitor'].map(x=>import('./scripts/'+x+'.mjs'))).then(()=>console.log('Runtime and workers OK'));`
   docker('exec',panel,'/usr/local/bin/node','--experimental-strip-types','-e',check)
   console.log('Image smoke passed: migrations, public pages, memory admission/recovery, persistent alert cooldown, native images, auth, workers, non-root and no shell/npm.')
 } finally {

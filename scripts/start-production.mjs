@@ -34,6 +34,7 @@ function launch(args) {
 }
 if (process.env.WORKSHOP_EMAIL_WORKER_ENABLED === '1') {
   launch(['--experimental-strip-types', 'scripts/email-worker.mjs'])
+  launch(['scripts/email-bounce-worker.mjs'])
 }
 if (process.env.WORKSHOP_DRIVE_WORKER_ENABLED === '1') {
   launch(['scripts/drive-proof-worker.mjs'])

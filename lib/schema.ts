@@ -124,6 +124,7 @@ export const registrations = pgTable('registrations', {
   normalizedName: text('normalized_name').notNull(),
   email: text('email').notNull(),
   normalizedEmail: text('normalized_email').notNull(),
+  accreditationEmail: text('accreditation_email'),
   phone: text('phone').notNull(),
   normalizedPhone: text('normalized_phone').notNull(),
   status: registrationStatus('status').notNull().default('pending'),
@@ -140,6 +141,7 @@ export const registrations = pgTable('registrations', {
   index('registrations_by_phone_name').on(table.workshopId, table.normalizedPhone, table.normalizedName),
   check('registrations_deletion_actor', sql`(${table.deletedAt} IS NULL) = (${table.deletedBy} IS NULL)`),
   check('registrations_archive_actor', sql`(${table.archivedAt} IS NULL) = (${table.archivedBy} IS NULL)`),
+  check('registrations_accreditation_email_length', sql`${table.accreditationEmail} IS NULL OR length(${table.accreditationEmail}) BETWEEN 3 AND 254`),
 ])
 
 // Complete form data is separate from the legacy minimal registration API.
@@ -531,9 +533,12 @@ export const emailOutbox = pgTable('email_outbox', {
   nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   lastErrorCode: text('last_error_code'),
+  manualResend: boolean('manual_resend').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index('email_outbox_ready').on(table.status, table.nextAttemptAt),
+  index('email_outbox_accreditation_history').on(table.registrationId, table.createdAt).where(sql`${table.kind}='accreditation_ready'`),
+  check('email_outbox_manual_resend_kind', sql`NOT ${table.manualResend} OR (${table.kind}='accreditation_ready' AND ${table.credentialId} IS NOT NULL)`),
   check('email_outbox_attempts_nonnegative', sql`${table.attemptCount} >= 0`),
   check('email_outbox_one_subject', sql`(
     (${table.registrationId} IS NOT NULL)::integer +
@@ -541,6 +546,27 @@ export const emailOutbox = pgTable('email_outbox', {
     (${table.lotChangeId} IS NOT NULL)::integer = 1
   )`),
 ])
+
+export const emailDeliveryReports = pgTable('email_delivery_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  emailId: uuid('email_id').notNull().references(() => emailOutbox.id),
+  reportKey: text('report_key').notNull().unique(),
+  action: text('action').notNull(),
+  enhancedStatus: text('enhanced_status').notNull(),
+  reasonCode: text('reason_code').notNull(),
+  diagnostic: text('diagnostic').notNull(),
+  reportedAt: timestamp('reported_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [index('email_delivery_reports_by_email').on(table.emailId, table.reportedAt),
+  check('email_delivery_reports_action_check', sql`${table.action} IN ('failed','delayed')`)])
+
+export const emailBounceSync = pgTable('email_bounce_sync', {
+  id: integer('id').primaryKey(),
+  cursors: jsonb('cursors').notNull().default({}),
+  checkedAt: timestamp('checked_at', { withTimezone: true }),
+  attemptedAt: timestamp('attempted_at', { withTimezone: true }),
+  lastErrorCode: text('last_error_code'),
+}, table => [check('email_bounce_sync_id_check', sql`${table.id}=1`)])
 
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
