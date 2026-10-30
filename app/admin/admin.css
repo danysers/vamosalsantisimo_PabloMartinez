@@ -159,3 +159,5 @@
 @media(max-width:480px){.admin-topbar-brand>span:last-child small{display:none}.admin-topbar-brand strong{font-size:12px}.admin-monogram{width:34px;height:34px}.admin-sign-out button{padding:6px 8px!important;font-size:10px!important}.admin-counts{gap:9px}.admin-counts>div{min-height:102px;padding:14px}.admin-counts dd{font-size:27px}.admin-counts small{font-size:10px}.admin-filters{grid-template-columns:1fr}.admin-filters label:first-child{grid-column:auto}.admin-card{padding:15px}.admin-page-heading h1{font-size:27px}.admin-pagination{flex-wrap:wrap}}
 
 .admin-registration-table td:first-child{min-width:180px;max-width:260px;white-space:normal;overflow-wrap:anywhere}.admin-registration-table td:last-child small{max-width:200px;white-space:normal;overflow-wrap:anywhere}
+.admin-email-bounce { border-left: 4px solid #b42318; padding-left: 14px; background: #fff8f6; }
+.admin-email-bounce p { margin: 6px 0; font-size: .9rem; overflow-wrap: anywhere; }

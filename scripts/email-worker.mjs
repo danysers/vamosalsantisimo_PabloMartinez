@@ -61,7 +61,7 @@ async function render(pool, job) {
     })
   }
   const result = await pool.query(`
-    SELECT r.email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,
+    SELECT r.email,r.accreditation_email,r.reference,r.status,r.name,r.phone,i.first_name,i.payment_difficulty,i.payment_difficulty_notes,
       registration_is_current(r.id) AS current_registration,
       p.source,p.amount_minor,s.transfer_alias,s.transfer_provider,s.transfer_holder,s.transfer_document,
       s.proof_whatsapp_e164,s.reminder_email,
@@ -105,7 +105,9 @@ async function render(pool, job) {
       amountMinor: proof.amount_minor, proofUrl: `${origin.origin}/api/admin/taller/comprobantes/${proof.id}`,
       panelUrl: `${origin.origin}/admin/acreditacion?reference=${encodeURIComponent(registration.reference)}` })
   }
-  if (registration.email.toLowerCase() !== job.to_email.toLowerCase()) return null
+  const recipient = job.kind === 'accreditation_ready' && job.manual_resend
+    ? registration.accreditation_email || registration.email : registration.email
+  if (recipient.toLowerCase() !== job.to_email.toLowerCase()) return null
   if (job.kind === 'group_payment_notice') {
     if (!job.payment_attempt_id) return null
     const groupResult = await pool.query(`
@@ -163,7 +165,8 @@ async function render(pool, job) {
     })
   }
   if (job.kind === 'accreditation_ready') {
-    if (registration.status !== 'confirmed' || !job.credential_id) return null
+    if (registration.status !== 'confirmed' || !job.credential_id ||
+        !(registration.paid || registration.assistance_status === 'approved' || registration.waived)) return null
     const credentialResult = await pool.query(`
       SELECT version,token_hash,token_ciphertext,token_iv,token_auth_tag,encryption_key_id
       FROM accreditation_credentials

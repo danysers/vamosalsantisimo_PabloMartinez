@@ -22,7 +22,7 @@ COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts ./scripts
-COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts /app/lib/recovery-code.ts /app/lib/sponsor-media.mjs /app/lib/bounded-download.mjs /app/lib/traffic-guard.mjs ./lib/
+COPY --from=build /app/lib/accreditation-token.ts /app/lib/email-templates.ts /app/lib/recovery-code.ts /app/lib/sponsor-media.mjs /app/lib/bounded-download.mjs /app/lib/traffic-guard.mjs /app/lib/email-bounce.mjs ./lib/
 COPY --from=production-dependencies /app/node_modules ./node_modules
 RUN node scripts/strip-runtime-tools.mjs && mkdir -p .next/cache/traffic-guard && chown -R 65532:65532 .next/cache
 

@@ -18,7 +18,7 @@ function personal(row: Record<string, unknown>): PersonalFields {
 }
 
 export async function readAdminRegistration(db: Db, eventSlug: string, reference: string) {
-  const found = await db.execute(sql`SELECT r.id,r.reference,r.name,r.email,r.phone,r.status,r.created_at AS registered_at,r.updated_at,
+  const found = await db.execute(sql`SELECT r.id,r.reference,r.name,r.email,r.accreditation_email,r.phone,r.status,r.created_at AS registered_at,r.updated_at,
     r.deleted_at,r.archived_at,i.*,i.birth_date::text AS birth_date,${versionSql} AS version,
     registration_is_current(r.id) AS current
     FROM registrations r JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
@@ -27,7 +27,7 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
   const row = found.rows[0]
   if (!row) return null
   const id = String(row.id)
-  const [payments, proofs, credentials, emails, history] = await Promise.all([
+  const [payments, proofs, credentials, emails, history, bounceSync] = await Promise.all([
     db.execute(sql`SELECT p.id,p.status,p.source,p.created_at,p.manual_verified_at,p.manual_reference,
       COALESCE(a.due_amount_minor,p.amount_minor) AS amount_minor,p.amount_minor AS transaction_amount_minor,
       p.paid_amount_minor,(SELECT count(*)::int FROM payment_allocations x WHERE x.attempt_id=p.id) AS members
@@ -38,10 +38,15 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
     db.execute(sql`SELECT (registration_is_current(${id}) AND EXISTS(SELECT 1 FROM registrations WHERE id=${id} AND status='confirmed') AND EXISTS(SELECT 1 FROM accreditation_credentials WHERE registration_id=${id} AND revoked_at IS NULL AND expires_at>now())) AS issued,
       (SELECT scanned_at FROM check_ins WHERE registration_id=${id} LIMIT 1) AS admitted_at,
       (SELECT status FROM assistance_requests WHERE registration_id=${id} LIMIT 1) AS assistance_status`),
-    db.execute(sql`SELECT kind,status,to_email,sent_at,created_at,last_error_code FROM email_outbox WHERE registration_id=${id} ORDER BY created_at DESC LIMIT 8`),
+    db.execute(sql`SELECT m.id,m.kind,m.status,m.to_email,m.sent_at,m.created_at,m.last_error_code,m.manual_resend,
+      d.action AS delivery_action,d.enhanced_status,d.reason_code,d.diagnostic,d.reported_at
+      FROM email_outbox m LEFT JOIN LATERAL(SELECT action,enhanced_status,reason_code,diagnostic,reported_at FROM email_delivery_reports
+        WHERE email_id=m.id ORDER BY (action='failed') DESC,reported_at DESC LIMIT 1)d ON true
+      WHERE m.registration_id=${id} ORDER BY m.created_at DESC LIMIT 20`),
     db.execute(sql`SELECT l.reason,l.changes,l.created_at,COALESCE(u.name,'Operador') AS operator_name FROM audit_log l
       LEFT JOIN admin_users o ON o.id=l.actor_id LEFT JOIN "user" u ON u.id=o.auth_user_id
-      WHERE l.subject_id=${id} AND l.action='registration.updated' ORDER BY l.created_at DESC LIMIT 10`),
+      WHERE l.subject_id=${id} AND l.action IN ('registration.updated','accreditation.email_recipient_updated','accreditation.email_resent') ORDER BY l.created_at DESC LIMIT 10`),
+    db.execute(sql`SELECT checked_at,last_error_code FROM email_bounce_sync WHERE id=1`),
   ])
   return { reference: String(row.reference), name: String(row.name), status: String(row.status),
     version: String(row.version), editable: row.current === true && !!row.registration_id,
@@ -54,7 +59,12 @@ export async function readAdminRegistration(db: Db, eventSlug: string, reference
     proofs: proofs.rows.map(p => ({ id: String(p.id), filename: string(p.filename), uploadedAt: dateString(p.uploaded_at) })),
     credential: { issued: credentials.rows[0]?.issued === true, admittedAt: dateString(credentials.rows[0]?.admitted_at),
       assistanceStatus: string(credentials.rows[0]?.assistance_status) },
-    emails: emails.rows.map(e => ({ kind: String(e.kind), status: String(e.status), toEmail: String(e.to_email), sentAt: dateString(e.sent_at), createdAt: dateString(e.created_at) })),
+    accreditationEmail: string(row.accreditation_email),
+    bounceSync: { checkedAt: dateString(bounceSync.rows[0]?.checked_at), error: !!bounceSync.rows[0]?.last_error_code,
+      stale: !bounceSync.rows[0]?.checked_at || Date.now() - new Date(String(bounceSync.rows[0].checked_at)).getTime() > 15 * 60_000 },
+    emails: emails.rows.map(e => ({ id: String(e.id), kind: String(e.kind), status: String(e.status), toEmail: String(e.to_email), sentAt: dateString(e.sent_at), createdAt: dateString(e.created_at),
+      manualResend: !!e.manual_resend, errorCode: string(e.last_error_code), deliveryAction: string(e.delivery_action), enhancedStatus: string(e.enhanced_status),
+      reasonCode: string(e.reason_code), diagnostic: string(e.diagnostic), reportedAt: dateString(e.reported_at) })),
     history: history.rows.map(h => ({ reason: string(h.reason), changes: h.changes as { fields?: string[] }, createdAt: dateString(h.created_at), operator: string(h.operator_name) })),
   }
 }

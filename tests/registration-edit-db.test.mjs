@@ -129,6 +129,10 @@ test('registration detail and edits preserve financial history, enforce conflict
       assert.equal(login.status, 200)
       cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
       const headers = { ...proxyHeaders, origin, cookie, 'content-type': 'application/json' }
+      const mailAction = (body, change = {}) => fetch(origin + '/api/admin/inscripciones/correo', { method: 'POST', headers: { ...headers, ...change }, body: JSON.stringify(body) })
+      assert.equal((await mailAction({}, { origin: 'https://evil.invalid' })).status, 403)
+      assert.equal((await mailAction({ forged: true })).status, 400)
+      assert.equal((await mailAction({ reason: 'x'.repeat(5000) })).status, 400)
       const result = await fetch(origin + query, { headers: { cookie } })
       assert.equal(result.status, 200); assert.match(result.headers.get('cache-control'), /private.*no-store/)
       assert.equal((await fetch(origin + '/admin/inscripciones/' + reference, { headers: { cookie } })).status, 200)
@@ -142,6 +146,7 @@ test('registration detail and edits preserve financial history, enforce conflict
       assert.equal((await read()).fields.nickname, 'Corrección desde el panel')
       assert.equal((await pool.query('SELECT count(*)::int AS n FROM email_outbox WHERE registration_id=$1', [registered.id])).rows[0].n, beforeCount)
       await pool.query("UPDATE admin_users SET role='admission_operator' WHERE id=$1", [operator.id])
+      assert.equal((await mailAction({})).status, 403)
       assert.equal((await fetch(origin + query, { headers: { cookie } })).status, 403)
       assert.equal((await post(payload)).status, 403)
       assert.equal((await fetch(origin + '/admin/inscripciones/' + reference, { headers: { cookie } })).status, 404)
