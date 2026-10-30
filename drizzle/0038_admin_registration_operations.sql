@@ -64,7 +64,7 @@ BEGIN
     OR NEW.promotion_id IS NOT NULL OR NEW.promotion_code IS NOT NULL
     OR (p.source='on_site' AND NEW.discount_minor<>0) THEN RAISE EXCEPTION 'administrative allocation scope mismatch'; END IF;
   IF c.previous_attempt_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM payment_allocations old WHERE old.attempt_id=c.previous_attempt_id AND old.registration_id=NEW.registration_id
+    SELECT 1 FROM payment_allocations prior WHERE prior.attempt_id=c.previous_attempt_id AND prior.registration_id=NEW.registration_id
   ) AND NEW.registration_id IS DISTINCT FROM (SELECT registration_id FROM payment_attempts WHERE id=c.previous_attempt_id) THEN
     RAISE EXCEPTION 'administrative allocation cannot add group members';
   END IF;

@@ -30,7 +30,7 @@ test('administrative operations preserve payment facts and enforce owner, replay
     const payload=async(ref,overrides={})=>{
       const s=await read(ref);return {reference:ref,version:s.version,requestId:randomUUID(),registrationStatus:s.registrationStatus,paymentMethod:s.paymentMethod,paymentStatus:s.paymentStatus,amountMinor:s.amountMinor,paidAmountMinor:s.paidAmountMinor,feeMinor:s.feeMinor,manualReference:s.manualReference,registeredAt:s.registeredAt,qrAction:'keep',waiver:'keep',undoAdmission:false,confirmGroup:false,confirmPayment:false,confirmQrChange:false,notify:false,reason:'Corrección ficticia en base descartable',...overrides}
     }
-    const edit=data=>editRegistrationOperations(db,slug,owner.id,data)
+    const edit=async data=>{try{return await editRegistrationOperations(db,slug,owner.id,data)}catch(error){throw new Error(error.cause?.message||error.message)}}
     const ref=await enroll(),original=(await pool.query('SELECT p.* FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id WHERE r.reference=$1',[ref])).rows[0]
     let approvedCredential
     await t.test('owner only, strict data and stale version; unpaid confirmation rolls back',async()=>{
@@ -126,7 +126,7 @@ test('administrative operations preserve payment facts and enforce owner, replay
       const order={id:orderId,external_reference:p.external_reference,country_code:'ARG',currency:'ARS',total_amount:(p.amount_minor/100).toFixed(2),total_paid_amount:'0.00',status:'processing',user_id:'111',integration_data:{application_id:'222'},live_mode:true}
       let cancellations=0
       const provider={load:async()=>order,cancel:async()=>{cancellations++;order.status='canceled'}}
-      const input=await payload(reference,{paymentMethod:'bank_transfer',confirmPayment:true})
+      const input=await payload(reference,{paymentMethod:'bank_transfer',feeMinor:0,confirmPayment:true})
       assert.equal((await editRegistrationOperations(db,slug,owner.id,input,provider)).code,409)
       assert.equal(cancellations,0);assert.equal((await read(reference)).paymentMethod,'mercado_pago')
       order.status='created'
