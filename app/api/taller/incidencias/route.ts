@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { publicRequestOrigin } from '../../../../lib/public-site-origin'
 import { readSmallJson } from '../../../../lib/read-small-json'
 import { incidentSchema } from '../../../../lib/incident-policy'
-import { recordIncident } from '../../../../lib/operational-incidents'
+import { admitIncidentReport, recordIncident } from '../../../../lib/operational-incidents'
 import { allowPublicOperation, tooManyRequests } from '../../../../lib/request-rate-limit'
 
 export const runtime = 'nodejs'
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
   let input: z.infer<typeof schema>
   try { input = schema.parse(await readSmallJson(request, 4096)) } catch { return reply({ error: 'Solicitud inválida.' }, 400) }
   try {
+    if (!admitIncidentReport()) return tooManyRequests()
     if (!await allowPublicOperation('incident-report')) return tooManyRequests()
     const { access, ...event } = input
     const stored = await recordIncident(event, 'client', access)
