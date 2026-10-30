@@ -126,7 +126,7 @@ export default function RegistrationEditor({ initial, startEditing = false, canA
           <div><dt>Pagado en la operación</dt><dd>{money(payment.paidAmountMinor)}</dd></div><div><dt>Creado</dt><dd>{date(payment.createdAt)}</dd></div>
           {payment.verifiedAt && <div><dt>Verificado</dt><dd>{date(payment.verifiedAt)}</dd></div>}{payment.manualReference && <div><dt>Referencia bancaria / caja</dt><dd>{payment.manualReference}</dd></div>}</dl></article>)}
       <h3>Archivos recibidos</h3>{detail.proofs.length ? <ul>{detail.proofs.map(proof => <li key={proof.id}><a href={`/api/admin/taller/comprobantes/${proof.id}`} target="_blank" rel="noopener noreferrer">{proof.filename || 'Ver comprobante'}</a><small> · {date(proof.uploadedAt)}</small></li>)}</ul> : <p className="admin-empty">No hay comprobantes adjuntos.</p>}
-    </section><section className="admin-card"><AccreditationEmailControls detail={detail} blocked={editing || operationsEditing || busy || reloadRequired} refresh={refreshDetail} onBusy={setEmailBusy} />
+    </section><section className="admin-card"><AccreditationEmailControls detail={detail} canAdminister={canAdminister} blocked={editing || operationsEditing || busy || reloadRequired} refresh={refreshDetail} onBusy={setEmailBusy} />
       <h3>Historial de cambios y envíos</h3>{detail.history.length ? <ul className="admin-detail-history">{detail.history.map((item, index) => <li key={index}><strong>{item.operator} · {date(item.createdAt)}</strong><span>{item.reason}</span>
         <small>{item.changes.fields?.map(key => personalLabels[key as keyof PersonalFields] || key).join(', ')}</small></li>)}</ul> : <p className="admin-empty">Todavía no hay correcciones.</p>}
     </section></div>

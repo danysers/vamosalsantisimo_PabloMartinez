@@ -185,5 +185,54 @@ test('administrative operations preserve payment facts and enforce owner, replay
       // Exercise the database's actual entry eligibility guard, not just the UI.
       await pool.query('INSERT INTO check_ins(registration_id,credential_id,scanned_by) VALUES($1,$2,$3)',[registration.id,current.id,owner.id])
     })
+    await t.test('QR shortcuts preserve payment, use the current credential in links and resends, and require explicit replacement',async()=>{
+      const [{verifyManualPayment},{accreditationPreparation},{readAdminRegistration},{manageAccreditationEmail},{readWorkshopEmailLink}]=await Promise.all([
+        import('../lib/accreditation-workflow.ts'),import('../lib/registration-email-actions.ts'),import('../lib/registration-admin.ts'),
+        import('../lib/accreditation-email-admin.ts'),import('../lib/workshop-email-access.ts')])
+      process.env.SITE_ORIGIN='https://example.invalid'
+      const reference=await enroll()
+      assert.equal((await verifyManualPayment(db,{eventSlug:slug,operatorId:owner.id,reference,note:'Pago ficticio para gestión del QR',manualReference:'TEST-QR'})).code,200)
+      const id=(await pool.query('SELECT id FROM registrations WHERE reference=$1',[reference])).rows[0].id
+      const paymentSnapshot=async()=>({payments:(await pool.query('SELECT * FROM payment_attempts WHERE registration_id=$1 ORDER BY id',[id])).rows,
+        allocations:(await pool.query('SELECT * FROM payment_allocations WHERE registration_id=$1 ORDER BY id',[id])).rows})
+      const before=await paymentSnapshot(),registeredAt=(await read(reference)).registeredAt
+      const active=async()=>(await pool.query('SELECT id,token_hash FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[id])).rows[0]
+      const emailAction=async(action)=>manageAccreditationEmail(db,slug,owner.id,{reference,version:(await readAdminRegistration(db,slug,reference)).version,
+        action,...(action==='resend'?{requestId:randomUUID(),confirmRecipient:true}:{})})
+      const pass=async()=>{const result=await emailAction('link');assert.equal(result.code,200);return new URL(result.body.url)}
+      const open=async url=>readWorkshopEmailLink({reference,purpose:'pass',token:new URLSearchParams(url.hash.slice(1)).get('pass')})
+      const first=await active(),oldLink=await pass()
+      assert.ok((await open(oldLink)).accreditation.qrDataUrl)
+      assert.deepEqual(await active(),first,'viewing/copying a link keeps the existing QR')
+      const state=await read(reference)
+      const change=accreditationPreparation(reference,state,randomUUID(),'Reemplazo explícito de prueba',true)
+      assert.equal(change.confirmPayment,false);assert.equal(change.notify,false);assert.equal(change.undoAdmission,false)
+      assert.equal((await editRegistrationOperations(db,slug,limited.id,change)).code,403)
+      assert.equal((await edit({...change,confirmQrChange:false})).code,400)
+      assert.equal((await edit(change)).code,200)
+      const second=await active();assert.notEqual(second.id,first.id);assert.notEqual(second.token_hash,first.token_hash)
+      assert.equal((await edit(change)).body.replayed,true)
+      assert.deepEqual(await active(),second,'replaying the same click cannot issue another QR')
+      assert.equal((await edit({...change,requestId:randomUUID()})).code,409,'stale tabs cannot replace the newer QR')
+      assert.equal(await open(oldLink),null,'the old link cannot show the replacement QR')
+      const currentLink=await pass();assert.ok((await open(currentLink)).accreditation.qrDataUrl)
+      assert.deepEqual(await active(),second)
+      assert.equal((await emailAction('resend')).code,202)
+      const jobs=(await pool.query("SELECT credential_id,status FROM email_outbox WHERE registration_id=$1 AND kind='accreditation_ready' ORDER BY created_at",[id])).rows
+      assert.equal(jobs.find(j=>j.status==='queued').credential_id,second.id)
+      assert.ok(jobs.filter(j=>j.credential_id===first.id).every(j=>j.status==='cancelled'))
+      assert.deepEqual(await paymentSnapshot(),before)
+      assert.equal((await read(reference)).registeredAt,registeredAt)
+      const revoke=accreditationPreparation(reference,await read(reference),randomUUID(),'Revocación explícita de prueba',true,'revoke')
+      assert.equal((await edit(revoke)).code,200);assert.equal(await active(),undefined)
+      assert.equal((await read(reference)).qrBlocked,true);assert.equal(await open(currentLink),null)
+      assert.equal((await emailAction('resend')).code,409)
+      const regenerate=accreditationPreparation(reference,await read(reference),randomUUID(),'Generación explícita después del bloqueo',true)
+      assert.equal((await edit(regenerate)).code,200)
+      const third=await active();assert.notEqual(third.id,second.id);assert.equal((await read(reference)).qrBlocked,false)
+      assert.ok((await open(await pass())).accreditation.qrDataUrl)
+      assert.deepEqual(await paymentSnapshot(),before)
+      assert.equal((await pool.query("SELECT count(*)::int n FROM email_outbox WHERE registration_id=$1 AND kind='accreditation_ready' AND status='queued'",[id])).rows[0].n,0,'QR changes do not send mail automatically')
+    })
   }finally{await pool.end();await db.$client.end()}
 })

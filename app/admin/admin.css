@@ -164,3 +164,4 @@
 .admin-inline-edit{display:inline-block!important;padding:6px 12px!important;margin-top:8px;font-size:12px!important;white-space:nowrap}.admin-table small.admin-mobile-payment{display:none}
 @media(max-width:900px){.admin-table small.admin-mobile-payment{display:block;color:#294366;font-weight:600}}
 .admin-proof-link{display:grid;gap:10px;margin:14px 0;min-width:0}.admin-proof-link label{display:grid;gap:7px;font-size:12px;font-weight:600;color:#40516b}.admin-proof-link input{width:100%;min-width:0}.admin-proof-link .button{justify-self:start}
+.admin-prepare-accreditation{margin:20px 0;padding:16px;border:1px solid #e2e8f1;border-radius:10px;background:#f7f9fc}.admin-prepare-accreditation h4{margin:0 0 12px}.admin-prepare-accreditation textarea{width:100%}.admin-detail-save+.admin-detail-save{margin-top:24px}
