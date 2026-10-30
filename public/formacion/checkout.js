@@ -295,6 +295,11 @@
     if(result.testMode) current.testMode=true;
     try { sessionStorage.setItem('vas-workshop-payment:'+current.reference,JSON.stringify(current)); } catch { /* Current tab remains usable. */ }
     if(method!=='on_site' || result.status==='approved') document.getElementById('checkout-controls').append(ui.editor);
+    if(result.accreditationBlocked) {
+      hidePass();root.dataset.state='pending';document.getElementById('registration-result-title').textContent='Inscripción en revisión';
+      root.querySelector('.result-intro').textContent='La organización está revisando tu acreditación. Conservá tu referencia y contactanos antes de realizar otro pago.';
+      document.getElementById('registration-reference').hidden=false;ui.host.hidden=true;ui.editor.hidden=true;return false;
+    }
     if (result.status==='approved' && result.registrationStatus==='confirmed') {
       ui.editor.hidden=true;
       if(method!=='on_site') return !renderConfirmation(result) || result.emailStatus!=='sent';
@@ -343,6 +348,7 @@
           ui.proof.hidden=!!result.proofSubmitted;
         } else { document.getElementById('checkout-transfer-qr-image').removeAttribute('src'); }
         if(ui.editor.hidden) { ui.help.href=helpUrl(result); ui.help.hidden=false; }
+      } else if(method==='manual') { ui.title.textContent='Pago gestionado por la organización';ui.description.textContent='Estamos revisando tu registro de pago. Conservá tu referencia; no hagas otro pago sin consultar.';ui.edit.hidden=true;ui.editor.hidden=true;ui.help.href=helpUrl(result);ui.help.hidden=false;
       } else { ui.title.textContent='Pagá en efectivo al llegar al taller'; ui.description.textContent='Tu inscripción quedó registrada. El precio de ventanilla se informará antes de cobrar; no aplican lotes ni promociones.'; }
       ui.status.textContent=result.proofSubmitted ? 'Pago en proceso de confirmación. Te enviaremos un correo al verificarlo.'
         : 'Conservá tu referencia. La confirmación se actualizará automáticamente cuando se registre el pago.';

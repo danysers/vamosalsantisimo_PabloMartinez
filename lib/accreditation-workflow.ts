@@ -20,9 +20,9 @@ function qrConfig() {
   return { key, keyId }
 }
 
-async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: string, operatorId: string | null): Promise<Result> {
+async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: string, operatorId: string | null, notify = true): Promise<Result> {
   const found = await tx.execute(sql`
-    SELECT r.id, r.status, r.email, r.reference, w.starts_at,
+    SELECT r.id, r.status, r.email, r.reference, r.accreditation_blocked, w.starts_at,
       registration_has_approved_payment(r.id) AS paid,
       a.status AS assistance_status,
       (fw.registration_id IS NOT NULL) AS waived
@@ -36,9 +36,10 @@ async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: str
   `)
   const row = found.rows[0] as {
     id: string; status: string; email: string; reference: string; starts_at: Date;
-    paid: boolean; assistance_status: string | null; waived: boolean
+    paid: boolean; assistance_status: string | null; waived: boolean; accreditation_blocked: boolean
   } | undefined
   if (!row) return { code: 404, body: { error: 'Inscripción no encontrada.' } }
+  if (row.accreditation_blocked) return { code: 200, body: { blocked: true, emailQueued: false } }
   if (!['pending', 'confirmed'].includes(row.status)) return { code: 409, body: { error: 'La inscripción no está habilitada para acreditarse.' } }
   const reason = row.paid ? 'paid' : row.assistance_status === 'approved' ? 'assistance_approved' : row.waived ? 'waived' : null
   if (!reason) return { code: 409, body: { error: 'Primero debe verificarse el pago o aprobarse la excepción.' } }
@@ -57,22 +58,22 @@ async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: str
     registrationId, version, tokenHash: qr.tokenHash, ...encrypted,
     encryptionKeyId: keyId, reason, expiresAt,
   }).returning({ id: accreditationCredentials.id })
-  await tx.insert(emailOutbox).values({
+  if (notify) await tx.insert(emailOutbox).values({
     dedupeKey: `accreditation:${credential.id}:ready`, kind: 'accreditation_ready',
     toEmail: row.email.trim().toLowerCase(), registrationId, credentialId: credential.id,
     nextAttemptAt: new Date(Date.now() + 60_000),
   })
   await tx.insert(auditLog).values({ actorId: operatorId, action: 'accreditation.issued', subjectId: registrationId,
     changes: { credentialId: credential.id, version, reason } })
-  return { code: 201, body: { credentialId: credential.id, reference: row.reference, emailQueued: true, alreadyIssued: false } }
+  return { code: 201, body: { credentialId: credential.id, reference: row.reference, emailQueued: notify, alreadyIssued: false } }
 }
 
 export function issueAccreditation(db: Db, input: { registrationId: string; eventSlug: string; operatorId: string }) {
   return db.transaction(tx => issueInTransaction(tx, input.registrationId, input.eventSlug, input.operatorId))
 }
 
-export async function issueAccreditationAfterApproval(tx: Tx, input: { registrationId: string; eventSlug: string; operatorId: string | null }) {
-  return issueInTransaction(tx, input.registrationId, input.eventSlug, input.operatorId)
+export async function issueAccreditationAfterApproval(tx: Tx, input: { registrationId: string; eventSlug: string; operatorId: string | null; notify?: boolean }) {
+  return issueInTransaction(tx, input.registrationId, input.eventSlug, input.operatorId, input.notify)
 }
 
 export function verifyManualPayment(db: Db, input: {
@@ -87,7 +88,7 @@ export function verifyManualPayment(db: Db, input: {
       SELECT p.id,p.registration_id,p.source,p.status,p.amount_minor,p.payer_name,p.payer_email
       FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
-      WHERE e.slug=${input.eventSlug} AND p.status='pending' AND
+      WHERE e.slug=${input.eventSlug} AND p.superseded_by_admin IS NULL AND p.status='pending' AND
         registration_is_live(r.id) AND
         ((r.reference=${input.reference} AND r.deleted_at IS NULL AND r.archived_at IS NULL) OR EXISTS (
           SELECT 1 FROM payment_allocations a JOIN registrations member ON member.id=a.registration_id
@@ -184,7 +185,7 @@ export function admitAccreditation(db: Db, input: { qrValue: string; eventSlug: 
     `)
     const row = found.rows[0] as {
       credential_id: string; registration_id: string; reason: string; revoked_at: Date | null; expires_at: Date;
-      status: string; name: string; reference: string; paid: boolean; assistance_status: string | null; waived: boolean
+      status: string; name: string; reference: string; paid: boolean; assistance_status: string | null; waived: boolean; accreditation_blocked: boolean
     } | undefined
     if (!row) {
       await tx.insert(admissionScans).values({ scannedBy: input.operatorId, result: 'unknown', entryPoint: input.entryPoint || null })

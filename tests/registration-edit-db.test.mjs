@@ -130,6 +130,12 @@ test('registration detail and edits preserve financial history, enforce conflict
       assert.equal(login.status, 200)
       cookie = login.headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
       const headers = { ...proxyHeaders, origin, cookie, 'content-type': 'application/json' }
+      const operations=(body,change={})=>fetch(origin+'/api/admin/inscripciones/operaciones',{method:'PATCH',headers:{...headers,...change},body:JSON.stringify(body)})
+      const bounce=(body,change={})=>fetch(origin+'/api/admin/correos/actualizar',{method:'POST',headers:{...headers,...change},body:JSON.stringify(body)})
+      assert.equal((await operations({}, {origin:'https://evil.invalid'})).status,403)
+      assert.equal((await operations({operatorId:'forged'})).status,400)
+      assert.equal((await bounce({}, {origin:'https://evil.invalid'})).status,403)
+      assert.equal((await bounce({unexpected:true})).status,400)
       const reportId = randomUUID(), report = { correlationId: reportId, operation: 'page', code: 'runtime_exception', page: 'panel' }
       const incidentAction = (body, change = {}) => fetch(origin + '/api/admin/incidencias', { method: 'POST', headers: { ...headers, ...change }, body: JSON.stringify(body) })
       assert.equal((await incidentAction(report, { origin: 'https://evil.invalid' })).status, 403)
@@ -169,6 +175,8 @@ test('registration detail and edits preserve financial history, enforce conflict
       assert.equal((await read()).fields.nickname, 'Corrección desde el panel')
       assert.equal((await pool.query('SELECT count(*)::int AS n FROM email_outbox WHERE registration_id=$1', [registered.id])).rows[0].n, beforeCount)
       await pool.query("UPDATE admin_users SET role='admission_operator' WHERE id=$1", [operator.id])
+      assert.equal((await operations({})).status,403)
+      assert.equal((await bounce({})).status,403)
       assert.equal((await fetch(origin + '/api/admin/incidencias', { headers: { cookie } })).status, 403)
       assert.equal((await fetch(origin + '/admin/incidencias', { headers: { cookie } })).status, 404)
       assert.equal((await mailAction({})).status, 403)

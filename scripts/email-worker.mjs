@@ -75,7 +75,7 @@ async function render(pool, job) {
     LEFT JOIN fee_waivers fw ON fw.registration_id=r.id AND fw.revoked_at IS NULL
     LEFT JOIN LATERAL (
       SELECT source,amount_minor FROM payment_attempts
-      WHERE registration_id=r.id OR EXISTS(SELECT 1 FROM payment_allocations own WHERE own.attempt_id=payment_attempts.id AND own.registration_id=r.id)
+      WHERE superseded_by_admin IS NULL AND (registration_id=r.id OR EXISTS(SELECT 1 FROM payment_allocations own WHERE own.attempt_id=payment_attempts.id AND own.registration_id=r.id))
       ORDER BY created_at DESC,id DESC LIMIT 1
     ) p ON true
     WHERE r.id=$1
@@ -98,7 +98,7 @@ async function render(pool, job) {
     const proofResult = await pool.query(`
       SELECT proof.id,p.amount_minor,p.status FROM payment_proofs proof
       JOIN payment_attempts p ON p.id=proof.payment_attempt_id
-      WHERE proof.id=$1 AND proof.payment_attempt_id=$2 AND proof.registration_id=$3
+      WHERE p.superseded_by_admin IS NULL AND proof.id=$1 AND proof.payment_attempt_id=$2 AND proof.registration_id=$3
     `, [job.payment_proof_id, job.payment_attempt_id, job.registration_id])
     const proof = proofResult.rows[0]
     if (!proof || proof.status !== 'pending') return null
@@ -121,7 +121,7 @@ async function render(pool, job) {
       FROM payment_attempts p
       JOIN registrations payer ON payer.id=p.registration_id
       JOIN payment_allocations allocation ON allocation.attempt_id=p.id
-      WHERE p.id=$1 AND EXISTS (
+      WHERE p.superseded_by_admin IS NULL AND p.id=$1 AND EXISTS (
         SELECT 1 FROM payment_allocations own WHERE own.attempt_id=p.id AND own.registration_id=$2
       ) GROUP BY p.id,payer.id
     `, [job.payment_attempt_id, job.registration_id])
@@ -150,7 +150,7 @@ async function render(pool, job) {
     // that unpaid attempt with a group charge; send the group notice instead.
     const grouped = await pool.query(`
       SELECT 1 FROM payment_allocations a JOIN payment_attempts p ON p.id=a.attempt_id
-      WHERE a.registration_id=$1 AND p.status IN ('pending','approved')
+      WHERE a.registration_id=$1 AND p.superseded_by_admin IS NULL AND p.status IN ('pending','approved')
         AND (SELECT count(*) FROM payment_allocations x WHERE x.attempt_id=p.id)>1 LIMIT 1
     `, [job.registration_id])
     if (grouped.rows.length) return null

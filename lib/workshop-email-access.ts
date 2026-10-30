@@ -16,8 +16,8 @@ export async function readWorkshopEmailLink(input: { reference: string; token: s
     c.id AS credential_id,c.version,c.token_hash,c.token_ciphertext,c.token_iv,c.token_auth_tag,c.encryption_key_id,c.expires_at
     FROM registrations r JOIN registration_intakes i ON i.registration_id=r.id
     JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
-    LEFT JOIN LATERAL (SELECT p.* FROM payment_attempts p WHERE p.registration_id=r.id
-      OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=p.id AND a.registration_id=r.id)
+    LEFT JOIN LATERAL (SELECT p.* FROM payment_attempts p WHERE p.superseded_by_admin IS NULL AND (p.registration_id=r.id
+      OR EXISTS(SELECT 1 FROM payment_allocations a WHERE a.attempt_id=p.id AND a.registration_id=r.id))
       ORDER BY p.created_at DESC,p.id DESC LIMIT 1) p ON true
     LEFT JOIN LATERAL (SELECT c.* FROM accreditation_credentials c WHERE c.registration_id=r.id
       AND c.revoked_at IS NULL AND c.expires_at>now() ORDER BY c.version DESC LIMIT 1) c ON true

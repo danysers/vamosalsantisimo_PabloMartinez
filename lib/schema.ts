@@ -125,6 +125,8 @@ export const registrations = pgTable('registrations', {
   email: text('email').notNull(),
   normalizedEmail: text('normalized_email').notNull(),
   accreditationEmail: text('accreditation_email'),
+  registeredAtOverride: timestamp('registered_at_override', { withTimezone: true }),
+  accreditationBlocked: boolean('accreditation_blocked').notNull().default(false),
   phone: text('phone').notNull(),
   normalizedPhone: text('normalized_phone').notNull(),
   status: registrationStatus('status').notNull().default('pending'),
@@ -185,6 +187,10 @@ export const reservations = pgTable('reservations', {
 
 export const paymentAttempts = pgTable('payment_attempts', {
   id: uuid('id').primaryKey().defaultRandom(),
+  adminChangeId: uuid('admin_change_id'),
+  supersededByAdmin: uuid('superseded_by_admin'),
+  reportedSource: paymentSource('reported_source'),
+  reportedFeeMinor: integer('reported_fee_minor').notNull().default(0),
   replacesAttemptId: uuid('replaces_attempt_id').unique('payment_attempts_replaces_attempt_id_key'),
   registrationId: uuid('registration_id').notNull().references(() => registrations.id),
   providerOrderId: text('provider_order_id').unique(),
@@ -328,6 +334,7 @@ export const settlementReminders = pgTable('settlement_reminders', {
 export const paymentAllocations = pgTable('payment_allocations', {
   id: uuid('id').primaryKey().defaultRandom(),
   attemptId: uuid('attempt_id').notNull().references(() => paymentAttempts.id),
+  adminChangeId: uuid('admin_change_id'),
   registrationId: uuid('registration_id').notNull().references(() => registrations.id),
   lotId: uuid('lot_id').notNull().references(() => workshopLots.id),
   lotNumber: integer('lot_number').notNull(),
@@ -566,6 +573,12 @@ export const emailBounceSync = pgTable('email_bounce_sync', {
   checkedAt: timestamp('checked_at', { withTimezone: true }),
   attemptedAt: timestamp('attempted_at', { withTimezone: true }),
   lastErrorCode: text('last_error_code'),
+  requestId: uuid('request_id'),
+  requestedAt: timestamp('requested_at', { withTimezone: true }),
+  requestedBy: uuid('requested_by').references(() => adminUsers.id),
+  requestStatus: text('request_status').notNull().default('idle'),
+  completedRequestId: uuid('completed_request_id'),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
 }, table => [check('email_bounce_sync_id_check', sql`${table.id}=1`)])
 
 export const auditLog = pgTable('audit_log', {

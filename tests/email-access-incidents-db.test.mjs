@@ -70,7 +70,7 @@ test('personal email links, existing credentials and bounded diagnostics integra
     assert.equal((await readWorkshopEmailLink(requestFrom(emailUrl(cashReceipt,'proof')))).canUpload,false)
     assert.equal((await verifyManualPayment(db,{reference:cash.reference,eventSlug:slug,operatorId:operator.id,note:'Efectivo ficticio',manualReference:'CASH-'+randomUUID()})).code,200)
     const cashMail=await send(cash,'accreditation_ready')
-    assert.doesNotMatch(cashMail.text,/#pass=|volante personal en 3D/)
+    assert.doesNotMatch(cashMail.text,/#pass=|Abrí tu volante personal/)
     assert.ok(cashMail.attachments[0].content.length>0,'confirmed cash keeps its emailed QR; only the 3D pass is excluded')
     const cashCredential=(await pool.query('SELECT id FROM accreditation_credentials WHERE registration_id=$1',[cash.id])).rows[0]
     const forgedCash=tokens.emailLinkToken('pass',{id:cash.id,reference:cash.reference,creationKey:cash.creation_key,email:cash.email+'|',credentialId:cashCredential.id},new Date('2026-12-20T18:00:00Z'))

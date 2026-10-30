@@ -48,7 +48,7 @@ export async function changeRegistrationDeletion(db: ReturnType<typeof getDb>, i
           (${row.status === 'confirmed'} OR EXISTS(SELECT 1 FROM reservations WHERE registration_id=${String(row.id)}
             AND (status='used' OR (status='held' AND expires_at>now()))) OR
             EXISTS(SELECT 1 FROM payment_attempts p JOIN payment_allocations a ON a.attempt_id=p.id
-              WHERE a.registration_id=${String(row.id)} AND p.status='approved' AND p.paid_amount_minor>=p.amount_minor)) AS needs_seat,
+              WHERE a.registration_id=${String(row.id)} AND p.superseded_by_admin IS NULL AND p.status='approved' AND p.paid_amount_minor>=p.amount_minor)) AS needs_seat,
           (SELECT count(*)::int FROM registrations r
             WHERE r.workshop_id=${String(w.id)} AND registration_is_current(r.id) AND
               (r.status='confirmed' OR EXISTS(SELECT 1 FROM reservations h WHERE h.registration_id=r.id

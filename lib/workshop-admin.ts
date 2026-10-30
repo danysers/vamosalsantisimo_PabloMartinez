@@ -67,14 +67,14 @@ export async function readWorkshopPricing(db: Db, eventSlug: string) {
       SELECT DISTINCT ON (a.lot_number,r.id) a.lot_number,r.id,p.source
       FROM registrations r JOIN payment_allocations a ON a.registration_id=r.id JOIN payment_attempts p ON p.id=a.attempt_id
       WHERE r.workshop_id=${workshop.id} AND r.status='confirmed' AND registration_is_current(r.id)
-        AND p.source IN ('mercado_pago','bank_transfer','manual') AND p.status='approved'
+        AND p.superseded_by_admin IS NULL AND p.source IN ('mercado_pago','bank_transfer','manual') AND p.status='approved'
         AND p.amount_minor IS NOT NULL AND p.paid_amount_minor>=p.amount_minor
       ORDER BY a.lot_number,r.id,p.created_at DESC,p.id DESC
     ), cash AS (
       SELECT DISTINCT a.lot_number,r.id FROM registrations r
       JOIN payment_allocations a ON a.registration_id=r.id JOIN payment_attempts p ON p.id=a.attempt_id
       WHERE r.workshop_id=${workshop.id} AND registration_is_current(r.id) AND r.status<>'cancelled'
-        AND p.source='on_site' AND p.status IN ('created','pending','approved')
+        AND p.superseded_by_admin IS NULL AND p.source='on_site' AND p.status IN ('created','pending','approved')
     ), places AS (
       SELECT lot_number,source::text AS source FROM paid UNION ALL SELECT lot_number,'cash_excluded' FROM cash
     ) SELECT lot_number,
@@ -113,7 +113,7 @@ export async function searchPendingIndividualRegistrations(db: Db, eventSlug: st
     JOIN registration_intakes i ON i.registration_id=r.id
     JOIN payment_allocations a ON a.registration_id=r.id
     JOIN payment_attempts p ON p.id=a.attempt_id
-    WHERE e.slug=${eventSlug} AND r.status='pending' AND p.status='pending'
+    WHERE e.slug=${eventSlug} AND r.status='pending' AND p.superseded_by_admin IS NULL AND p.admin_change_id IS NULL AND p.status='pending'
       AND registration_is_current(r.id)
       AND p.source IN ('bank_transfer','on_site')
       AND NOT EXISTS (SELECT 1 FROM assistance_requests x WHERE x.registration_id=r.id)
@@ -312,7 +312,7 @@ export async function quoteOrCreateGroup(db: Db, input: GroupDraft & { eventSlug
             (SELECT count(*)::int FROM payment_allocations x WHERE x.attempt_id=p.id) AS member_count
           FROM payment_allocations a JOIN payment_attempts p ON p.id=a.attempt_id
           JOIN workshop_lots l ON l.id=a.lot_id
-          WHERE a.registration_id=${row.id} AND p.status IN ('created','pending','review','approved')
+          WHERE a.registration_id=${row.id} AND p.superseded_by_admin IS NULL AND p.admin_change_id IS NULL AND p.status IN ('created','pending','review','approved')
           FOR UPDATE OF p
         `)
         if (payments.rows.length !== 1) return invalid(`La referencia ${reference} no tiene un pago individual pendiente único.`)

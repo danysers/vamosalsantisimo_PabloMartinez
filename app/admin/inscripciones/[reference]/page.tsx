@@ -44,8 +44,8 @@ export default async function RegistrationPage({ params, searchParams }: {
     </AdminWorkspace>
   }
   if (!registration) notFound()
-  return <AdminWorkspace title={registration.name} description="Ficha completa de la inscripción. Podés corregir los datos personales y de contacto."
+  return <AdminWorkspace title={registration.name} description="Ficha completa de la inscripción. Podés corregir los datos personales y gestionar el estado, el pago y la acreditación."
     section="registrations" role={role} canManageWorkshop>
-    <RegistrationEditor initial={registration} startEditing={(await searchParams).editar === '1'} />
+    <RegistrationEditor initial={registration} canAdminister={role === 'configuration'} startEditing={(await searchParams).editar === '1'} />
   </AdminWorkspace>
 }
