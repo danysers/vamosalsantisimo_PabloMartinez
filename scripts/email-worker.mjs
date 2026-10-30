@@ -7,7 +7,7 @@ import { decryptAccreditationQr, hashAccreditationQr } from '../lib/accreditatio
 import { decryptRecoveryCode } from '../lib/recovery-code.ts'
 import { workshopEmailUrl } from '../lib/email-link-token.ts'
 import { processLotAutomation } from './lot-automation.mjs'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, lotChangedEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, groupPaymentEmail, lotChangedEmail, paymentProofReminderEmail, paymentProofReviewEmail, registrationAccessEmail, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
 
 async function claim(pool) {
   // A local preview may restrict delivery to jobs created during that preview;
@@ -112,6 +112,19 @@ async function render(pool, job) {
   const recipient = job.kind === 'accreditation_ready' && job.manual_resend
     ? registration.accreditation_email || registration.email : registration.email
   if (recipient.toLowerCase() !== job.to_email.toLowerCase()) return null
+  if (job.kind === 'payment_proof_reminder') {
+    if (registration.status !== 'pending' || registration.paid || registration.waived || registration.assistance_status === 'approved' || !job.payment_attempt_id) return null
+    const pending = await pool.query(`SELECT 1 FROM payment_attempts p WHERE p.id=$1 AND p.registration_id=$2
+      AND p.superseded_by_admin IS NULL AND p.source='bank_transfer' AND p.status='pending'
+      AND NOT EXISTS(SELECT 1 FROM payment_proofs proof WHERE proof.payment_attempt_id=p.id)
+      AND NOT EXISTS(SELECT 1 FROM payment_attempts newer WHERE newer.superseded_by_admin IS NULL
+        AND (newer.registration_id=p.registration_id OR EXISTS(SELECT 1 FROM payment_allocations a
+          WHERE a.attempt_id=newer.id AND a.registration_id=p.registration_id))
+        AND (newer.created_at,newer.id)>(p.created_at,p.id))`, [job.payment_attempt_id, job.registration_id])
+    if (!pending.rows.length) return null
+    return paymentProofReminderEmail({ firstName: registration.first_name, reference: registration.reference,
+      proofUrl: workshopEmailUrl('proof', emailIdentity, linkEndsAt), proofWhatsappE164: registration.proof_whatsapp_e164 })
+  }
   if (job.kind === 'group_payment_notice') {
     if (!job.payment_attempt_id) return null
     const groupResult = await pool.query(`

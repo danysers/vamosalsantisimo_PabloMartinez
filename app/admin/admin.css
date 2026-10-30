@@ -163,3 +163,4 @@
 .admin-email-bounce p { margin: 6px 0; font-size: .9rem; overflow-wrap: anywhere; }
 .admin-inline-edit{display:inline-block!important;padding:6px 12px!important;margin-top:8px;font-size:12px!important;white-space:nowrap}.admin-table small.admin-mobile-payment{display:none}
 @media(max-width:900px){.admin-table small.admin-mobile-payment{display:block;color:#294366;font-weight:600}}
+.admin-proof-link{display:grid;gap:10px;margin:14px 0;min-width:0}.admin-proof-link label{display:grid;gap:7px;font-size:12px;font-weight:600;color:#40516b}.admin-proof-link input{width:100%;min-width:0}.admin-proof-link .button{justify-self:start}

@@ -13,7 +13,7 @@ export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assi
 export const accreditationDelivery = pgEnum('accreditation_delivery', ['screen', 'download', 'print', 'email'])
 export const admissionScanResult = pgEnum('admission_scan_result', ['admitted', 'already_admitted', 'not_eligible', 'revoked', 'expired', 'unknown'])
 export const promotionKind = pgEnum('promotion_kind', ['bundle', 'group_fixed'])
-export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted', 'registration_access', 'lot_changed'])
+export const emailKind = pgEnum('email_kind', ['registration_received', 'payment_instructions', 'payment_proof_reminder', 'group_payment_notice', 'accreditation_ready', 'settlement_reminder', 'assistance_review_request', 'assistance_approved', 'assistance_declined', 'payment_proof_submitted', 'registration_access', 'lot_changed'])
 export const emailStatus = pgEnum('email_status', ['queued', 'sending', 'sent', 'failed', 'cancelled'])
 const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
 

@@ -13,7 +13,7 @@ const reasons: Record<string, string> = {
 const statuses: Record<string, string> = { queued: 'En cola', sending: 'Enviando', sent: 'Aceptado por el servidor de correo',
   failed: 'Error al enviar al servidor', cancelled: 'Cancelado' }
 const kinds: Record<string, string> = { registration_received: 'Inscripción', accreditation_ready: 'Acreditación con QR',
-  payment_proof_submitted: 'Aviso de comprobante', registration_access: 'Recuperación de acceso', payment_instructions: 'Instrucciones de pago',
+  payment_proof_submitted: 'Aviso de comprobante', payment_proof_reminder: 'Comprobante pendiente', registration_access: 'Recuperación de acceso', payment_instructions: 'Instrucciones de pago',
   group_payment_notice: 'Pago de grupo', assistance_review_request: 'Solicitud de ayuda', assistance_approved: 'Ayuda aprobada', assistance_declined: 'Respuesta de ayuda' }
 const date = (value: string | null) => value ? new Date(value).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', hour12: false }) : '—'
 
@@ -28,10 +28,45 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
   const [error, setError] = useState('')
   const [reload, setReload] = useState(false)
   const [requestId, setRequestId] = useState('')
+  const [proofLinkData, setProofLinkData] = useState<{ url: string; version: string; email: string } | null>(null)
+  const [proofConfirmed, setProofConfirmed] = useState(false)
+  const [proofRequestId, setProofRequestId] = useState('')
+  const [proofMessage, setProofMessage] = useState('')
+  const [proofError, setProofError] = useState('')
   const dirty = alternate.trim().toLowerCase() !== detail.accreditationEmail
   const recipient = detail.accreditationEmail || detail.fields.email
   const inactive = detail.deleted || detail.archived || !detail.editable
   const staleSync = detail.bounceSync.stale
+  const proofLink = proofLinkData?.version === detail.version && proofLinkData.email === detail.fields.email && detail.proofReminderEligible
+    ? proofLinkData.url : ''
+
+  async function proofAction(action: 'link' | 'resend') {
+    if (busy || reload || blocked || inactive || !detail.proofReminderEligible || (action === 'resend' && !proofConfirmed)) return
+    setBusy(true); onBusy(true); setProofMessage(''); setProofError('')
+    let accepted = false
+    const nextId = proofRequestId || crypto.randomUUID()
+    if (action === 'resend') setProofRequestId(nextId)
+    try {
+      const response = await fetch('/api/admin/inscripciones/comprobante-pendiente', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, reference: detail.reference, version: detail.version,
+          ...(action === 'resend' ? { requestId: nextId, confirmRecipient: proofConfirmed } : {}) }) })
+      const data = await response.json()
+      if (!response.ok) { setProofError(data.error || 'No pudimos completar la operación.'); if (data.conflict) setReload(true); return }
+      accepted = true
+      if (action === 'link') {
+        setProofLinkData({ url: data.url, version: detail.version, email: detail.fields.email })
+        setProofMessage('Enlace personal disponible para copiar. Compartilo sólo con la persona inscripta.')
+      } else {
+        setProofMessage('Aviso en cola para el correo original de la inscripción. El pago sigue pendiente de verificación.')
+        setProofConfirmed(false)
+        await refresh()
+        setProofRequestId('')
+      }
+    } catch {
+      setProofError(accepted ? 'La operación fue registrada. Recargá la ficha para ver el resultado.' : 'No pudimos confirmar el resultado. Recargá la ficha antes de reintentar.')
+      setReload(true)
+    } finally { setBusy(false); onBusy(false) }
+  }
 
   async function sendAction(action: 'recipient' | 'resend', event?: FormEvent) {
     event?.preventDefault()
@@ -105,6 +140,25 @@ export default function AccreditationEmailControls({ detail, blocked, refresh, o
       <button type="button" className="button button-gold" disabled={busy || inactive || blocked || dirty || reload || !confirmed || !detail.credential.issued}
         onClick={() => sendAction('resend')}>{busy ? 'Procesando…' : 'Reenviar acreditación con el mismo QR'}</button>
       <p className="admin-context-note">Máximo un reenvío cada cinco minutos y cinco en 24 horas. No modifica el pago ni emite un nuevo QR. {blocked ? 'Terminá o cancelá la edición de datos antes de continuar.' : dirty ? 'Guardá el correo alternativo antes de reenviar.' : ''}</p>
+    </div>
+    <div className="admin-detail-save"><h3>Comprobante de pago pendiente</h3>
+      <p className="admin-context-note">Si la persona pagó por transferencia o QR y aún no pudo adjuntar el comprobante, podés reenviarle el aviso o copiar su enlace personal. El mensaje se envía a <strong>{detail.fields.email}</strong>, no al correo alternativo del QR.</p>
+      {proofMessage && <p role="status">{proofMessage}</p>}{proofError && <p role="alert">{proofError}</p>}
+      {detail.proofReminderEligible ? <>
+        <button type="button" className="button button-outline" disabled={busy || blocked || inactive || reload} onClick={() => proofAction('link')}>
+          {busy ? 'Procesando…' : 'Mostrar enlace para subir comprobante'}</button>
+        {proofLink && <div className="admin-proof-link"><label htmlFor="personal-proof-link">Enlace personal para compartir
+          <input id="personal-proof-link" type="text" readOnly value={proofLink} onFocus={event => event.target.select()} /></label>
+          <button type="button" className="button button-outline" onClick={async () => {
+            try { await navigator.clipboard.writeText(proofLink); setProofMessage('Enlace copiado. Compartilo sólo con la persona inscripta.') }
+            catch { setProofError('No se pudo copiar automáticamente. Seleccioná y copiá el enlace del campo.') }
+          }}>Copiar enlace</button></div>}
+        <label className="admin-detail-email-confirm"><input type="checkbox" checked={proofConfirmed} disabled={busy || blocked || inactive || reload}
+          onChange={event => setProofConfirmed(event.target.checked)} />Confirmé que falta el comprobante y que el correo de la inscripción es correcto.</label>
+        <button type="button" className="button button-gold" disabled={busy || blocked || inactive || reload || !proofConfirmed}
+          onClick={() => proofAction('resend')}>{busy ? 'Procesando…' : 'Reenviar aviso de comprobante pendiente'}</button>
+        <p className="admin-context-note">Máximo un aviso cada cinco minutos y cinco en 24 horas. No cambia el estado del pago. Si el comprobante se carga antes de que el trabajador procese el aviso, éste se cancela.</p>
+      </> : <p className="admin-context-note">El enlace y el aviso sólo están disponibles mientras la transferencia del pagador siga pendiente y aún no haya un comprobante cargado.</p>}
     </div>
   </>
 }

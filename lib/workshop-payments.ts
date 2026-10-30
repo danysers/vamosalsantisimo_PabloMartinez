@@ -330,7 +330,7 @@ export async function changeWorkshopPaymentMethod(
       ? new Date(Math.min(Date.now()+30*60_000, new Date(String(workshop.starts_at)).getTime())) : new Date(String(workshop.starts_at)) })
       .where(eq(reservations.registrationId, attempt.registration_id))
     await tx.update(emailOutbox).set({ status: 'cancelled', lastErrorCode: 'payment_method_changed' })
-      .where(and(eq(emailOutbox.registrationId, attempt.registration_id), sql`${emailOutbox.kind} IN ('registration_received','payment_instructions')`, sql`${emailOutbox.status} IN ('queued','failed')`))
+      .where(and(eq(emailOutbox.registrationId, attempt.registration_id), sql`${emailOutbox.kind} IN ('registration_received','payment_instructions','payment_proof_reminder')`, sql`${emailOutbox.status} IN ('queued','failed')`))
     await tx.insert(emailOutbox).values({ dedupeKey: `payment:${replacement.id}:instructions`, kind: 'payment_instructions',
       registrationId: attempt.registration_id, paymentAttemptId: replacement.id, toEmail: attempt.payer_email })
     await tx.insert(auditLog).values({ action: 'payment.method_changed', subjectId: attempt.registration_id,

@@ -13,7 +13,7 @@ const names: Record<string, string> = { pending: 'Pendiente', waiting: 'En esper
   created: 'Iniciado', approved: 'Aprobado', rejected: 'Rechazado', refunded: 'Reintegrado', partially_refunded: 'Reintegro parcial', charged_back: 'Revertido',
   mercado_pago: 'Mercado Pago', bank_transfer: 'Transferencia', on_site: 'Efectivo en el taller', manual: 'Manual',
   queued: 'En cola', sending: 'Enviando', sent: 'Aceptado por el servidor de correo', failed: 'Error de entrega', requested: 'Solicitada', declined: 'Rechazada',
-  registration_received: 'Inscripción', payment_instructions: 'Instrucciones de pago', accreditation_ready: 'Acreditación con QR',
+  registration_received: 'Inscripción', payment_instructions: 'Instrucciones de pago', payment_proof_reminder: 'Comprobante pendiente', accreditation_ready: 'Acreditación con QR',
   registration_access: 'Recuperación de acceso', group_payment_notice: 'Pago de grupo', payment_proof_submitted: 'Aviso de comprobante',
   assistance_review_request: 'Solicitud de ayuda a la organización', assistance_approved: 'Ayuda aprobada', assistance_declined: 'Respuesta de ayuda' }
 const label = (value: string) => names[value] || value || '—'

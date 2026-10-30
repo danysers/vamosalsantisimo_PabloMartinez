@@ -105,6 +105,21 @@ export function registrationEmail(input: {
   return { subject: `Inscripción registrada · ${input.reference}`, text, html: actionEmailHtml(text, input.proofUrl, 'Subir mi comprobante') }
 }
 
+export function paymentProofReminderEmail(input: { firstName: string; reference: string; proofUrl: string; proofWhatsappE164?: string | null }) {
+  const lines = [
+    `Hola ${input.firstName.trim()}:`, '',
+    'Tu inscripción al taller de música de Pablo Martínez está registrada, pero aún no recibimos el comprobante de pago por transferencia o QR.',
+    `Tu referencia es ${input.reference}.`,
+    'Si ya pagaste, no vuelvas a pagar: quizá hubo un inconveniente al adjuntarlo. Podés enviarlo desde este enlace personal, sin volver a cargar tus datos:',
+    input.proofUrl,
+    'No compartas este enlace. El pago seguirá pendiente hasta que una persona de la organización revise el comprobante.',
+  ]
+  if (input.proofWhatsappE164) lines.push('', 'Si no podés subirlo, pedí ayuda por WhatsApp:', proofWhatsappUrl(input.proofWhatsappE164, input.reference))
+  lines.push('', 'Vamos al Santísimo')
+  const text = lines.join('\n')
+  return { subject: `Aún no recibimos tu comprobante · ${input.reference}`, text, html: actionEmailHtml(text, input.proofUrl, 'Subir mi comprobante') }
+}
+
 export function registrationAccessEmail(input:{firstName:string;code:string}) {
   const text=[`Hola ${input.firstName.trim()}:`,'','Solicitaste volver a tu inscripción para enviar el comprobante o consultar tu pago.',
     `Tu código de acceso es: ${input.code}`,'El código vence en 15 minutos y se puede utilizar una sola vez. No lo compartas.',

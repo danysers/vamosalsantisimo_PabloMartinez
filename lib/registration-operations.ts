@@ -195,7 +195,7 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
         const id=String(target.id), selected=id===s.id
         const revoke=!target.eligible||target.status!=='confirmed'||target.blocked||(selected&&input.qrAction==='reissue')
         if(financial||revoke)await tx.execute(sql`UPDATE email_outbox SET status='cancelled',last_error_code='administrative_correction' WHERE registration_id=${id} AND status IN('queued','failed')
-          AND kind IN('registration_received','payment_instructions','group_payment_notice','accreditation_ready')`)
+          AND kind IN('registration_received','payment_instructions','payment_proof_reminder','group_payment_notice','accreditation_ready')`)
         if(revoke)await tx.execute(sql`UPDATE accreditation_credentials SET revoked_at=now(),revoked_by=${operatorId},revocation_reason=${input.reason} WHERE registration_id=${id} AND revoked_at IS NULL`)
         await tx.execute(sql`UPDATE registrations SET status=${target.status}::registration_status,accreditation_blocked=${target.blocked},
           registered_at_override=CASE WHEN id=${s.id} THEN ${input.registeredAt?new Date(input.registeredAt):null} ELSE registered_at_override END,updated_at=now() WHERE id=${id}`)

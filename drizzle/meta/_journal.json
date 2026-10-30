@@ -274,6 +274,13 @@
       "when": 1793336628255,
       "tag": "0038_admin_registration_operations",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793371850887,
+      "tag": "0039_payment_proof_reminder",
+      "breakpoints": true
     }
   ]
 }

@@ -71,6 +71,9 @@ export async function submitPaymentProof(input: { reference: string; accessToken
       filename: input.filename.slice(0, 120), contentType, sizeBytes: input.bytes.length, sha256, data: input.bytes,
       driveFileName: proofDriveFileName(documentNumber, uploadedAt, proofId, contentType),
     }).returning({ id: paymentProofs.id })
+    await tx.execute(sql`UPDATE email_outbox SET status='cancelled',last_error_code='proof_received'
+      WHERE registration_id=${String(attempt.registration_id)} AND kind='payment_proof_reminder'
+        AND payment_attempt_id=${String(attempt.id)} AND status IN ('queued','failed')`)
     await tx.insert(emailOutbox).values({
       dedupeKey: `payment-proof:${proof.id}:review`, kind: 'payment_proof_submitted',
       toEmail: 'danysers@gmail.com', registrationId: String(attempt.registration_id),

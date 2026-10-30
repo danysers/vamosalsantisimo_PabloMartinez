@@ -1,6 +1,18 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, assistanceWhatsappUrl, paymentProofReviewEmail, proofWhatsappUrl, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+import { accreditationEmail, assistanceApprovedEmail, assistanceDeclinedEmail, assistanceReviewEmail, assistanceWhatsappUrl, paymentProofReminderEmail, paymentProofReviewEmail, proofWhatsappUrl, registrationEmail, settlementReminderEmail } from '../lib/email-templates.ts'
+
+test('proof reminder says the proof is missing and reuses the personal upload link', () => {
+  const link = 'https://example.invalid/formacion/comprobante?reference=REF-123#proof=v1.1234567890.signature'
+  const message = paymentProofReminderEmail({ firstName: 'Ana', reference: 'REF-123', proofUrl: link, proofWhatsappE164: '5493718632884' })
+  assert.match(message.subject, /Aún no recibimos tu comprobante/)
+  assert.match(message.text, /no recibimos el comprobante/)
+  assert.match(message.text, /no vuelvas a pagar/)
+  assert.match(message.text, /pendiente hasta que.*revise/)
+  assert.match(message.text, /wa\.me\/5493718632884/)
+  assert.ok(message.text.includes(link))
+  assert.ok(message.html.includes('href="' + link + '"'))
+})
 
 test('untrusted names cannot inject HTML, event handlers or links into messages', () => {
   const payload = '<img src=x onerror="alert(1)"><a href="javascript:alert(1)">attack</a>'
