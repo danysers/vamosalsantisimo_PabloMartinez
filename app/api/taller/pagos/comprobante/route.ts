@@ -1,3 +1,4 @@
+import { observePublicRequest } from '../../../../../lib/operational-incidents'
 import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
@@ -26,7 +27,7 @@ async function boundedFormData(request: NextRequest) {
   return new Request('http://localhost/upload', { method: 'POST', headers: { 'content-type': request.headers.get('content-type') || '' }, body }).formData()
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('multipart/form-data;')) return reply({ error: 'Solicitud inválida.' }, 400)
   try {
@@ -34,16 +35,22 @@ export async function POST(request: NextRequest) {
     const declaredLength = Number(request.headers.get('content-length'))
     if (Number.isFinite(declaredLength) && declaredLength > MAX_MULTIPART_BYTES) return reply({ error: 'El archivo supera el límite de 5 MB.' }, 413)
     const data = await boundedFormData(request)
-    const reference = data.get('reference'), accessToken = data.get('accessToken'), file = data.get('comprobante')
+    const reference = data.get('reference'), emailToken = data.get('emailToken'), checkoutToken = data.get('accessToken'), file = data.get('comprobante')
+    const accessToken = emailToken ?? checkoutToken
     if (typeof reference !== 'string' || !/^[A-Za-z0-9_-]{10,80}$/.test(reference) ||
-      typeof accessToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(accessToken) ||
+      typeof accessToken !== 'string' || (emailToken !== null && checkoutToken !== null) ||
+      !(emailToken !== null ? /^v1\.\d{10}\.[A-Za-z0-9_-]{43}$/ : /^[A-Za-z0-9_-]{43}$/).test(accessToken) ||
       !(file instanceof File) || file.size < 1 || file.size > MAX_PROOF_BYTES) {
       return reply({ error: 'Adjuntá una imagen JPG, PNG, WebP o un PDF de hasta 5 MB.' }, 400)
     }
-    const result = await submitPaymentProof({ reference, accessToken, filename: file.name || 'comprobante', bytes: Buffer.from(await file.arrayBuffer()) })
+    const result = await submitPaymentProof({ reference, accessToken, emailLink: emailToken !== null, filename: file.name || 'comprobante', bytes: Buffer.from(await file.arrayBuffer()) })
     return reply(result.body, result.code)
   } catch (error) {
     if (error instanceof Error && error.message === 'too_large') return reply({ error: 'El archivo supera el límite de 5 MB.' }, 413)
     return reply({ error: 'No pudimos guardar el comprobante. Intentá nuevamente.' }, 503)
   }
+}
+
+export async function POST(request: NextRequest) {
+  return observePublicRequest(request, 'proof_upload', () => handlePost(request))
 }

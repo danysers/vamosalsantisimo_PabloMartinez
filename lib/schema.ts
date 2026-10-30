@@ -584,6 +584,24 @@ export const rateLimits = pgTable('rate_limits', {
   windowEnd: timestamp('window_end', { withTimezone: true }).notNull(),
 })
 
+export const operationalIncidents = pgTable('operational_incidents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventSlug: text('event_slug').notNull(),
+  correlationId: uuid('correlation_id').notNull(),
+  source: text('source').notNull(),
+  operation: text('operation').notNull(),
+  code: text('code').notNull(),
+  registrationId: uuid('registration_id').references(() => registrations.id, { onDelete: 'set null' }),
+  details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  uniqueIndex('operational_incidents_identity').on(table.source, table.correlationId, table.code),
+  index('operational_incidents_by_time').on(table.eventSlug, table.createdAt),
+  index('operational_incidents_by_registration').on(table.registrationId, table.createdAt),
+  check('operational_incidents_source', sql`${table.source} IN ('client','server')`),
+  check('operational_incidents_details_size', sql`octet_length(${table.details}::text)<=1024`),
+])
+
 export const jobs = pgTable('jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
   kind: text('kind').notNull(),

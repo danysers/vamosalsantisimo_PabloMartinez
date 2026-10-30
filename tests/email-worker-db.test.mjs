@@ -21,6 +21,8 @@ test('assistance outbox renders organizer notice and reviewed decisions without 
   const sent = []
   const previousKey = process.env.ACCREDITATION_TOKEN_KEY
   const previousKeyId = process.env.ACCREDITATION_TOKEN_KEY_ID
+  const previousCheckoutKey = process.env.WORKSHOP_CHECKOUT_TOKEN_KEY
+  process.env.WORKSHOP_CHECKOUT_TOKEN_KEY = randomBytes(48).toString('base64url')
   const qrKey = randomBytes(32).toString('base64url')
   process.env.ACCREDITATION_TOKEN_KEY = qrKey
   process.env.ACCREDITATION_TOKEN_KEY_ID = 'email-test'
@@ -109,6 +111,8 @@ test('assistance outbox renders organizer notice and reviewed decisions without 
     else process.env.ACCREDITATION_TOKEN_KEY = previousKey
     if (previousKeyId === undefined) delete process.env.ACCREDITATION_TOKEN_KEY_ID
     else process.env.ACCREDITATION_TOKEN_KEY_ID = previousKeyId
+    if (previousCheckoutKey === undefined) delete process.env.WORKSHOP_CHECKOUT_TOKEN_KEY
+    else process.env.WORKSHOP_CHECKOUT_TOKEN_KEY = previousCheckoutKey
     await pool.end()
   }
 })

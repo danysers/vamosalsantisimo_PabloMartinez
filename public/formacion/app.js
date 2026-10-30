@@ -190,7 +190,7 @@ document.addEventListener('submit', async event => {
     }
   } catch { /* A registration can still be submitted without saved receipts. */ }
   try {
-    const response = await fetch('/api/taller/inscripciones', {
+    const response = await (window.VASErrors?.fetch||fetch)('/api/taller/inscripciones', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': creationKey },
       body: JSON.stringify({
         firstName: data.get('nombre'), lastName: data.get('apellido'), documentNumber: data.get('documento'), birthDate: data.get('fechaNacimiento'),

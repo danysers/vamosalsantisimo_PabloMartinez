@@ -20,6 +20,7 @@ test('admin pricing and group charges integrate with allocations, email and QR',
   const db = getDb()
   const slug = `group-test-${randomUUID()}`
   process.env.REGISTRATION_EMAIL_READY = '1'
+  process.env.WORKSHOP_CHECKOUT_TOKEN_KEY = randomBytes(48).toString('base64url')
   process.env.ACCREDITATION_TOKEN_KEY_ID = 'group-test'
   process.env.ACCREDITATION_TOKEN_KEY = randomBytes(32).toString('base64url')
   try {

@@ -253,6 +253,13 @@
       "when": 1793324000000,
       "tag": "0035_email_delivery_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793336000000,
+      "tag": "0036_operational_incidents",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { observePublicRequest } from '../../../../../lib/operational-incidents'
 import { publicRequestOrigin } from '../../../../../lib/public-site-origin'
 import { NextRequest } from 'next/server'
 import { allowPublicOperation, tooManyRequests } from '../../../../../lib/request-rate-limit'
@@ -11,7 +12,7 @@ const reply = (body: object, status: number) => Response.json(body, { status, he
   'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow',
 } })
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   if (!publicRequestOrigin(request)) return reply({ error: 'Solicitud inválida.' }, 403)
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return reply({ error: 'Solicitud inválida.' }, 400)
   let access: z.infer<typeof schema>
@@ -21,4 +22,8 @@ export async function POST(request: NextRequest) {
     return reply(await workshopPaymentStatus(access), 200)
   }
   catch { return reply({ error: 'No pudimos consultar ese pago. Usá el mismo navegador en el que te inscribiste.' }, 404) }
+}
+
+export async function POST(request: NextRequest) {
+  return observePublicRequest(request, 'payment_status', () => handlePost(request))
 }

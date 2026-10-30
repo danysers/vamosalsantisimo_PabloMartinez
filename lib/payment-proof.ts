@@ -2,6 +2,7 @@ import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
 import { eq, sql } from 'drizzle-orm'
 import { hasCheckoutAccess } from './checkout-access'
+import { hasEmailLink } from './email-link-token'
 import { getDb } from './db'
 import { emailOutbox, paymentProofs } from './schema'
 
@@ -30,12 +31,12 @@ export function proofDriveFileName(documentNumber: string, uploadedAt: Date, pro
   return `${document}_${date}_${time}_${proofId.slice(0, 8)}.${extension}`
 }
 
-export async function submitPaymentProof(input: { reference: string; accessToken: string; filename: string; bytes: Buffer }) {
+export async function submitPaymentProof(input: { reference: string; accessToken: string; emailLink?: boolean; filename: string; bytes: Buffer }) {
   const db = getDb()
   return db.transaction(async tx => {
     const found = await tx.execute(sql`
       SELECT p.id,p.source,p.status,r.id AS registration_id,r.creation_key,r.status AS registration_status,
-        i.document_number
+        i.document_number,r.email,r.reference
       FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
       JOIN registration_intakes i ON i.registration_id=r.id
       JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
@@ -44,7 +45,10 @@ export async function submitPaymentProof(input: { reference: string; accessToken
       ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF p,r
     `)
     const attempt = found.rows[0]
-    if (!attempt || !hasCheckoutAccess(input.accessToken, String(attempt.registration_id), String(attempt.creation_key))) {
+    const authorized = attempt && (input.emailLink
+      ? hasEmailLink(input.accessToken, 'proof', { id: String(attempt.registration_id), reference: String(attempt.reference), creationKey: String(attempt.creation_key), email: String(attempt.email) })
+      : hasCheckoutAccess(input.accessToken, String(attempt.registration_id), String(attempt.creation_key)))
+    if (!attempt || !authorized) {
       return { code: 404, body: { error: 'No encontramos esta inscripción en este navegador.' } }
     }
     if (attempt.source !== 'bank_transfer' || attempt.status !== 'pending' || attempt.registration_status !== 'pending') {

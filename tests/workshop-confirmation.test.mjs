@@ -8,12 +8,12 @@ const flush=() => new Promise(resolve => setImmediate(resolve))
 
 // Small DOM boundary for the checkout controller: real timers and network are
 // replaced so we can cover long waits, interruptions and return-tab recovery.
-function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false,rejectReturn=false,initialResponse={},proofMode='success'}={}) {
+function browser({storage=new Map(),url='http://localhost:3000/formacion/inscripcion',holdFirstStatus=false,rejectReturn=false,rejectEmailLink=false,telemetry=false,initialResponse={},proofMode='success'}={}) {
   const ids=new Map(), classes=new Map(), events=new Map(), windowEvents=new Map(), timers=new Map()
   let serial=0, now=0, printed=0, interrupted=false, proofPosts=0, proofResets=0
   let releaseProof
   let releasePending
-  const calls=[]
+  const calls=[],reports=[]
   let response={reference:'TestReference123',status:'pending',registrationStatus:'pending',baseAmountMinor:1_000_000,amountMinor:1_100_000,onlineCheckoutReady:true,testMode:true,emailStatus:'queued',checkoutUrl:'https://www.mercadopago.com.ar/checkout/v1/redirect?order_id=ORDTST1234567890',paymentMethod:'mercado_pago',attemptId:'00000000-0000-4000-8000-000000000001',canChangeMethod:true,methods:{mercado_pago:true,bank_transfer:true,on_site:true},transfer:{alias:'test.alias',provider:'Banco de prueba',whatsappUrl:'https://wa.me/5493704000000'}}
   response={...response,...initialResponse}
   class Element {
@@ -39,7 +39,7 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
   const context={document,location,URL,URLSearchParams,Intl,JSON,console,queueMicrotask,FormData,AbortController,CustomEvent:class {constructor(type){this.type=type}},
     sessionStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)},
     history:{state:{},replaceState:(state,unused,next)=>{location.href=String(next)}},
-    matchMedia:()=>({matches:false}),window:{print(){printed++}},
+    matchMedia:()=>({matches:false}),window:{print(){printed++},...(telemetry?{VASErrors:{newId:()=> '00000000-0000-4000-8000-000000000009',report:(event,access)=>reports.push({event,access})}}:{})},
     addEventListener:(name,callback)=>windowEvents.set(name,callback),
     setTimeout:(fn,delay)=>{const id=++serial;timers.set(id,{fn,at:now+delay});return id},clearTimeout:id=>timers.delete(id),
     fetch:async(path,options)=>{calls.push({path,body:path.endsWith('/comprobante')?options.body:JSON.parse(options.body)});if(path.endsWith('/estado')&&interrupted){interrupted=false;throw new Error('Temporary network failure')}
@@ -55,12 +55,13 @@ function browser({storage=new Map(),url='http://localhost:3000/formacion/inscrip
       }
       if(path.endsWith('/metodo')) {const method=JSON.parse(options.body).method;response={...response,paymentMethod:method,amountMinor:method==='mercado_pago'?1_100_000:1_000_000,attemptId:'00000000-0000-4000-8000-000000000002'}}
       if(path.endsWith('/retorno')) return {ok:!rejectReturn,json:async()=>rejectReturn?{error:'Expired'}:{reference:'TestReference123',accessToken:'a'.repeat(43)}}
+      if(path.endsWith('/enlace')&&rejectEmailLink)return {ok:false,status:404,json:async()=>({error:'Este enlace ya no está disponible.'})}
       const snapshot=JSON.parse(JSON.stringify(response))
       if(path.endsWith('/estado')&&holdFirstStatus){holdFirstStatus=false;await new Promise(resolve=>{releasePending=resolve})}
       return {ok:true,json:async()=>path.endsWith('/checkout')?{checkoutUrl:snapshot.checkoutUrl,amountMinor:snapshot.amountMinor}:snapshot}},
   }
   vm.runInNewContext(source,context)
-  return {ids,events,windowEvents,document,storage,location,calls,
+  return {ids,events,windowEvents,document,storage,location,calls,reports,rejectEmailLink(){rejectEmailLink=true},
     get printed(){return printed},get proofResets(){return proofResets},get proofPosts(){return proofPosts},releaseProof(){releaseProof?.()},set response(value){response={...response,...value}},interrupt(){interrupted=true},release(){releasePending?.()},
     async tick(){const next=[...timers].sort((a,b)=>a[1].at-b[1].at)[0];assert.ok(next,'automatic refresh must remain scheduled');timers.delete(next[0]);now=next[1].at;next[1].fn();await flush()},
   }
@@ -210,22 +211,18 @@ test('alias and QR render as separate choices; proof uses upload and WhatsApp is
   assert.match(sandbox.ids.get('checkout-status').textContent,/proceso de confirmación/)
 })
 
-test('pay-at-workshop displays and prints a registration card while retaining a visible pending-payment label',async()=>{
+test('pay-at-workshop keeps instructions and method editing but never offers a 3D pass or printing',async()=>{
   const app=browser()
   app.response={paymentMethod:'on_site',amountMinor:null,nickname:'Dany',registrationCard:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis de Francia'}}
   await app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'on_site',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:null,localTest:true}})
   await flush()
-  assert.equal(app.ids.get('registration-result').dataset.payment,'pending')
   assert.equal(app.ids.get('registration-result-title').textContent,'Inscripción registrada')
-  assert.equal(app.ids.get('pass-qr').hidden,false)
-  assert.match(app.ids.get('pass-payment').textContent,/PENDIENTE/)
-  assert.match(app.ids.get('confirmation-payment-note').textContent,/Precio de ventanilla a definir/)
-  assert.doesNotMatch(app.ids.get('confirmation-payment-note').textContent,/\$0/)
-  assert.equal(app.ids.get('pass-nickname').textContent,'Dany')
-  app.ids.get('print-workshop-pass').handlers.get('click')()
-  assert.equal(app.printed,1)
+  assert.equal(app.ids.has('registration-confirmed'),false)
+  assert.equal(app.ids.has('print-workshop-pass'),false)
+  assert.match(app.ids.get('checkout-breakdown').textContent,/Precio de ventanilla a definir/)
+  assert.equal(app.printed,0)
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
-  await app.ids.get('pass-change-method').handlers.get('click')()
+  await app.ids.get('checkout-edit').handlers.get('click')()
   assert.equal(app.ids.get('checkout-method-editor').hidden,false)
   app.ids.get('payment-method-cancel').handlers.get('click')()
   assert.equal(app.ids.get('checkout-method-editor').hidden,true)
@@ -240,7 +237,7 @@ test('switching alias, cash and Mercado Pago clears the previous payment instruc
   assert.equal(app.ids.get('checkout-transfer-alias').hidden,false)
   app.response={paymentMethod:'on_site',registrationCard:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis'}}
   app.windowEvents.get('focus')();await flush()
-  assert.equal(app.ids.get('payment-next').hidden,true)
+  assert.equal(app.ids.get('payment-next').hidden,false)
   assert.equal(app.ids.get('checkout-transfer-alias').hidden,true)
   assert.equal(app.ids.get('checkout-proof').hidden,true)
   app.response={paymentMethod:'mercado_pago',registrationCard:null}
@@ -302,8 +299,8 @@ test('archived registration stays available as history without a QR or checkout'
   assert.equal(app.calls.filter(call=>call.path.endsWith('/checkout')).length,0)
 })
 
-async function proofBrowser(proofMode) {
-  const app=browser({proofMode,initialResponse:{paymentMethod:'bank_transfer',proofSubmitted:false,amountMinor:1_000_000}})
+async function proofBrowser(proofMode,telemetry=false) {
+  const app=browser({proofMode,telemetry,initialResponse:{paymentMethod:'bank_transfer',proofSubmitted:false,amountMinor:1_000_000}})
   app.events.get('workshop:registered')({detail:{reference:'TestReference123',payment:'bank_transfer',paymentStatus:'pending',status:'pending',paymentAccessToken:'a'.repeat(43),amountMinor:1_000_000,transfer:{alias:'test.alias',provider:'Banco'}}})
   await flush()
   const file=new File([Buffer.from([255,216,255,1])],'comprobante.jpg',{type:'image/jpeg'})
@@ -351,4 +348,54 @@ test('only a confirmed successful upload clears the file; concurrent submits are
   app.releaseProof();await pending
   assert.equal(app.proofResets,1);assert.equal(app.ids.get('checkout-proof').hidden,true)
   assert.equal(app.ids.get('registration-result').dataset.state,'pending')
+})
+
+test('a personal proof link opens upload only in a fresh browser, strips the fragment and never exchanges for checkout access',async()=>{
+  const token='v1.1799999999.'+'p'.repeat(43)
+  const app=browser({url:'https://example.invalid/formacion/comprobante?reference=TestReference123#proof='+token,
+    initialResponse:{paymentMethod:'bank_transfer',canUpload:true,proofSubmitted:false}})
+  await flush();await flush()
+  assert.equal(app.location.hash,'')
+  assert.equal(app.calls[0].path,'/api/taller/enlace')
+  assert.equal(app.calls[0].body.purpose,'proof')
+  assert.equal(app.ids.get('registration-grid').hidden,true)
+  assert.equal(app.ids.get('checkout-proof').hidden,false)
+  for(const id of ['checkout-pay','checkout-edit','checkout-transfer-alias','checkout-transfer-qr'])assert.equal(app.ids.get(id).hidden,true)
+  const file=new File([Buffer.from([255,216,255,1])],'private-name.jpg',{type:'image/jpeg'})
+  app.ids.get('checkout-proof-file').files=[file]
+  await app.ids.get('checkout-proof').handlers.get('submit')({preventDefault(){}})
+  const upload=app.calls.find(call=>call.path.endsWith('/comprobante'))
+  assert.equal(upload.body.get('emailToken'),token)
+  assert.equal(upload.body.get('accessToken'),null)
+  assert.equal(app.proofResets,1)
+  assert.equal(app.calls.some(call=>/checkout$|metodo$|inscripciones$|retorno$|estado$/.test(call.path)),false)
+})
+
+test('paid methods and approved assistance open the same printable 3D pass, which disappears when access is revoked',async()=>{
+  for(const method of ['bank_transfer','mercado_pago','assistance']) {
+    const app=browser({url:'https://example.invalid/formacion/acreditacion?reference=TestReference123#pass=v1.1799999999.'+'p'.repeat(43),
+      initialResponse:{paymentMethod:method,status:method==='assistance'?'not_required':'approved',registrationStatus:'confirmed',passAvailable:true,
+        accreditation:{qrDataUrl:'data:image/png;base64,iVBORw0KGgo=',startsAt:'2026-12-19T18:00:00Z',venue:'Parroquia San Luis de Francia'}}})
+    await flush();await flush()
+    assert.equal(app.location.hash,'')
+    assert.equal(app.ids.get('pass-qr').src,'data:image/png;base64,iVBORw0KGgo=')
+    app.ids.get('print-workshop-pass').handlers.get('click')();assert.equal(app.printed,1)
+    assert.equal(app.calls.every(call=>call.path==='/api/taller/enlace'),true)
+    app.rejectEmailLink();app.windowEvents.get('focus')();await flush()
+    assert.equal(app.ids.get('pass-qr').hidden,true);assert.equal(app.ids.get('pass-qr').src,undefined)
+    assert.equal(app.ids.get('registration-result').dataset.state,'access-unavailable')
+  }
+  const missing=browser({url:'https://example.invalid/formacion/acreditacion?reference=TestReference123'})
+  assert.equal(missing.calls.length,0);assert.equal(missing.ids.has('registration-confirmed'),false)
+})
+
+test('upload reports correlate the outcome and metadata without filenames, file bytes or exception text',async()=>{
+  for(const [mode,outcome] of [['lost-before-save','missing'],['lost-after-save','saved'],['lost-without-status','unavailable']]) {
+    const {app}=await proofBrowser(mode,true);await app.submitProof()
+    assert.equal(app.reports.length,1)
+    assert.equal(app.reports[0].event.outcome,outcome)
+    assert.equal(app.reports[0].event.code,'upload_network')
+    assert.equal(app.reports[0].event.fileType,'image/jpeg')
+    assert.doesNotMatch(JSON.stringify(app.reports[0].event),/comprobante\.jpg|Failed to fetch|accessToken|token/)
+  }
 })
