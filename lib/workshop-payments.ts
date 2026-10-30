@@ -19,7 +19,7 @@ type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
 type Access = { reference: string; accessToken: string }
 type Attempt = {
   id: string; registration_id: string; workshop_id: string; reference: string; creation_key: string;
-  admin_change_id: string | null;
+  admin_change_id: string | null; accreditation_blocked: boolean;
   source: string; status: string; registration_status: string; amount_minor: number | null; provider_fee_minor: number;
   payer_email: string; external_reference: string; idempotency_key: string; provider_order_id: string | null;
   checkout_url: string | null; reconciled_at: Date | null; expires_at: Date | null;
@@ -31,7 +31,7 @@ type Attempt = {
 
 async function authorizedAttempt(db: Db | Tx, access: Access, lock = false): Promise<Attempt> {
   const result = await db.execute(sql`
-    SELECT p.*,r.id AS registration_id,r.workshop_id,r.reference,r.creation_key,r.status AS registration_status,h.expires_at,r.deleted_at,r.archived_at,
+    SELECT p.*,r.id AS registration_id,r.workshop_id,r.reference,r.creation_key,r.status AS registration_status,r.accreditation_blocked,h.expires_at,r.deleted_at,r.archived_at,
       NOT registration_is_current(r.id) AS historical
     FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id
     JOIN workshops w ON w.id=r.workshop_id JOIN events e ON e.id=w.event_id
@@ -185,7 +185,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
     status: attempt.status, registrationStatus: attempt.registration_status, canChangeMethod: false, checkoutUrl: null,
     accreditation: null, registrationCard: null, testMode: false }
   let verification: 'verified' | 'pending' | 'unavailable' = 'pending'
-  if (!attempt.historical && refresh && attempt.source === 'mercado_pago' && attempt.provider_order_id && (!attempt.reconciled_at || Date.now() - new Date(attempt.reconciled_at).getTime() > 10_000)) {
+  if (!attempt.accreditation_blocked && !attempt.historical && refresh && attempt.source === 'mercado_pago' && attempt.provider_order_id && (!attempt.reconciled_at || Date.now() - new Date(attempt.reconciled_at).getTime() > 10_000)) {
     try { await reconcileWorkshopOrder(attempt.provider_order_id); verification = 'verified' } catch { verification = 'unavailable' }
     attempt = await authorizedAttempt(getDb(), access)
   }
@@ -226,7 +226,7 @@ export async function workshopPaymentStatus(access: Access, refresh = true) {
     }
   }
   return { reference: attempt.reference, status: attempt.status, registrationStatus: attempt.registration_status,
-    attemptId: attempt.id, paymentMethod: attempt.source, proofSubmitted: !!proof.rows[0],
+    attemptId: attempt.id, accreditationBlocked: attempt.accreditation_blocked, paymentMethod: attempt.source, proofSubmitted: !!proof.rows[0],
     canChangeMethod: !attempt.admin_change_id && !attempt.historical && !proof.rows[0] && ['mercado_pago','bank_transfer','on_site'].includes(attempt.source) && attempt.registration_status === 'pending' && ['pending','created','rejected','cancelled'].includes(attempt.status) &&
       Number(eligibility.rows[0]?.members) === 1 && !eligibility.rows[0]?.other_active && attempt.paid_amount_minor === 0,
     onlineCheckoutReady: !!settings?.mercadoPagoEnabled && checkoutConfigured(),
