@@ -114,10 +114,10 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
         const eligible=nextPaid||(selected?nextWaived:!!r.waived)||!!r.assisted
         const status=selected?input.registrationStatus:eligible&&['pending','confirmed'].includes(String(r.status))&&!r.accreditation_blocked?'confirmed'
           :!eligible&&r.status==='confirmed'?'review':String(r.status)
-        const blocked=selected?(input.qrAction==='revoke'||status!=='confirmed'):!!r.accreditation_blocked
+        const blocked=selected?(input.qrAction==='revoke'||status!=='confirmed'||(input.qrAction==='keep'&&s.accreditation_blocked&&s.status==='confirmed')):!!r.accreditation_blocked
         return {...r,previousStatus:r.status,status,blocked,eligible}
       })
-      if(targets.some(r=>r.admitted&&(r.status!=='confirmed'||!r.eligible||r.blocked||input.qrAction==='reissue')&&!(r.id===s.id&&input.undoAdmission)))fail(409,'Hay un ingreso registrado. Revertí ese ingreso explícitamente antes de invalidar su acreditación.')
+      if(targets.some(r=>r.admitted&&(r.status!=='confirmed'||!r.eligible||r.blocked||(r.id===s.id&&input.qrAction==='reissue'))&&!(r.id===s.id&&input.undoAdmission)))fail(409,'Hay un ingreso registrado. Revertí ese ingreso explícitamente antes de invalidar su acreditación.')
       const occupied=await tx.execute(sql`SELECT count(*)::int AS n FROM registrations r WHERE r.workshop_id=${String(w.id)} AND registration_is_current(r.id)
         AND (r.status='confirmed' OR EXISTS(SELECT 1 FROM reservations h WHERE h.registration_id=r.id AND (h.status='used' OR(h.status='held' AND h.expires_at>now()))))`)
       const extra=targets.filter(r=>!r.has_seat&&r.status!=='cancelled').length

@@ -61,6 +61,8 @@ test('administrative operations preserve payment facts and enforce owner, replay
       assert.equal(queued.length,1);assert.equal(queued[0].credential_id,approvedCredential)
       assert.equal((await edit(await payload(ref,{qrAction:'revoke',confirmQrChange:true}))).code,200)
       assert.equal((await issueAccreditation(db,{registrationId:original.registration_id,eventSlug:slug,operatorId:owner.id})).body.blocked,true)
+      assert.equal((await edit(await payload(ref))).code,200)
+      assert.equal((await read(ref)).qrBlocked,true,'keeping a revoked QR must preserve the explicit block')
       assert.equal((await pool.query('SELECT count(*)::int n FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[original.registration_id])).rows[0].n,0)
       assert.equal((await edit(await payload(ref,{qrAction:'reissue',confirmQrChange:true}))).code,200)
       assert.notEqual((await pool.query('SELECT id FROM accreditation_credentials WHERE registration_id=$1 AND revoked_at IS NULL',[original.registration_id])).rows[0].id,approvedCredential)
@@ -115,6 +117,21 @@ test('administrative operations preserve payment facts and enforce owner, replay
       assert.equal((await edit(await payload(reference,{registrationStatus:'pending'}))).code,409)
       assert.equal((await read(reference)).registrationStatus,'cancelled')
       await pool.query('UPDATE workshops SET capacity=NULL WHERE id=$1',[workshop.id])
+    })
+    await t.test('a processing Mercado Pago order cannot be replaced; a safely cancelled checkout can',async()=>{
+      const reference=await enroll('mercado_pago')
+      const p=(await pool.query('SELECT p.* FROM payment_attempts p JOIN registrations r ON r.id=p.registration_id WHERE r.reference=$1',[reference])).rows[0]
+      const orderId='ORDTST'+randomBytes(12).toString('hex').toUpperCase()
+      await pool.query('UPDATE payment_attempts SET provider_order_id=$1 WHERE id=$2',[orderId,p.id])
+      const order={id:orderId,external_reference:p.external_reference,country_code:'ARG',currency:'ARS',total_amount:(p.amount_minor/100).toFixed(2),total_paid_amount:'0.00',status:'processing',user_id:'111',integration_data:{application_id:'222'},live_mode:false}
+      let cancellations=0
+      const provider={load:async()=>order,cancel:async()=>{cancellations++;order.status='canceled'}}
+      const input=await payload(reference,{paymentMethod:'bank_transfer',confirmPayment:true})
+      assert.equal((await editRegistrationOperations(db,slug,owner.id,input,provider)).code,409)
+      assert.equal(cancellations,0);assert.equal((await read(reference)).paymentMethod,'mercado_pago')
+      order.status='created'
+      const changed=await editRegistrationOperations(db,slug,owner.id,input,provider)
+      assert.equal(changed.code,200,JSON.stringify(changed.body));assert.equal(cancellations,1);assert.equal((await read(reference)).paymentMethod,'bank_transfer')
     })
   }finally{await pool.end();await db.$client.end()}
 })
