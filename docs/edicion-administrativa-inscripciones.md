@@ -69,3 +69,14 @@ pagos/QR/accesos, recuperación, cancelación selectiva de correos y controles H
 de sesión, rol, Origin y superficie pública. No se corrigen asistentes reales
 ni se realizan pagos o envíos reales para validar esta función. No requiere
 migraciones nuevas ni cambios de configuración del servidor.
+
+
+## Gestión completa del administrador
+
+El rol `configuration` dispone además de **Editar estado, pago y acreditación** en la ficha. El formulario personal y su API continúan limitados a los datos de la persona. La nueva API privada `PATCH /api/admin/inscripciones/operaciones` permite corregir estados, medio e importes del pago, referencia bancaria, fecha efectiva, exención, QR e ingreso. Exige motivo, versión actual e identificador idempotente; los pagos de grupos y los cambios de QR o ingreso requieren confirmación.
+
+La migración 0038 conserva los pagos y sus asignaciones originales. Una corrección financiera crea una operación administrativa nueva y deja la anterior como reemplazada. Las transacciones reales del proveedor permanecen intactas. Un estado de reintegro registrado aquí no devuelve dinero: el reintegro se gestiona en el proveedor. Un enlace de Mercado Pago pendiente debe cerrarse de forma verificada antes de reemplazarlo. La fecha corregida se muestra en ficha y grilla; la fecha original conserva su función de auditoría y corte de producción.
+
+Corregir una inscripción todavía impaga conserva el flujo normal de aprobación, emisión de QR y correo. Revocar el QR explícitamente bloquea las emisiones automáticas hasta solicitar uno nuevo. También se respeta una inscripción ya pagada que el administrador deja sin confirmar. Los lugares se validan contra la capacidad; el efectivo continúa excluido del avance de lotes. Cancelar o quitar elegibilidad revoca la acreditación. Revertir un ingreso guarda en la auditoría el registro anterior.
+
+La opción de enviar acreditación encola el correo al confirmar una inscripción habilitada; conserva el QR existente salvo reemisión explícita. El botón independiente de reenvío sigue reutilizando el mismo QR y conserva sus límites. Las correcciones no cambian referencias públicas, claves de acceso ni los datos de autenticación.

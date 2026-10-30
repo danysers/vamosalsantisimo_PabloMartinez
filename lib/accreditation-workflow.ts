@@ -43,9 +43,19 @@ async function issueInTransaction(tx: Tx, registrationId: string, eventSlug: str
   if (!['pending', 'confirmed'].includes(row.status)) return { code: 409, body: { error: 'La inscripción no está habilitada para acreditarse.' } }
   const reason = row.paid ? 'paid' : row.assistance_status === 'approved' ? 'assistance_approved' : row.waived ? 'waived' : null
   if (!reason) return { code: 409, body: { error: 'Primero debe verificarse el pago o aprobarse la excepción.' } }
-  const [existing] = await tx.select({ id: accreditationCredentials.id }).from(accreditationCredentials)
+  const [existing] = await tx.select({ id: accreditationCredentials.id, reason: accreditationCredentials.reason }).from(accreditationCredentials)
     .where(and(eq(accreditationCredentials.registrationId, registrationId), sql`${accreditationCredentials.revokedAt} IS NULL`)).limit(1)
-  if (existing) return { code: 200, body: { credentialId: existing.id, reference: row.reference, emailQueued: false, alreadyIssued: true } }
+  if (existing) {
+    const stillEligible = existing.reason === 'paid' ? row.paid : existing.reason === 'assistance_approved' ? row.assistance_status === 'approved' : row.waived
+    if (!stillEligible) {
+      // Keep the same QR when an owner replaces payment with an authorized
+      // exemption. Entry still checks this reason against the current records.
+      await tx.update(accreditationCredentials).set({ reason }).where(eq(accreditationCredentials.id, existing.id))
+      await tx.insert(auditLog).values({ actorId: operatorId, action: 'accreditation.eligibility_updated', subjectId: registrationId,
+        changes: { credentialId: existing.id, from: existing.reason, to: reason } })
+    }
+    return { code: 200, body: { credentialId: existing.id, reference: row.reference, emailQueued: false, alreadyIssued: true } }
+  }
   const { key, keyId } = qrConfig()
   const versionResult = await tx.execute(sql`SELECT coalesce(max(version),0)::integer AS version FROM accreditation_credentials WHERE registration_id=${registrationId}`)
   const version = Number(versionResult.rows[0]?.version ?? 0) + 1
@@ -137,15 +147,18 @@ export function verifyManualPayment(db: Db, input: {
       JOIN registrations r ON r.id=a.registration_id WHERE a.attempt_id=${attempt.id} AND registration_is_current(r.id)`)
     const members = [...new Set((allocated.rows.length ? allocated.rows : [{ registration_id: attempt.registration_id }])
       .map(row => String(row.registration_id)))]
+    let accreditedPeople = 0, emailQueued = false
     for (const registrationId of members) {
       const issued = await issueInTransaction(tx, registrationId, input.eventSlug, input.operatorId)
       if (issued.code !== 201 && issued.code !== 200) throw new Error('payment_accreditation_inconsistent')
+      if (issued.body.credentialId) accreditedPeople++
+      if (issued.body.emailQueued) emailQueued = true
     }
     await tx.insert(auditLog).values({ actorId: input.operatorId, action: 'payment.manually_verified',
       subjectId: attempt.id, reason: input.note,
-      changes: { source: attempt.source, amountMinor: attempt.amount_minor, manualReference: input.manualReference || null, accreditedPeople: members.length } })
+      changes: { source: attempt.source, amountMinor: attempt.amount_minor, manualReference: input.manualReference || null, accreditedPeople } })
     await tx.execute(sql`SELECT advance_workshop_lot(${String(workshop.rows[0].id)})`)
-    return { code: 200, body: { status: 'approved', accreditedPeople: members.length, emailQueued: true } }
+    return { code: 200, body: { status: 'approved', accreditedPeople, emailQueued, accreditationBlocked: accreditedPeople < members.length } }
   })
 }
 

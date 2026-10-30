@@ -2,7 +2,7 @@
 
 El panel distingue la aceptación SMTP del rechazo posterior. Cada mensaje tiene su propia identificación: un rebote de un intento anterior no se atribuye a un reenvío nuevo. No se afirma recepción en bandeja porque no haya rebote.
 
-En la ficha, **Correos de la inscripción** muestra «Rebotó · No entregado» o «Entrega demorada», código, causa y un detalle de texto del proveedor. La grilla avisa si la acreditación más reciente rebotó. **Actualizar estado de correos** vuelve a consultar la ficha; el servidor revisa el buzón cada dos minutos. Se muestra la última consulta y una advertencia si está incompleta o lleva más de quince minutos sin actualizarse.
+En la ficha, **Correos de la inscripción** muestra «Rebotó · No entregado» o «Entrega demorada», código, causa y un detalle de texto del proveedor. La grilla avisa si la acreditación más reciente rebotó. **Actualizar estado de correos** solicita una revisión global del buzón y actualiza la ficha. No hay consultas periódicas a IMAP: el trabajador permanece a la espera de una solicitud explícita. La consulta se comparte entre todas las inscripciones, conserva el resultado y agrupa solicitudes cercanas durante un minuto. El panel muestra la última revisión y si está pendiente o terminó con un error.
 
 El trabajador `email-bounce-worker.mjs` acompaña al de envío en la aplicación pública cuando `WORKSHOP_EMAIL_WORKER_ENABLED=1`. Usa TLS en IMAP 993 con el mismo buzón SMTP; `IMAP_HOST` permite otro servidor si el proveedor separa los accesos. No necesita una credencial nueva ni la VPN de la PC. Los fallos de consulta se registran sin detener el sitio ni el envío SMTP. Lee INBOX y las carpetas de spam, promociones y papelera disponibles, en modo de sólo lectura. No marca, mueve ni borra mensajes.
 
@@ -19,3 +19,5 @@ Las pruebas usan mensajes DSN sintéticos, transporte SMTP simulado y PostgreSQL
 Referencias de implementación: [ImapFlow](https://imapflow.com/docs/api/imapflow-client/) y [MailParser](https://nodemailer.com/extras/mailparser).
 
 Cada mensaje admite hasta veinte informes distintos; los bloques repetidos no multiplican consultas a la base. Un MIME que no se pueda analizar queda advertido y no impide avanzar a los mensajes posteriores.
+
+La migración 0037 agrega la solicitud y su estado a `email_bounce_sync`. El panel encola la solicitud desde `POST /api/admin/correos/actualizar`; PostgreSQL avisa al trabajador con LISTEN/NOTIFY y éste confirma al terminar. El arranque sólo retoma solicitudes manuales ya encoladas. Reconectar una conexión de PostgreSQL caída no programa una revisión del buzón. El trabajador SMTP sigue enviando los correos normalmente.

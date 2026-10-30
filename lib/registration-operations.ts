@@ -117,7 +117,10 @@ export async function editRegistrationOperations(db: Db, eventSlug: string, oper
         const eligible=nextPaid||(selected?nextWaived:!!r.waived)||!!r.assisted
         const status=selected?input.registrationStatus:eligible&&['pending','confirmed'].includes(String(r.status))&&!r.accreditation_blocked?'confirmed'
           :!eligible&&r.status==='confirmed'?'review':String(r.status)
-        const blocked=selected?(input.qrAction==='revoke'||status!=='confirmed'||(input.qrAction==='keep'&&s.accreditation_blocked&&s.status==='confirmed')):!!r.accreditation_blocked
+        // Ordinary unpaid edits must retain the normal approval -> QR workflow.
+        // An explicit revocation or a paid registration deliberately put on hold
+        // stays blocked until the owner requests a new credential.
+        const blocked=selected?(input.qrAction==='revoke'||(input.qrAction!=='reissue'&&(s.accreditation_blocked||(status!=='confirmed'&&eligible)))):!!r.accreditation_blocked
         return {...r,previousStatus:r.status,status,blocked,eligible}
       })
       if(targets.some(r=>r.admitted&&(r.status!=='confirmed'||!r.eligible||r.blocked||(r.id===s.id&&input.qrAction==='reissue'))&&!(r.id===s.id&&input.undoAdmission)))fail(409,'Hay un ingreso registrado. Revertí ese ingreso explícitamente antes de invalidar su acreditación.')
