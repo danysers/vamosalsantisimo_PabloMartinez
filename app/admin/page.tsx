@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
@@ -104,14 +105,14 @@ export default async function AdminPage() {
         <div><dt>Eventos</dt><dd>{state.events}</dd><small>En la organización</small></div>
       </dl>
       {state.role !== 'unlinked' && <div className="admin-dashboard-grid">
-        <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Actividad reciente</p><h2>Últimas inscripciones</h2></div><a href="/admin/inscripciones">Ver todas →</a></div>
+        <section className="admin-card"><div className="admin-card-heading"><div><p className="admin-card-eyebrow">Actividad reciente</p><h2>Últimas inscripciones</h2></div><Link href="/admin/inscripciones">Ver todas →</Link></div>
           {state.recent.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Persona</th><th>Referencia</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
             {state.recent.map(item => <tr key={item.reference}><td>{item.name}{item.historical && <small>Ensayo anterior</small>}</td><td><a href={`/admin/acreditacion?reference=${encodeURIComponent(item.reference)}`}>{item.reference}</a></td>
               <td>{new Date(item.createdAt).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</td><td><span className={`admin-status admin-status-${item.status}`}>{item.status === 'confirmed' ? 'Confirmada' : item.status === 'pending' ? 'Registrada' : item.status}</span></td></tr>)}</tbody></table></div>
             : <p className="admin-empty">Aún no hay inscripciones para este taller.</p>}
         </section>
         <section className="admin-card admin-shortcuts"><p className="admin-card-eyebrow">Atajos</p><h2>Qué necesitás hacer</h2>
-          <a href="/admin/inscripciones"><strong>Buscar inscripciones</strong><span>Consultar personas y estados →</span></a>
+          <Link href="/admin/inscripciones"><strong>Buscar inscripciones</strong><span>Consultar personas y estados →</span></Link>
           <a href="/admin/acreditacion"><strong>Revisar pagos e ingresos</strong><span>Comprobantes, QR y control →</span></a>
           {state.reviewEnabled && <a href="/admin/taller"><strong>Administrar el taller</strong><span>Lotes, promociones y grupos →</span></a>}
         </section>
