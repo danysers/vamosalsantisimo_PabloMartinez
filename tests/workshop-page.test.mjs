@@ -102,7 +102,7 @@ test('registration validates typed fields and submits only to the gated workshop
   assert.match(html, /name="formaPago" value="on_site"/)
   assert.match(html, /id="payment-next" hidden/)
   assert.doesNotMatch(html, /Pagar con Mercado Pago<\/button>/)
-  assert.match(script, /fetch\('\/api\/taller\/inscripciones'/)
+  assert.match(script, /(?:fetch|\(window\.VASErrors\?\.fetch\|\|fetch\))\('\/api\/taller\/inscripciones'/)
   assert.match(script, /Idempotency-Key/)
   assert.doesNotMatch(script, /La recepción de inscripciones se habilitará próximamente/)
   assert.doesNotMatch(script, /fetch\(['"]\/api\/inscripciones/)

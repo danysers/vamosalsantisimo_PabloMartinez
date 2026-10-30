@@ -17,7 +17,7 @@ test('registration QR has a separate signed purpose and cannot be treated as a p
   assert.throws(()=>hashAccreditationQr(value))
 })
 
-test('on-site registration has a printable QR without approving payment; it admits only after payment and resumes only with private proof',{
+test('on-site status omits the public pass while legacy signed registration codes admit only after payment and private resumption',{
   skip:!process.env.DATABASE_URL&&'Requires a disposable migrated PostgreSQL database',
 },async()=>{
   Object.assign(process.env,{WORKSHOP_EVENT_SLUG:'registration-card-'+randomUUID(),WORKSHOP_CHECKOUT_TOKEN_KEY:randomBytes(48).toString('base64url'),
@@ -52,7 +52,7 @@ test('on-site registration has a printable QR without approving payment; it admi
       FROM payment_attempts p JOIN payment_allocations a ON a.attempt_id=p.id WHERE p.id=$1`,[state.attemptId])
     assert.deepEqual(pendingQuote.rows[0],{amount_minor:null,base_amount_minor:null,due_amount_minor:null,promotion_id:null})
     assert.equal(state.nickname,'Dany');assert.equal(state.accreditation,null)
-    assert.match(state.registrationCard.qrDataUrl,/^data:image\/png;base64,iVBOR/)
+    assert.equal(state.registrationCard,null,'ventanilla does not expose a public 3D registration pass')
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM accreditation_credentials WHERE registration_id=$1',[row.id])).rows[0].n,0)
     const scan={qrValue:value,eventSlug:process.env.WORKSHOP_EVENT_SLUG,operatorId:operator.id,entryPoint:'Test reception'}
     assert.equal((await admitAccreditation(getDb(),scan)).body.result,'not_eligible')
@@ -79,7 +79,8 @@ test('on-site registration has a printable QR without approving payment; it admi
     assert.equal(history.rows[0].status,'cancelled');assert.equal(history.rows[0].amount_minor,null)
     assert.equal(history.rows[1].status,'approved');assert.equal(history.rows[1].amount_minor,2_000_000)
     assert.equal(history.rows[1].replaces_attempt_id,state.attemptId)
-    assert.equal(final.registrationCard,null);assert.equal(final.status,'approved');assert.ok(final.accreditation)
+    assert.equal(final.registrationCard,null);assert.equal(final.status,'approved');assert.equal(final.accreditation,null)
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM accreditation_credentials WHERE registration_id=$1',[row.id])).rows[0].n,1)
     assert.equal((await admitAccreditation(getDb(),scan)).body.result,'admitted')
     assert.equal((await admitAccreditation(getDb(),scan)).body.result,'already_admitted')
   } finally {await pool.end()}
