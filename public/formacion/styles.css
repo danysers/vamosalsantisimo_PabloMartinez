@@ -261,3 +261,18 @@ select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
   #payment-method-field .payment-options{grid-template-columns:1fr}
   #checkout-controls .button{width:100%;justify-content:center}
 }
+
+/* El acceso de correo pone el archivo y su accion primero, tambien en celular. */
+.registration-result[data-view=proof]{width:min(720px,92%);margin:28px auto 60px;padding:32px}
+.registration-result[data-view=proof]>.eyebrow,.registration-result[data-view=proof] .payment-next>.eyebrow{display:none}
+.registration-result[data-view=proof]>h2{font-size:clamp(32px,5vw,42px);line-height:1.1;margin-bottom:14px}
+.registration-result[data-view=proof]>.result-intro{font-size:17px;line-height:1.5;max-width:none;margin-bottom:12px}
+.registration-result[data-view=proof] #registration-reference{font-size:12px;margin-bottom:12px}
+.registration-result[data-view=proof] .payment-next{margin-top:12px;padding-top:18px}
+.registration-result[data-view=proof] #checkout-proof{border-top:0;padding:0}
+.registration-result[data-view=proof] #checkout-proof label{font-size:18px}
+.registration-result[data-view=proof] .proof-payment-note{font-size:15px;line-height:1.5;margin-bottom:4px}
+.registration-result[data-view=proof] #checkout-proof button{width:100%;min-height:48px;font-size:16px}
+.registration-result[data-view=proof] .whatsapp-help{padding:14px;margin:14px 0}
+.registration-result[data-view=proof] .whatsapp-help strong{font-size:16px}
+@media(max-width:600px){.registration-result[data-view=proof]{width:calc(100% - 24px);padding:24px 20px;margin-top:18px}}

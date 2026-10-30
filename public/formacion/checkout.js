@@ -51,8 +51,8 @@
       alias.innerHTML='<p class="alias-label">Alias para transferir</p><strong id="checkout-alias-value"></strong><button type="button" id="copy-transfer-alias" class="checkout-edit">Copiar alias</button><span id="copy-alias-feedback" role="status"></span><dl id="checkout-alias-details"><div><dt>Billetera</dt><dd id="checkout-alias-provider"></dd></div><div><dt>Titular</dt><dd id="checkout-alias-holder"></dd></div><div id="checkout-alias-document-row"><dt>DNI del titular</dt><dd id="checkout-alias-document"></dd></div></dl>';
       alias.querySelector('#copy-transfer-alias').addEventListener('click',async()=>{try { await navigator.clipboard.writeText(document.getElementById('checkout-alias-value').textContent);document.getElementById('copy-alias-feedback').textContent='Alias copiado'; } catch { document.getElementById('copy-alias-feedback').textContent='Podés seleccionar el alias y copiarlo.'; } });
       const proof=document.createElement('form'); proof.id='checkout-proof'; proof.className='checkout-proof'; proof.hidden=true;
-      const proofLabel=document.createElement('label'); proofLabel.htmlFor='checkout-proof-file'; proofLabel.textContent='¿Ya hiciste el pago? Subí tu comprobante acá';
-      const proofNote=document.createElement('p'); proofNote.className='proof-payment-note'; proofNote.textContent='Asegurate de no pagar dos veces. Una vez que pagaste, adjuntá el comprobante para que podamos verificarlo.';
+      const proofLabel=document.createElement('label'); proofLabel.id='checkout-proof-label';proofLabel.htmlFor='checkout-proof-file'; proofLabel.textContent='¿Ya hiciste el pago? Subí tu comprobante acá';
+      const proofNote=document.createElement('p'); proofNote.id='checkout-proof-note';proofNote.className='proof-payment-note'; proofNote.textContent='Asegurate de no pagar dos veces. Una vez que pagaste, adjuntá el comprobante para que podamos verificarlo.';
       const proofInput=document.createElement('input'); proofInput.id='checkout-proof-file'; proofInput.type='file'; proofInput.name='comprobante'; proofInput.accept='image/png,image/jpeg,image/webp,application/pdf'; proofInput.required=true;
       const proofButton=document.createElement('button'); proofButton.type='submit'; proofButton.className='button gold'; proofButton.textContent='Subir comprobante';
       const proofFeedback=document.createElement('p'); proofFeedback.id='checkout-proof-feedback'; proofFeedback.setAttribute('role','status');
@@ -393,8 +393,12 @@
     document.getElementById('registration-reference').hidden=false;
     const canUpload=result.canUpload ?? (!result.deleted&&!result.archived&&!result.historical&&result.paymentMethod==='bank_transfer'&&result.status==='pending'&&result.registrationStatus==='pending');
     const confirmed=result.registrationStatus==='confirmed';
+    root.dataset.view='proof';root.querySelector('.result-symbol').hidden=!result.proofSubmitted&&!confirmed;
     document.getElementById('registration-result-title').textContent=result.proofSubmitted?'Comprobante recibido':confirmed?'Inscripción confirmada':'Subí tu comprobante';
-    root.querySelector('.result-intro').textContent='Este acceso es personal. Tu inscripción ya está cargada; no necesitás completar tus datos otra vez.';
+    root.querySelector('.result-intro').textContent='Tu inscripción ya está cargada. Adjuntá tu comprobante sin volver a completar tus datos.';
+    ui.title.hidden=ui.description.hidden=canUpload&&!result.proofSubmitted;
+    document.getElementById('checkout-proof-label').textContent='Comprobante de tu pago';
+    document.getElementById('checkout-proof-note').textContent='Elegí una imagen JPG, PNG, WebP o un PDF de hasta 5 MB. Después pulsá «Subir comprobante».';
     ui.title.textContent=result.proofSubmitted?'Tu comprobante está en revisión':canUpload?'Adjuntá el comprobante de tu pago':confirmed?'Tu inscripción ya está confirmada':'No hace falta adjuntar un archivo en este estado';
     ui.description.textContent=result.proofSubmitted?'Recibimos un comprobante para esta inscripción. No vuelvas a pagar. Te avisaremos por correo después de revisarlo.'
       : canUpload?'Elegí una imagen JPG, PNG, WebP o un PDF de hasta 5 MB. Después pulsá «Subir comprobante».'
