@@ -71,6 +71,22 @@ try {
     if(process.getuid()===0)throw Error('Unexpected root user');
     Promise.all(['email-worker','email-bounce-worker','drive-proof-worker','sponsor-sync-worker','traffic-monitor'].map(x=>import('./scripts/'+x+'.mjs'))).then(()=>console.log('Runtime and workers OK'));`
   docker('exec',panel,'/usr/local/bin/node','--experimental-strip-types','-e',check)
+  // Verify both package provenance and actual replacement bytes. Node's native
+  // image endpoint above also proves the new library keeps the required ABI.
+  const zlibCheck=`const fs=require('node:fs'),crypto=require('node:crypto');
+    const root='/var/lib/dpkg/status.d/';
+    if(!fs.readFileSync(root+'zlib1g','utf8').includes('Version: 1:1.3.dfsg+really1.3.2-4'))throw Error('Unpatched zlib package');
+    let checked=0;
+    for(const line of fs.readFileSync(root+'zlib1g.md5sums','utf8').trim().split('\\n')){
+      const [hash,path]=line.trim().split(/\\s+/);
+      if(!path.includes('libz.so.'))continue;
+      if(crypto.createHash('md5').update(fs.readFileSync('/'+path)).digest('hex')!==hash)throw Error('zlib package bytes changed');checked++;
+    }
+    if(!checked)throw Error('Missing fixed zlib library');
+    for(const dir of fs.readdirSync('/usr/lib')){
+      if(fs.existsSync('/usr/lib/'+dir+'/libz.so.1.3.1'))throw Error('Old vulnerable zlib still present');
+    }`;
+  docker('exec',publicApp,'node','-e',zlibCheck)
   console.log('Image smoke passed: migrations, public pages, memory admission/recovery, persistent alert cooldown, native images, auth, workers, non-root and no shell/npm.')
 } finally {
   for(const name of [panel,publicApp,db]) { try { docker('rm','-f',name) } catch {} }
