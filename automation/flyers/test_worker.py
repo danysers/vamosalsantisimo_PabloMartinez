@@ -33,6 +33,7 @@ class WorkerTest(unittest.TestCase):
             with patch.object(worker, 'STATE', Path(directory)), patch.object(worker, 'token', return_value='test'), \
                  patch.object(worker, 'listing', side_effect=lambda folder, _token: source if folder == worker.SOURCE else destination), \
                  patch.object(worker, 'request', return_value=logo), patch.object(worker, 'upload', side_effect=upload), \
+                 patch.object(worker, 'resolve_hermes_runtime', return_value=('/test/hermes-python', {})), \
                  patch.object(worker.subprocess, 'run', side_effect=hermes):
                 worker.run(); worker.run()
                 self.assertEqual(calls, [3], 'unchanged sponsor list must not call Hermes again')
