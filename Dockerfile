@@ -32,8 +32,10 @@ RUN node scripts/strip-runtime-tools.mjs && mkdir -p .next/cache/traffic-guard &
 FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e AS runtime-base
 FROM node:22.23.4-bookworm-slim AS patched-runtime-base
 COPY --from=runtime-base / /patched-runtime/
-RUN printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261106T000000Z/ sid main\n' > /etc/apt/sources.list.d/vas-zlib.list \
-    && apt-get update \
+RUN apt-get update -o APT::Update::Error-Mode=any \
+    && apt-get install -y --no-install-recommends ca-certificates debian-archive-keyring \
+    && printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261106T000000Z/ sid main\n' > /etc/apt/sources.list.d/vas-zlib.list \
+    && apt-get update -o APT::Update::Error-Mode=any \
     && cd /tmp \
     && apt-get download 'zlib1g=1:1.3.dfsg+really1.3.2-4' \
     && find /patched-runtime/usr/lib -maxdepth 2 -type f -name 'libz.so.1.3.1' -delete \
