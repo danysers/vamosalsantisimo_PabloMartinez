@@ -47,11 +47,13 @@ jobs:
         run: node scripts/smoke-image.mjs ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
       - name: Scan runtime packages and native binaries
         run: >-
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/security:/security:ro"
           aquasec/trivy:0.74.0 image --image-src docker --scanners vuln
+          --vex /security/zlib-fixed.openvex.json --show-suppressed
           --severity HIGH,CRITICAL --exit-code 1
           ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
       - name: Publish verified image
+        if: github.ref == 'refs/heads/main'
         run: |
           docker push ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
           docker push ghcr.io/danysers/vamosalsantisimo-pablomartinez:latest

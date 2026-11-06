@@ -1,0 +1,21 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/danysers/vamosalsantisimo_PabloMartinez/blob/main/security/zlib-fixed.openvex.json",
+  "author": "Vamos al Santisimo maintainers",
+  "timestamp": "2026-11-06T18:10:00-03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": { "name": "CVE-2026-76844" },
+      "products": [{ "@id": "pkg:deb/debian/zlib1g@1.3.dfsg%2Breally1.3.2-4?epoch=1" }],
+      "status": "fixed",
+      "action_statement": "The runtime installs Debian's exact fixed package 1:1.3.dfsg+really1.3.2-4 from a signed frozen snapshot and removes libz.so.1.3.1. Debian confirms this version contains the fix: https://security-tracker.debian.org/tracker/CVE-2026-76844 . Trivy's Debian 13 feed currently has no fixed version for that distribution; this statement applies only to the actual patched package, never the old version."
+    },
+    {
+      "vulnerability": { "name": "CVE-2026-85091" },
+      "products": [{ "@id": "pkg:deb/debian/zlib1g@1.3.dfsg%2Breally1.3.2-4?epoch=1" }],
+      "status": "fixed",
+      "action_statement": "Debian's fixed package includes the same upstream fixing change df84af25dc1942490e1d1c899a07619152a46148: https://security-tracker.debian.org/tracker/CVE-2026-85091 . Runtime smoke verification checks package version, binary checksums, absence of the old library and native image processing before publication."
+    }
+  ]
+}

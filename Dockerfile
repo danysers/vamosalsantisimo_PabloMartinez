@@ -27,8 +27,25 @@ COPY --from=build /app/lib/flyer-media.mjs ./lib/
 COPY --from=production-dependencies /app/node_modules ./node_modules
 RUN node scripts/strip-runtime-tools.mjs && mkdir -p .next/cache/traffic-guard && chown -R 65532:65532 .next/cache
 
-# Keep the patched Node binary, without shell, package managers or build tools.
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
+# Debian 13 has not yet shipped its zlib security update. Use Debian's signed,
+# fixed package from a frozen archive; keep its real package metadata for SBOMs.
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e AS runtime-base
+FROM node:22.23.4-bookworm-slim AS patched-runtime-base
+COPY --from=runtime-base / /patched-runtime/
+RUN printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261106T000000Z/ sid main\n' > /etc/apt/sources.list.d/vas-zlib.list \
+    && apt-get update \
+    && cd /tmp \
+    && apt-get download 'zlib1g=1:1.3.dfsg+really1.3.2-4' \
+    && find /patched-runtime/usr/lib -maxdepth 2 -type f -name 'libz.so.1.3.1' -delete \
+    && dpkg-deb --extract zlib1g_*.deb /patched-runtime \
+    && dpkg-deb --field zlib1g_*.deb > /patched-runtime/var/lib/dpkg/status.d/zlib1g \
+    && printf '\nStatus: install ok installed\n' >> /patched-runtime/var/lib/dpkg/status.d/zlib1g \
+    && dpkg-deb --control zlib1g_*.deb /tmp/zlib-control \
+    && cp /tmp/zlib-control/md5sums /patched-runtime/var/lib/dpkg/status.d/zlib1g.md5sums
+
+# Copy only the finished runtime; no vulnerable old library remains in a lower layer.
+FROM scratch
+COPY --from=patched-runtime-base /patched-runtime/ /
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=runtime-files /usr/local/bin/node /usr/local/bin/node
