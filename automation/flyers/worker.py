@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
+from hermes_runtime import resolve_hermes_runtime
 
 ROOT = Path(__file__).resolve().parent
 STATE = Path(os.environ.get('FLYER_STATE_DIR', '/var/lib/vas-flyers'))
@@ -148,8 +149,9 @@ def run():
         atomic(job_path, job)
         if not (job_dir / 'rendered.json').exists():
             # Exactly one bounded Hermes session per changed sponsor set; retry on next timer tick.
-            result = subprocess.run(['/usr/local/lib/hermes-agent/venv/bin/python', str(ROOT / 'hermes_job.py'), str(job_path)],
-                                    capture_output=True, text=True, timeout=300)
+            python, hermes_env = resolve_hermes_runtime()
+            result = subprocess.run([python, str(ROOT / 'hermes_job.py'), str(job_path)],
+                                    env=hermes_env, capture_output=True, text=True, timeout=300)
             # Private diagnostic file, no attendee data. Never copy model/raw auth output to public logs.
             (job_dir / 'hermes.log').write_text(result.stdout + result.stderr)
             (job_dir / 'hermes.log').chmod(0o600)

@@ -39,6 +39,23 @@ estado y trabajos privados `/var/lib/vas-flyers`; credenciales Drive sólo en
 `/etc/vas-flyers.env` (0600), reutilizadas de la configuración privada existente.
 Hermes se ejecuta con la instalación existente y un perfil de trabajo separado,
 sin reemplazar el modelo/configuración del gateway general.
+En Hermes con PM, el worker consulta `pm.environments --format json` y ejecuta
+el gestor con el Python y las dependencias seleccionados por esa instalación.
+Si esa selección falla, se detiene; no vuelve silenciosamente a un Python viejo.
+Las instalaciones anteriores conservan su ruta `venv/bin/python`. Las
+credenciales OAuth de Drive no se pasan al proceso del gestor.
+
+El perfil dedicado de flyers debe conservar la herramienta directa, sin el
+catálogo general introducido en Hermes 0.23:
+
+```yaml
+tools:
+  tool_search:
+    enabled: "off"
+```
+
+El guard de `hermes_job.py` exige que el agente exponga únicamente
+`generate_event_flyers` antes de hacer una solicitud al modelo.
 
 El servicio se serializa por `flock`, limita CPU al 40%, memoria a 1536 MiB y
 pospone trabajos cuando la memoria disponible del host cae por debajo del 15%.
