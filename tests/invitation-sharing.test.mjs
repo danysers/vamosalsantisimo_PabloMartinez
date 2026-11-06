@@ -31,16 +31,18 @@ function setup({support = true, share, fetch: customFetch, clipboard, venue = 'o
   get('#invite-save').href = 'http://localhost:3000/pagina%20principal%20con%20efecto/assets/invitacion-vamos-al-santisimo-2026-final.png';
   get('#invite-save').download = 'invitacion-vamos-al-santisimo-2026-final.png';
   const shares = [], fetches = [], copies = [];
+  const windowEvents = new Map();
+  const window = {addEventListener:(name, handler) => windowEvents.set(name, handler)};
   const navigator = {clipboard:clipboard || {writeText:async text => copies.push(text)}};
   if (support) {
     navigator.canShare = data => data.files[0].type === 'image/png';
     navigator.share = data => { shares.push(data); return share ? share(data) : Promise.resolve(); };
   }
   vm.runInNewContext(source,{
-    document,navigator,File,encodeURIComponent,matchMedia:() => ({matches:true}),
+    document,window,navigator,File,encodeURIComponent,matchMedia:() => ({matches:true}),
     fetch:url => { fetches.push(url); return customFetch ? customFetch(url) : Promise.resolve({ok:true,blob:async () => new Blob(['test-image'],{type:'image/png'})}); }
   });
-  return {get,choices,classes,document,shares,fetches,copies};
+  return {get,choices,classes,document,shares,fetches,copies, asset:detail => windowEvents.get('vas:invitation-asset')({detail})};
 }
 
 test('loads the file before the share tap and hands off a real PNG without another fetch',async () => {
@@ -68,6 +70,16 @@ test('canceling native share neither downloads nor opens a network',async () => 
   assert.equal(app.get('#invite-open-network').clicks,0);
   assert.match(app.get('#invite-status').textContent,/No se compartió/);
   assert.equal(app.get('#invite-native').disabled,false);
+});
+
+test('a new flyer version invalidates the previously prepared native share file',async () => {
+  const app = setup();
+  await app.get('#share').click(); await settle();
+  const image = '/api/flyers/media/flyer-evento-historia-v3-'+'a'.repeat(32)+'.png';
+  app.asset({image,name:'flyer-evento-historia-v3.png'}); await settle();
+  await app.get('#invite-native').click();
+  assert.equal(app.fetches.at(-1), image);
+  assert.equal(app.shares[0].files[0].name,'flyer-evento-historia-v3.png');
 });
 
 test('blocks duplicate native share requests until the pending handoff completes',async () => {

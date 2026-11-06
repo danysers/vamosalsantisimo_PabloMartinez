@@ -1,0 +1,46 @@
+{
+  "principal": {
+    "id": "mila-club",
+    "file": "assets/mila.png",
+    "x": 350,
+    "y": 1575,
+    "width": 380,
+    "height": 96,
+    "align": "center",
+    "alwaysAboveSecondary": true
+  },
+  "secondary": [
+    {
+      "id": "alma-verde",
+      "file": "assets/alma.png",
+      "order": 1,
+      "currentBox": { "x": 188.20539419087137, "y": 1694.491082276885, "width": 113.58921161825725, "height": 75 }
+    },
+    {
+      "id": "cabildo",
+      "file": "assets/cabildo.png",
+      "order": 2,
+      "currentBox": { "x": 483.2053941908714, "y": 1694.491082276885, "width": 113.58921161825725, "height": 75 }
+    },
+    {
+      "id": "las-kalas",
+      "file": "assets/kalas.png",
+      "order": 3,
+      "currentBox": { "x": 788.2053941908714, "y": 1694.491082276885, "width": 113.58921161825725, "height": 75 }
+    }
+  ],
+  "secondaryGridForRegeneration": {
+    "canvasWidth": 1080,
+    "leftRightPadding": 64,
+    "boxWidth": 113.58921161825725,
+    "boxHeight": 75,
+    "horizontalGap": 16,
+    "rowPitch": 84,
+    "fit": "contain",
+    "preserveAspectRatio": "xMidYMid meet",
+    "flow": "left-to-right-then-next-row",
+    "maxPerRow": 7,
+    "rowCentering": "(1080 - (count*boxWidth + (count-1)*horizontalGap))/2",
+    "overflow": "more-than-14-secondary-sponsors-create-continuation-story"
+  }
+}

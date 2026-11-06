@@ -1,0 +1,23 @@
+[Unit]
+Description=Vamos al Santisimo - Hermes sponsor flyers
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vas-flyers
+EnvironmentFile=/etc/vas-flyers.env
+ExecStart=/opt/vas-flyers/venv/bin/python /opt/vas-flyers/worker.py
+UMask=0077
+TimeoutStartSec=8min
+MemoryMax=1536M
+CPUQuota=40%
+Nice=15
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/vas-flyers /root/.hermes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+

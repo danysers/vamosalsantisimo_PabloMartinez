@@ -27,5 +27,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit
       - run: pnpm typecheck && pnpm lint
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r automation/flyers/requirements.txt
+      - run: python -m unittest discover -s automation/flyers -p 'test_*.py'
       - run: node scripts/migrate.mjs && node scripts/seed-workshop.mjs
       - run: pnpm test

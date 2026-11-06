@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { boundedDownload } from '../lib/bounded-download.mjs'
 import { matchesImageSignature, maxSponsorBytes, maxSponsors, sponsorCacheDir, sponsorFolderId, sponsorFromDrive, sponsorOwnerEmails } from '../lib/sponsor-media.mjs'
+import { syncFlyers } from './flyer-sync.mjs'
 
 const api = 'https://www.googleapis.com/drive/v3'
 const intervalMs = 5 * 60_000
@@ -99,7 +100,12 @@ async function run() {
   process.on('SIGTERM', () => { stopping = true })
   process.on('SIGINT', () => { stopping = true })
   while (!stopping) {
-    try { await syncSponsors(await accessToken()) }
+    try {
+      const token = await accessToken()
+      await syncSponsors(token)
+      try { await syncFlyers(token) }
+      catch (error) { console.error(`Flyer cache retained: ${error instanceof Error ? error.message : 'sync error'}`) }
+    }
     catch (error) { console.error(`Sponsor sync paused: ${error instanceof Error ? error.message : 'unknown error'}`) }
     if (!stopping) await new Promise(resolve => setTimeout(resolve, intervalMs))
   }
