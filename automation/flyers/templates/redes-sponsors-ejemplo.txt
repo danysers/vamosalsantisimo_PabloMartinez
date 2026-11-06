@@ -1,0 +1,13 @@
+# Una linea por sponsor: nombre, enlace HTTPS completo.
+# Para logos subidos a Drive, usar el nombre del archivo sin .png/.jpg/.webp.
+# Mayusculas, acentos, guiones y espacios no cambian la coincidencia.
+# Se puede dejar vacio el enlace: el logo se muestra sin enlace.
+# Guardar como redes-sponsors.txt (UTF-8), un solo archivo, en sponsors-2026.
+# Si el nombre contiene una coma, encerrarlo entre comillas dobles.
+# Editar este TXT no genera un flyer: solo actualiza los enlaces de la web.
+
+Mila Club, https://www.instagram.com/milaclub.ar/
+Paseo Alma Verde, https://www.instagram.com/paseoalmaverde/
+Cabildo Casual Bar, https://www.instagram.com/cabildocasualbar/
+Las Kalas Rental Suites,
+Jose Motos,

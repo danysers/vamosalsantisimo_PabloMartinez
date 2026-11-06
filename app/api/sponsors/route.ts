@@ -9,7 +9,8 @@ export async function GET() {
     const manifest: unknown = JSON.parse(await readFile(join(sponsorCacheDir, 'manifest.json'), 'utf8'))
     if (!validSponsorManifest(manifest)) throw new Error('Invalid sponsor manifest')
     const files = (manifest as { files: { id: string; name: string; filename: string }[] }).files
-    return Response.json({ available: true, sponsors: files.map(file => ({ id: file.id, name: file.name,
+    const links = (manifest as { links?: { name: string; href: string | null }[] }).links || []
+    return Response.json({ available: true, links, sponsors: files.map(file => ({ id: file.id, name: file.name,
       image: `/api/sponsors/media/${file.filename}` })) }, { headers: { 'Cache-Control': 'public, max-age=60' } })
   } catch {
     // The four established sponsors remain in static HTML if Drive is unavailable.

@@ -71,5 +71,21 @@ vas-flyers.timer` para pausar. El log detallado de Hermes queda privado junto al
 trabajo. Si vence ChatGPT, renovar con `hermes auth add openai-codex --type oauth`.
 Telegram queda pendiente para otra versión.
 
+## Redes de sponsors en la web
+
+En `sponsors-2026`, mantener un único **redes-sponsors.txt**, texto UTF-8 con
+una línea `Nombre del sponsor, https://enlace-completo`. Para cada imagen nueva,
+el nombre debe coincidir con su archivo sin extensión (se ignoran acentos,
+mayúsculas, guiones y espacios). Los originales usan `Mila Club`, `Paseo Alma
+Verde`, `Cabildo Casual Bar` y `Las Kalas Rental Suites`. Ver el TXT de ejemplo.
+Un enlace vacío conserva el logo sin hacerlo clicable. Se admiten comentarios
+que empiecen con `#` y nombres entre comillas si contienen comas.
+
+El worker valida propietario, tamaño máximo 64 KiB, checksum, UTF-8, nombres
+únicos y enlaces HTTPS antes de publicar. Ante TXT inválido conserva la última
+galería correcta y registra el error en el worker. Las redes se actualizan en el
+ritmo de sincronización existente, sin llamadas adicionales a Hermes ni nuevos
+flyers. Los enlaces se abren en otra pestaña con `noopener noreferrer`.
+
 Pruebas: `python -m unittest discover -s automation/flyers -p 'test_*.py'`
 y `node --test tests/flyer-sync.test.mjs tests/flyer-feed.test.mjs`.
