@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { boundedDownload } from '../lib/bounded-download.mjs'
 import { matchesImageSignature, maxSponsorBytes, maxSponsors, sponsorCacheDir, sponsorFolderId, sponsorFromDrive, sponsorOwnerEmails } from '../lib/sponsor-media.mjs'
 import { syncFlyers } from './flyer-sync.mjs'
+import { maxSponsorLinksBytes, parseSponsorLinks, sponsorLinksFilename } from '../lib/sponsor-links.mjs'
 
 const api = 'https://www.googleapis.com/drive/v3'
 const intervalMs = 5 * 60_000
@@ -55,8 +56,26 @@ async function listSponsorFiles(token) {
     if (files.length > 1000) throw new Error('Sponsor folder exceeds sync limit')
     pageToken = page.nextPageToken || ''
   } while (pageToken)
-  return files.sort((a, b) => String(a.createdTime || '').localeCompare(String(b.createdTime || '')) ||
-    String(a.id).localeCompare(String(b.id))).map(file => sponsorFromDrive(file)).filter(Boolean).slice(0, maxSponsors)
+  const config = files.filter(file => file.name?.toLowerCase() === sponsorLinksFilename &&
+    file.owners?.some(owner => sponsorOwnerEmails.includes(owner.emailAddress?.toLowerCase())))
+  if (config.length > 1) throw new Error('Keep only one redes-sponsors.txt in the sponsor folder')
+  let links = []
+  if (config.length) {
+    const file = config[0]
+    if (file.mimeType !== 'text/plain' || !/^[A-Za-z0-9_-]{10,100}$/.test(file.id || '') ||
+        !/^[a-f0-9]{32}$/i.test(file.md5Checksum || '') || !Number.isSafeInteger(Number(file.size)) ||
+        Number(file.size) < 1 || Number(file.size) > maxSponsorLinksBytes) throw new Error('Invalid sponsor links TXT metadata')
+    const response = await fetch(`${api}/files/${encodeURIComponent(file.id)}?alt=media`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20_000) })
+    if (!response.ok) throw new Error(`Sponsor links download HTTP ${response.status}`)
+    const bytes = await boundedDownload(response, maxSponsorLinksBytes)
+    if (bytes.length !== Number(file.size) || createHash('md5').update(bytes).digest('hex') !== file.md5Checksum.toLowerCase()) {
+      throw new Error('Sponsor links TXT checksum mismatch')
+    }
+    links = parseSponsorLinks(new TextDecoder('utf-8', { fatal: true }).decode(bytes))
+  }
+  return { links, files: files.sort((a, b) => String(a.createdTime || '').localeCompare(String(b.createdTime || '')) ||
+    String(a.id).localeCompare(String(b.id))).map(file => sponsorFromDrive(file)).filter(Boolean).slice(0, maxSponsors) }
 }
 
 async function downloadSponsor(file, token, root) {
@@ -76,14 +95,14 @@ async function downloadSponsor(file, token, root) {
 }
 
 export async function syncSponsors(token, root = sponsorCacheDir) {
-  const files = await listSponsorFiles(token)
+  const { files, links } = await listSponsorFiles(token)
   await mkdir(root, { recursive: true, mode: 0o700 })
   const published = []
   for (const file of files) {
     try { await downloadSponsor(file, token, root); published.push(file) }
     catch (error) { console.error(`Sponsor ${file.id} skipped: ${error instanceof Error ? error.message : 'download error'}`) }
   }
-  const manifest = { version: 1, files: published }
+  const manifest = { version: 1, files: published, links }
   const current = await readFile(join(root, 'manifest.json'), 'utf8').catch(() => '')
   const next = JSON.stringify(manifest)
   if (current !== next) {
