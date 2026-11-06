@@ -42,6 +42,9 @@ sin reemplazar el modelo/configuración del gateway general.
 En Hermes con PM, el worker consulta `pm.environments --format json` y ejecuta
 el gestor con el Python y las dependencias seleccionados por esa instalación.
 Si esa selección falla, se detiene; no vuelve silenciosamente a un Python viejo.
+El gestor activa `hermes_bootstrap` antes de importar autenticación. El compositor
+se ejecuta en modo Python aislado (`-I`) para que las dependencias de Hermes no
+se mezclen con el entorno Pillow, que puede usar otra versión de Python.
 Las instalaciones anteriores conservan su ruta `venv/bin/python`. Las
 credenciales OAuth de Drive no se pasan al proceso del gestor.
 

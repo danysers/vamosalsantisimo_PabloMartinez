@@ -13,6 +13,14 @@ job = json.loads(job_path.read_text())
 # Tokens stay in this process and are never written to the job, command line or logs.
 sys.path.insert(0, '/usr/local/lib/hermes-agent')
 os.environ['HERMES_HOME'] = '/root/.hermes'
+# The PM runtime selects Python separately from its dependency layers. Activate
+# those layers before importing auth (which itself needs third-party modules).
+# Older Hermes releases do not have this SDK bootstrap.
+try:
+    import hermes_bootstrap
+except ModuleNotFoundError as error:
+    if error.name != 'hermes_bootstrap':
+        raise
 from hermes_cli.runtime_provider import resolve_runtime_provider
 credentials = resolve_runtime_provider(requested='openai-codex', target_model=os.environ.get('FLYER_HERMES_MODEL', 'gpt-6-astra'))
 os.environ['HERMES_HOME'] = '/root/.hermes/profiles/vas-flyers'
@@ -26,7 +34,9 @@ def generate(args, **_kwargs):
     if args.get('job_id') != job['id']:
         return json.dumps({'error': 'Unknown job'})
     if not (job_path.parent / 'rendered.json').exists():
-        subprocess.run([str(INSTALL / 'venv/bin/python'), str(INSTALL / 'compose.py'), str(job_path)],
+        # Hermes PM exports its own Python 3.14 dependency layers. The renderer
+        # uses a separate Pillow environment; -I prevents cross-version imports.
+        subprocess.run([str(INSTALL / 'venv/bin/python'), '-I', str(INSTALL / 'compose.py'), str(job_path)],
                        check=True, timeout=180, capture_output=True)
     return json.dumps({'ok': True, 'version': job['version'], 'protected_pixels': 'verified',
                        'files': json.loads((job_path.parent / 'rendered.json').read_text())})
