@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { sponsorFromDrive, sponsorOwnerEmails, validSponsorManifest } from '../lib/sponsor-media.mjs'
+import { matchesImageSignature, sponsorFromDrive, sponsorOwnerEmails, validSponsorManifest } from '../lib/sponsor-media.mjs'
 import { syncSponsors } from '../scripts/sponsor-sync-worker.mjs'
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/9xkAAAAASUVORK5CYII=', 'base64')
@@ -12,6 +12,19 @@ const checksum = createHash('md5').update(png).digest('hex')
 const file = { id: 'drive_logo_2026', name: 'Nueva marca.png', mimeType: 'image/png',
   size: String(png.length), md5Checksum: checksum, createdTime: '2026-10-28T00:00:00Z',
   owners: [{ emailAddress: sponsorOwnerEmails[0] }] }
+
+test('JPEG accepts the observed WhatsApp JFXX trailer while rejecting arbitrary or truncated trailers', () => {
+  const jpeg = Buffer.from('ffd8ffe000104a46494600010100000100010000ffd9', 'hex')
+  const trailer = Buffer.from('ffe000124a465858005741000000000000000000', 'hex')
+  assert.equal(matchesImageSignature(jpeg, 'image/jpeg'), true)
+  assert.equal(matchesImageSignature(Buffer.concat([jpeg, trailer]), 'image/jpeg'), true)
+  assert.equal(matchesImageSignature(Buffer.concat([jpeg, trailer, trailer]), 'image/jpeg'), true)
+  assert.equal(matchesImageSignature(Buffer.concat([jpeg, trailer.subarray(0, -1)]), 'image/jpeg'), false)
+  assert.equal(matchesImageSignature(Buffer.concat([jpeg, Buffer.from('<script>alert(1)</script>')]), 'image/jpeg'), false)
+  const oversized = Buffer.from(trailer); oversized.writeUInt16BE(65535, 2)
+  assert.equal(matchesImageSignature(Buffer.concat([jpeg, oversized]), 'image/jpeg'), false)
+  assert.equal(matchesImageSignature(jpeg.subarray(0, -2), 'image/jpeg'), false)
+})
 
 test('only owner-uploaded bounded raster images are eligible', () => {
   assert.equal(sponsorFromDrive(file)?.name, 'Nueva marca')
