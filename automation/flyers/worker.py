@@ -131,9 +131,14 @@ def run():
             atomic(job_path, {'id': job_id, 'version': max(versions) + 1, 'logos': []})
         job = json.loads(job_path.read_text())
         paths = []
+        logo_cache = STATE / 'logos'
+        logo_cache.mkdir(exist_ok=True, mode=0o700)
         for file in source:
-            path = job_dir / (file['id'] + '-' + file['md5Checksum'] + '.' + EXTENSIONS[file['mimeType']])
-            if not path.exists():
+            # Share immutable originals between versions instead of copying every
+            # accumulated logo into every job (quadratic disk growth).
+            path = logo_cache / (file['id'] + '-' + file['md5Checksum'] + '.' + EXTENSIONS[file['mimeType']])
+            valid_cached = path.exists() and path.stat().st_size == int(file['size']) and hashlib.md5(path.read_bytes()).hexdigest() == file['md5Checksum']
+            if not valid_cached:
                 data = request(f"{API}/{file['id']}?alt=media", access, limit=MAX_IMAGE)
                 if len(data) != int(file['size']) or hashlib.md5(data).hexdigest() != file['md5Checksum']:
                     raise ValueError('Sponsor download checksum mismatch')
