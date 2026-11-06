@@ -98,8 +98,8 @@
   const publicUrl = 'https://vamosalsantisimo.com/';
   const message = () => `Yo voy a VAMOS AL SANTÍSIMO 2026. ¿Venís conmigo? Sábado 19 de diciembre · ${document.documentElement.dataset?.eventVenue === 'indoor' ? 'Parroquia María Auxiliadora' : 'Anfiteatro de la Juventud'}. Desde las 19:00 h · 20:00 Misa central. Con Pablo Martínez. Si llueve, nos encontramos en María Auxiliadora. Consultá la sede actualizada en el enlace.`;
   const download = $('#invite-save');
-  const fileName = download.download;
-  const assetUrl = download.href;
+  let fileName = download.download;
+  let assetUrl = download.href;
   const openNetwork = $('#invite-open-network');
   const nativeShare = $('#invite-native');
   const status = $('#invite-status');
@@ -114,6 +114,17 @@
   let sharing = false;
   let returnFocus = trigger;
 
+  if (typeof window !== 'undefined') window.addEventListener('vas:invitation-asset', event => {
+    const asset = event.detail;
+    if (!asset || !/^\/api\/flyers\/media\/flyer-evento-historia-v\d+(?:-p\d+)?-[a-f0-9]{32}\.png$/.test(asset.image) || assetUrl === asset.image) return;
+    assetUrl = asset.image;
+    fileName = asset.name;
+    imageFile = null;
+    preparing = null;
+    nativeShare.hidden = true;
+    if (dialog.open) prepareFile();
+  });
+
   function selectNetwork() {
     const selected = choices.find(input => input.checked)?.value || 'instagram';
     const network = networks[selected];
@@ -127,18 +138,22 @@
   // awaiting network I/O can consume the browser's transient user activation.
   function prepareFile() {
     if (preparing || imageFile || typeof navigator.share !== 'function' || typeof navigator.canShare !== 'function') return;
-    preparing = fetch(assetUrl)
+    const requestedUrl = assetUrl;
+    const requestedName = fileName;
+    const pending = fetch(requestedUrl)
       .then(response => { if (!response.ok) throw new Error('Invitation unavailable'); return response.blob(); })
       .then(blob => {
         if (!blob.size || blob.type !== 'image/png') throw new Error('Invalid invitation image');
-        const candidate = new File([blob],fileName,{type:'image/png'});
+        if (requestedUrl !== assetUrl) return;
+        const candidate = new File([blob],requestedName,{type:'image/png'});
         if (navigator.canShare({files:[candidate]})) {
           imageFile = candidate;
           nativeShare.hidden = false;
         }
       })
       .catch(() => { /* Direct download and network links remain available; retry on reopening. */ })
-      .finally(() => { preparing = null; });
+      .finally(() => { if (preparing === pending) preparing = null; });
+    preparing = pending;
   }
 
   if (typeof dialog.showModal === 'function') {
