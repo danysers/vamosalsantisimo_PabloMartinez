@@ -9,6 +9,11 @@ visual nuevo invoca Hermes + ChatGPT. Renombrar un logo o subir un PDF no consum
 una generación. El gestor tiene **una única herramienta de composición**, sin
 terminal, correo, pagos ni acceso arbitrario al servidor. Se reutiliza la sesión
 ChatGPT de Hermes; no requiere FAL ni una clave de la API de imágenes.
+El perfil de flyers usa `gpt-6-astra`, validado con la cuenta conectada. Se puede
+fijar otro modelo disponible mediante `FLYER_HERMES_MODEL`, sin cambiar el gestor
+general. No confiar en los modelos sintéticos que algunas versiones de Hermes
+añaden al catálogo: si falla su consulta por descompresión Brotli, consultar el
+catálogo real con `Accept-Encoding: identity` antes de elegir el modelo.
 
 `compose.py` parte de los dos PNG V2 aprobados. Modifica exclusivamente las
 regiones de sponsors secundarios: historia `(0,1686)-(1080,1842)` y muro

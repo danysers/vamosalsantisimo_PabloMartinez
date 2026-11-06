@@ -14,7 +14,7 @@ job = json.loads(job_path.read_text())
 sys.path.insert(0, '/usr/local/lib/hermes-agent')
 os.environ['HERMES_HOME'] = '/root/.hermes'
 from hermes_cli.runtime_provider import resolve_runtime_provider
-credentials = resolve_runtime_provider(requested='openai-codex', target_model=os.environ.get('FLYER_HERMES_MODEL', 'gpt-5.5'))
+credentials = resolve_runtime_provider(requested='openai-codex', target_model=os.environ.get('FLYER_HERMES_MODEL', 'gpt-6-astra'))
 os.environ['HERMES_HOME'] = '/root/.hermes/profiles/vas-flyers'
 
 from run_agent import AIAgent
@@ -38,7 +38,7 @@ registry.register(name='generate_event_flyers', toolset='vas-flyers', handler=ge
                           'parameters': {'type': 'object', 'properties': {'job_id': {'type': 'string', 'enum': [job['id']]}},
                                          'required': ['job_id'], 'additionalProperties': False}})
 toolsets.TOOLSETS['vas-flyers'] = {'tools': ['generate_event_flyers'], 'description': 'Approved flyer composition only'}
-agent = AIAgent(model=os.environ.get('FLYER_HERMES_MODEL', 'gpt-5.5'),
+agent = AIAgent(model=os.environ.get('FLYER_HERMES_MODEL', 'gpt-6-astra'),
                 provider='openai-codex', api_key=credentials['api_key'], base_url=credentials['base_url'], api_mode=credentials.get('api_mode'),
                 enabled_toolsets=['vas-flyers'], max_iterations=4, quiet_mode=True,
                 skip_context_files=True, skip_memory=True, save_trajectories=False,
@@ -49,4 +49,4 @@ if {t['function']['name'] for t in agent.tools} != {'generate_event_flyers'}:
 agent.run_conversation(f'Generate job {job["id"]}, version V{job["version"]}. Use the exact templates for historia and muro, keeping Pablo, all text and Mila Club unchanged. Compose secondary sponsors across each row and wrap at seven. Call generate_event_flyers with this job_id once, verify the result and finish.')
 if not (job_path.parent / 'rendered.json').exists():
     raise RuntimeError('Hermes did not complete the composition tool')
-print(json.dumps({'ok': True, 'version': job['version'], 'manager': 'Hermes/ChatGPT'}))
+print(json.dumps({'ok': True, 'version': job['version'], 'manager': 'Hermes/ChatGPT', 'model': agent.model}))
