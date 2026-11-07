@@ -4,7 +4,7 @@ import { createMemoryGate, isTrafficEntry, trafficWaitHeaders, trafficWaitHtml }
 import { NextRequest, NextResponse } from 'next/server'
 
 const administrativePath = /^\/(?:admin|api\/(?:admin|auth))(?:\/|$)/
-const panelAsset = /^\/(?:_next(?:\/|$)|favicon-mark\.png$|page-transition\.js$|operational-errors\.js$|404\/vamos-al-santisimo-20261030\.webp$)/
+const panelAsset = /^\/(?:_next(?:\/|$)|robots\.txt$|favicon-mark\.png$|page-transition\.js$|operational-errors\.js$|404\/vamos-al-santisimo-20261030\.webp$)/
 const memoryGate = createMemoryGate()
 
 function hidden() {
@@ -19,7 +19,8 @@ function nextPage(request: NextRequest) {
   if (path.startsWith('/api/') || path.startsWith('/_next/') || path.includes('.') ||
       path === '/' || path.startsWith('/formacion') || path.startsWith('/pagina') || path.startsWith('/eventos-anteriores')) return NextResponse.next()
   const nonce = randomBytes(24).toString('base64')
-  const policy = contentPolicy("'nonce-" + nonce + "'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''))
+  const policy = contentPolicy("'nonce-" + nonce + "'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
+    process.env.APP_SURFACE !== 'panel' && ['/donaciones', '/voluntarios', '/sumar-marca'].includes(path))
   const headers = new Headers(request.headers)
   headers.set('x-nonce', nonce)
   headers.set('Content-Security-Policy', policy)
@@ -31,6 +32,18 @@ function nextPage(request: NextRequest) {
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
+  // Cloudflare declares the external scheme even when the tunnel uses HTTP.
+  // Do not infer it from the internal connection, which would create HTTPS loops.
+  const publicHost = request.headers.get('host')?.toLowerCase()
+  if (['GET', 'HEAD'].includes(request.method) &&
+      ['vamosalsantisimo.com', 'www.vamosalsantisimo.com', 'pablomartinez.vamosalsantisimo.com'].includes(publicHost || '')) {
+    try {
+      if (JSON.parse(request.headers.get('cf-visitor') || '{}').scheme === 'http') {
+        const target = new URL(request.nextUrl.pathname + request.nextUrl.search, 'https://' + publicHost)
+        return NextResponse.redirect(target, 308)
+      }
+    } catch { /* Malformed optional proxy metadata never changes routing or auth. */ }
+  }
   if (process.env.APP_SURFACE === 'panel') {
     if (path === '/') return NextResponse.redirect(new URL('/admin', request.url))
     return administrativePath.test(path) || panelAsset.test(path) ? nextPage(request) : hidden()

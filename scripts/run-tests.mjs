@@ -20,6 +20,7 @@ function run(args) {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
+run(['scripts/prepare-seo.mjs', '--check'])
 run(['node_modules/next/dist/bin/next', 'build'])
 
 const tests = readdirSync('tests')

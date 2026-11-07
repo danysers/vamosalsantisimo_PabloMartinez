@@ -1,13 +1,15 @@
-import type { Metadata } from 'next'
+import { publicMetadata } from '../../lib/seo'
+import SeoJsonLd from '../../components/seo-jsonld'
 import { ArrowUpRight, Heart, Megaphone, UsersRound } from 'lucide-react'
 import SupportPageShell from '../../components/support-page-shell'
 import { volunteerGroupUrl } from '../../lib/community-support'
 import styles from '../../components/community-support.module.css'
 
-export const metadata: Metadata = { title: 'Equipo de voluntarios · Pablo Martínez 2026 | Vamos al Santísimo' }
+export const metadata = publicMetadata('/voluntarios')
 
 export default function VolunteersPage() {
   return <SupportPageShell current="voluntarios">
+    <SeoJsonLd path="/voluntarios" />
     <header className={styles.pageHeading}><p className={styles.overline}>Equipo de voluntarios · Pablo Martínez 2026</p><h1>Tu tiempo también<br />es un regalo.</h1><p>Gracias por sumarte y por tus ganas de colaborar. Cada pequeña ayuda será muy importante para hacer posible este hermoso encuentro.</p></header>
     <div className={styles.volunteerIntro}><p>Nuestra misión será acompañar <strong>antes, durante y después del evento</strong>, colaborando en distintas tareas de organización y servicio.</p></div>
     <div className={styles.volunteerGrid}>

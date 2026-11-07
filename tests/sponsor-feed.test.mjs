@@ -11,17 +11,20 @@ const sponsor = (version, name = 'Marca de prueba') => ({ id: 'sponsor_test_2026
 test('Drive gallery adds a logo, updates a replaced Drive image and removes it without changing original brands', async () => {
   class Element {
     constructor(tag) { this.tag = tag; this.children = []; this.dataset = {}; this.classList = { toggle() {} } }
-    append(child) { child.parent = this; this.children.push(child) }
-    querySelector(tag) { return this.children.find(child => child.tag === tag) || this.children.map(child => child.querySelector(tag)).find(Boolean) }
+    get tagName() { return this.tag.toUpperCase() }
+    get firstChild() { return this.children[0] }
+    append(child) { if (child.parent) child.parent.children = child.parent.children.filter(c => c !== child); child.parent = this; this.children.push(child) }
+    querySelector(tag) { return this.children.find(child => tag.startsWith('.') ? child.className?.split(' ').includes(tag.slice(1)) : child.tag === tag) || this.children.map(child => child.querySelector(tag)).find(Boolean) }
     querySelectorAll() { return this.children.filter(child => child.dataset.driveId) }
     getAttribute(name) { return this[name] || null }
     setAttribute(name, value) { this[name] = value }
     removeAttribute(name) { delete this[name] }
     remove() { this.parent.children = this.parent.children.filter(child => child !== this) }
+    replaceWith(next) { if(this.parent) { const parent=this.parent; parent.children[parent.children.indexOf(this)]=next; next.parent=parent; this.parent=null } }
   }
   const grid = new Element('ul'), original = new Element('li'), events = new Map(), requests = []
   grid.append(original)
-  const base = new Element('a'); base.dataset.brandName = 'Mila Club'; base.href = 'https://www.instagram.com/milaclub.ar/'
+  const baseParent = new Element('section'), base = new Element('a'); base.className='brand-card'; base.dataset.brandName = 'Mila Club'; base.href = 'https://www.instagram.com/milaclub.ar/'; baseParent.append(base)
   let result = { available: true, sponsors: [sponsor('a')] }, refresh
   runInNewContext(source, {
     URL,
@@ -35,7 +38,7 @@ test('Drive gallery adds a logo, updates a replaced Drive image and removes it w
   const logo = grid.children[1], image = logo.querySelector('img')
   assert.equal(image.src, sponsor('a').image)
   assert.equal(image.alt, 'Marca de prueba')
-  assert.equal(logo.querySelector('a').getAttribute('href'), null)
+  assert.equal(logo.querySelector('a'), undefined, 'logos without a URL are cards, not uncrawlable anchors')
 
   result = { available: true, sponsors: [sponsor('b', 'Marca actualizada')], links: [
     { name: 'MÁRCA-actualizada.png', href: 'https://www.instagram.com/marca/' },
@@ -55,12 +58,13 @@ test('Drive gallery adds a logo, updates a replaced Drive image and removes it w
 
   result.links = [{ name: 'Marca actualizada', href: 'javascript:alert(1)' }, { name: 'Mila Club', href: null }]
   await refresh(); await settle()
-  assert.equal(card.getAttribute('href'), null, 'untrusted links are never made clickable')
-  assert.equal(base.getAttribute('href'), null, 'an empty TXT URL can disable a built-in link')
+  assert.equal(logo.querySelector('a'), undefined, 'untrusted links are never made clickable')
+  assert.equal(logo.querySelector('img'), image, 'converting a link into a card preserves its image')
+  assert.equal(baseParent.querySelector('a'), undefined, 'an empty TXT URL can disable a built-in link')
 
   result.links = []
   await refresh(); await settle()
-  assert.equal(base.href, 'https://www.instagram.com/milaclub.ar/', 'removing a TXT entry restores the original default')
+  assert.equal(baseParent.querySelector('a').href, 'https://www.instagram.com/milaclub.ar/', 'removing a TXT entry restores the original default')
 
   result = { available: false, sponsors: [] }
   events.get('visibilitychange')(); await settle()
