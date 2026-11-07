@@ -285,7 +285,7 @@ function loadPage(url) {
   return cache.get(key);
 }
 const portrait = new Image();
-portrait.src = '/formacion/assets/pablo-martinez-camisa-azul.png';
+portrait.src = '/2026/optimized/pablo-taller-20261106.webp';
 const assetsReady = Promise.allSettled([document.fonts.ready,portrait.decode()]);
 let generation = 0;
 let transition;

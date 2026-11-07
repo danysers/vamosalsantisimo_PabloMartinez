@@ -1,11 +1,24 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { stat } from 'node:fs/promises'
+import { stat, readFile } from 'node:fs/promises'
 
 const require = createRequire(import.meta.url)
 const sharp = createRequire(require.resolve('next/package.json'))('sharp')
 const source = path => new URL('../public/' + path, import.meta.url).pathname.replace(/^\/([A-Za-z]:\/)/, '$1')
+
+test('workshop navigation, CSS and HTML preload reuse one identical full-quality portrait request', async () => {
+  const app = await readFile(source('formacion/app.js'), 'utf8')
+  const css = await readFile(source('formacion/styles.css'), 'utf8')
+  const portrait = /portrait\.src = '([^']+)'/.exec(app)?.[1]
+  assert.ok(portrait)
+  assert.ok(css.includes(`background:url('${portrait}')`))
+  for (const page of ['', 'inscripcion', 'pago', 'comprobante', 'acreditacion', 'contacto', 'recursos', 'preguntas-frecuentes']) {
+    const html = await readFile(source('formacion/' + (page ? page + '/' : '') + 'index.html'), 'utf8')
+    assert.ok(html.includes(`rel="preload" as="image" href="${portrait}"`), page)
+    assert.ok(html.includes('/formacion/app.js?v=20261106-seo-portrait'), 'new navigation script must replace any cached previous version')
+  }
+})
 
 test('delivery images preserve every visible source pixel and the full original resolution', async () => {
   for (const [original, optimized] of [
