@@ -3,6 +3,7 @@
   const pattern = /^\/api\/flyers\/media\/flyer-evento-(historia|muro)-v([3-9]|[1-9]\d{1,4})(?:-p([1-6]))?-[a-f0-9]{32}\.png$/;
   let busy = false;
   let version = 0;
+  let active = typeof IntersectionObserver !== 'function';
   const preload = url => new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = resolve;
@@ -10,7 +11,7 @@
     image.src = url;
   });
   async function refresh() {
-    if (busy) return;
+    if (!active || busy) return;
     busy = true;
     try {
       const response = await fetch('/api/flyers', { cache: 'no-store' });
@@ -49,7 +50,16 @@
     } catch { /* Keep the approved local invitation or the last complete version. */ }
     finally { busy = false; }
   }
-  refresh();
+  if (active) refresh();
+  else {
+    const targets = [...document.querySelectorAll('.invite-thumbnail, .invite-preview-stage img')];
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      active = true; observer.disconnect(); refresh();
+    }, { rootMargin: '600px 0px' });
+    if (targets.length) targets.forEach(target => observer.observe(target));
+    else { active = true; refresh(); }
+  }
   setInterval(() => { if (!document.hidden) refresh(); }, 5 * 60_000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();

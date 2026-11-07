@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Disallow: /propuestas-inicio
-Disallow: /pagina%20principal%20con%20efecto/

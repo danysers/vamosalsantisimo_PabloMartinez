@@ -1,13 +1,15 @@
-import type { Metadata } from 'next'
+import { publicMetadata } from '../../lib/seo'
+import SeoJsonLd from '../../components/seo-jsonld'
 import Image from 'next/image'
 import SupportPageShell from '../../components/support-page-shell'
 import DonationAccount from '../../components/donation-account'
 import styles from '../../components/community-support.module.css'
 
-export const metadata: Metadata = { title: 'Donaciones · Vamos al Santísimo | Pablo Martínez 2026' }
+export const metadata = publicMetadata('/donaciones')
 
 export default function DonationsPage() {
   return <SupportPageShell current="donaciones">
+    <SeoJsonLd path="/donaciones" />
     <header className={styles.pageHeading}><p className={styles.overline}>Tu ayuda hace posible el encuentro</p><h1>Un pequeño aporte.<br />Un gran gesto de amor.</h1><p>Preparar este encuentro requiere mucho trabajo y recursos. Tu donación nos ayuda a cubrir los gastos de organización y a hacer posible esta noche de fe, música y comunidad.</p></header>
     <section className={styles.donationPanel} aria-label="Código QR y datos para colaborar">
       <div className={styles.qrPanel}>

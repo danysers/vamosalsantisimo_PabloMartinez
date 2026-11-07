@@ -12,6 +12,8 @@ async function setup({ ua = 'Android', platform = 'Linux', touch = 0, status = '
     return nodes.get(id)
   }
   const labels = [{}, {}, {}, {}], listeners = {}, timers = []
+  get('event-structured-data').type = 'application/ld+json'
+  get('event-structured-data').textContent = JSON.stringify({ '@graph': [{ '@id': 'https://vamosalsantisimo.com/#evento', location: {} }] })
   const documentElement = { dataset: {}, textContent: null }
   const document = { hidden: false, documentElement, getElementById: get,
     querySelectorAll: selector => {
@@ -51,6 +53,10 @@ test('rain updates every visible location and both platform-specific routes', as
     const url = new URL(app.get('directions-main').href)
     assert.match(url.searchParams.get(ua === 'iPhone' ? 'daddr' : 'destination'), /María Auxiliadora/)
     assert.equal(app.document.documentElement.dataset.eventVenue, 'indoor')
+    const event = JSON.parse(app.get('event-structured-data').textContent)['@graph'][0]
+    assert.equal(event.location.name, 'Parroquia María Auxiliadora')
+    assert.equal(event.location.address.streetAddress, 'Av. 9 de Julio 1015')
+    assert.equal(event.location.geo, undefined)
     assert.match(app.get('directions-status').textContent, /indica lluvia/)
     assert.equal(app.get('weather-source').hidden, false)
   }

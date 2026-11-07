@@ -9,11 +9,11 @@ const file = (format, version = 3, page = 1) => ({ format, page,
   name: `flyer-evento-${format}-v${version}.png`,
   image: `/api/flyers/media/flyer-evento-${format}-v${version}-${'a'.repeat(32)}.png` })
 
-function setup() {
+function setup({ deferred = false } = {}) {
   const images = [{ src: 'fallback.png' }, { src: 'fallback.png' }]
   const links = [{ href: 'fallback.png' }, { href: 'fallback.png' }]
   const wall = { hidden: true }, more = { replaceChildren() {}, append() {} }, events = []
-  let visibility, payload = { available: true, version: 3, files: [file('historia'), file('muro')] }, fail = false
+  let visibility, intersect, requests = 0, payload = { available: true, version: 3, files: [file('historia'), file('muro')] }, fail = false
   const document = { hidden: false,
     querySelectorAll: selector => selector.startsWith('.invite-thumbnail') ? images : links,
     querySelector: selector => selector === '#invite-save-wall' ? wall : more,
@@ -21,11 +21,13 @@ function setup() {
   }
   class Image { set src(_url) { queueMicrotask(() => fail ? this.onerror() : this.onload()) } }
   vm.runInNewContext(source, { document, window: { dispatchEvent: event => events.push(event) }, Image,
+    ...(deferred ? { IntersectionObserver: class { constructor(callback) { intersect = callback } observe() {} disconnect() {} } } : {}),
     CustomEvent: class { constructor(type, data) { this.type = type; this.detail = data.detail } },
-    fetch: async () => ({ ok: true, json: async () => payload }), setInterval() {}, queueMicrotask,
+    fetch: async () => { requests++; return { ok: true, json: async () => payload } }, setInterval() {}, queueMicrotask,
   })
   return { images, links, wall, events, refresh: () => visibility(),
-    payload: value => { payload = value }, fail: () => { fail = true } }
+    payload: value => { payload = value }, fail: () => { fail = true }, requests: () => requests,
+    approach: () => intersect([{ isIntersecting: true }]) }
 }
 
 test('one verified pair updates poster, preview, downloads and native share event together', async () => {
@@ -41,6 +43,17 @@ test('one verified pair updates poster, preview, downloads and native share even
   app.payload({ available: true, version: 4, files: [file('historia', 4), file('muro', 4)] })
   app.fail(); app.refresh(); await settle()
   assert.equal(app.events.length, 1, 'unavailable image preserves the last good invitation')
+})
+
+test('offscreen flyer pair waits until the poster or opened dialog approaches the viewport', async () => {
+  const app = setup({ deferred: true }); await settle()
+  assert.equal(app.requests(), 0)
+  app.refresh(); await settle()
+  assert.equal(app.requests(), 0, 'visibility changes must not preload offscreen posters')
+  app.approach(); await settle()
+  assert.equal(app.requests(), 1)
+  assert.ok(app.images.every(image => image.src === file('historia').image))
+  assert.equal(app.wall.href, file('muro').image)
 })
 
 test('untrusted external media cannot replace the invitation', async () => {

@@ -148,8 +148,11 @@ test('retired encounter page, its exclusive assets, and links to it are removed'
 
 test('landing inline scripts remain syntactically valid', async () => {
   const html = await readFile(landingPath, 'utf8')
-  const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+  const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)]
 
   assert.ok(scripts.length > 0)
-  for (const [, source] of scripts) assert.doesNotThrow(() => new Function(source))
+  for (const [, attributes, source] of scripts) {
+    if (/type="application\/ld\+json"/.test(attributes)) assert.doesNotThrow(() => JSON.parse(source))
+    else assert.doesNotThrow(() => new Function(source))
+  }
 })

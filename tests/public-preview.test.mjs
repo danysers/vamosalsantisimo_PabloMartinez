@@ -41,7 +41,8 @@ test('animated homepage is served at the root and keeps legacy APIs closed', asy
     }
     assert.ok(!html.includes('Daniel Poli'), 'archived performer leaked into new homepage')
     assert.match(html, /https:\/\/wa\.me\/5493704258770\?text=/)
-    assert.match(html, /<meta name="robots" content="index, follow">/)
+    const robots = /<meta name="robots" content="([^"]+)"/.exec(html)?.[1].split(',').map(value => value.trim())
+    assert.ok(robots?.includes('index') && robots.includes('follow') && !robots.includes('noindex'))
     assert.match(html, /href="https:\/\/vamosalsantisimo\.com\/"/)
     assert.ok(!html.includes('src="./'), 'homepage assets must resolve from the root URL')
     assert.ok(!html.includes('accessToken='), 'private status token leaked into the public WhatsApp link')

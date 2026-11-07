@@ -18,6 +18,11 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/:path*', has: [{ type: 'host', value: 'www.vamosalsantisimo.com' }], destination: 'https://vamosalsantisimo.com/:path*', permanent: true },
+      { source: '/pagina%20principal%20con%20efecto/index.html', destination: '/', permanent: true },
+      { source: '/pagina%20principal%20con%20efecto', destination: '/', permanent: true },
+      ...['', 'inscripcion', 'contacto', 'preguntas-frecuentes', 'recursos', 'pago', 'comprobante', 'acreditacion'].map(page => ({
+        source: page ? `/formacion/${page}/index.html` : '/formacion/index.html', destination: page ? `/formacion/${page}` : '/formacion', permanent: true,
+      })),
       { source: '/taller', destination: '/formacion', permanent: true },
       { source: '/taller/:path*', destination: '/formacion/:path*', permanent: true },
       { source: '/formacion/el-taller', destination: '/formacion/inscripcion', permanent: true },
@@ -50,15 +55,18 @@ const nextConfig = {
         { key: 'Content-Security-Policy', value: "base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'" },
       ] },
       ...['/', '/formacion/:path*', '/pagina%20principal%20con%20efecto/:path*', '/eventos-anteriores/:path*'].map(source => ({
-        source, headers: [{ key: 'Content-Security-Policy', value: contentPolicy(staticScriptHashes(fileURLToPath(new URL('./public', import.meta.url))).join(' ')) }],
+        source, headers: [{ key: 'Content-Security-Policy', value: contentPolicy(staticScriptHashes(fileURLToPath(new URL('./public', import.meta.url))).join(' '), true) }],
       })),
       {
         source: '/2026/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
+      { source: '/2026/optimized/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
+      { source: '/formacion/assets/:path*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }] },
       { source: '/404/vamos-al-santisimo-20261030.webp', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
-      ...['/formacion/comprobante', '/formacion/comprobante/:path*', '/formacion/acreditacion', '/formacion/acreditacion/:path*'].map(source => ({
-        source, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }, { key: 'Cache-Control', value: 'private, no-store' }, { key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      ...['pago', 'comprobante', 'acreditacion', 'recursos'].flatMap(page => [`/formacion/${page}`, `/formacion/${page}/:path*`]).map(source => ({
+        source, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }, { key: 'Cache-Control', value: 'private, no-store' }, { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Content-Security-Policy', value: contentPolicy(staticScriptHashes(fileURLToPath(new URL('./public', import.meta.url))).join(' ')) }],
       })),
       ...['/admin', '/admin/:path*', '/api/admin/:path*', '/api/auth/:path*'].map(source => ({
         source,

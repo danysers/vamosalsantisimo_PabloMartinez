@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.27.1",
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/prepare-seo.mjs && next build",
     "dev": "next dev --hostname localhost",
     "email:test": "node --env-file=.env --experimental-strip-types scripts/send-test-emails.mjs",
     "lint": "eslint app/page.tsx app/layout.tsx app/inscripcion/page.tsx app/sitemap.ts app/manifest.ts \"app/admin/**/*.{ts,tsx}\" \"app/api/**/route.ts\" \"lib/*.ts\" \"scripts/*.ts\"",

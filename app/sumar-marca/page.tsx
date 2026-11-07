@@ -1,18 +1,17 @@
-import type { Metadata } from 'next'
+import { publicMetadata } from '../../lib/seo'
+import SeoJsonLd from '../../components/seo-jsonld'
 import { ArrowUpRight, HandHeart, Lightbulb, Mail, MessageCircle, Phone, Truck, UsersRound } from 'lucide-react'
 import SupportPageShell from '../../components/support-page-shell'
 import shared from '../../components/community-support.module.css'
 import styles from './page.module.css'
 
-export const metadata: Metadata = {
-  title: 'Sumá tu marca al encuentro · Vamos al Santísimo',
-  description: 'Acompañá Vamos al Santísimo con tu marca, productos o servicios. Conocé cómo colaborar y contactá al equipo organizador.',
-}
+export const metadata = publicMetadata('/sumar-marca')
 
 const whatsapp = `https://wa.me/5493704258770?text=${encodeURIComponent('Hola, me gustaría sumar mi marca a Vamos al Santísimo. ¿Podemos conversar sobre las formas de acompañar el encuentro?')}`
 
 export default function BrandSupportPage() {
   return <SupportPageShell current="marcas" backHref="/#colabora">
+    <SeoJsonLd path="/sumar-marca" />
     <header className={shared.pageHeading}>
       <p className={shared.overline}>Marcas que nos acompañan en este encuentro</p>
       <h1>Tu marca también<br /> puede ser parte.</h1>

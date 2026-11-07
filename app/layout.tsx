@@ -6,7 +6,9 @@ import '../public/page-transition.css'
 export const metadata: Metadata = {
   title: 'Vamos al Santísimo · Pablo Martínez · 19 de diciembre de 2026',
   description: 'Adoración gratuita con Pablo Martínez el 19 de diciembre de 2026 desde las 19 h, en el Anfiteatro de la Juventud. Taller de músicos a las 15 h.',
-  robots: { index: false, follow: false }, // Remove only after the organization confirms publication.
+  // Public pages opt in explicitly; unlisted/administrative React routes stay excluded.
+  robots: { index: false, follow: false },
+  metadataBase: new URL('https://vamosalsantisimo.com'),
   openGraph: {
     title: 'Vamos al Santísimo · Pablo Martínez',
     description: 'Adoración el sábado 19 de diciembre de 2026 desde las 19 h; taller de músicos a las 15 h.',

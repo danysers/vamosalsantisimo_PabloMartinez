@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
+import { publicPages, siteOrigin } from '../lib/site-seo.mjs'
 
-// No verified production domain yet; do not advertise the archived 2025 URL.
 export default function sitemap(): MetadataRoute.Sitemap {
-  return []
+  return Object.keys(publicPages).map(path => ({ url: siteOrigin + path }))
 }

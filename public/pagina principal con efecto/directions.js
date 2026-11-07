@@ -40,6 +40,20 @@
     address.textContent = indoor ? 'Av. 9 de Julio 1015, Formosa.' : 'Av. Napoleón Uriburu y Av. 9 de Julio, Formosa.';
     document.querySelectorAll('[data-event-venue-label]').forEach(node => { node.textContent = name; });
     document.documentElement.dataset.eventVenue = indoor ? 'indoor' : 'outdoor';
+    const schema = document.getElementById('event-structured-data');
+    if (schema?.type === 'application/ld+json') {
+      try {
+        const value = JSON.parse(schema.textContent);
+        const event = value['@graph']?.find(item => item['@id'] === 'https://vamosalsantisimo.com/#evento');
+        if (event) {
+          event.location = { '@type': 'Place', name,
+            address: { '@type': 'PostalAddress', streetAddress: indoor ? 'Av. 9 de Julio 1015' : 'Av. Napoleón Uriburu y Av. 9 de Julio', addressLocality: 'Formosa', addressRegion: 'Formosa', addressCountry: 'AR' },
+            ...(!indoor ? { geo: { '@type': 'GeoCoordinates', latitude: -26.1936919, longitude: -58.1701572 } } : {}),
+          };
+          schema.textContent = JSON.stringify(value);
+        }
+      } catch { /* Visible venue and directions remain available if markup is unavailable. */ }
+    }
     syncLinks();
     source.hidden = !['dry','rain','unavailable'].includes(data.status);
     if (data.status === 'scheduled') status.textContent = 'Si llueve, nos encontramos en María Auxiliadora. La sede se actualiza según el clima desde las 18:00 h del 19 de diciembre.';

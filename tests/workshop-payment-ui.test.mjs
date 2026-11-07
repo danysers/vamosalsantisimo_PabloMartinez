@@ -50,6 +50,6 @@ test('workshop pages use the sharper high-resolution logo', async () => {
   assert.equal(logo.readUInt32BE(16), 900)
   assert.equal(logo.readUInt32BE(20), 686)
   for (const page of ['index.html', 'inscripcion/index.html', 'preguntas-frecuentes/index.html']) {
-    assert.match(await read(`public/formacion/${page}`), /logo-dorado\.png" width="900" height="686"/)
+    assert.match(await read(`public/formacion/${page}`), /logo-taller-20261106\.webp" width="900" height="686"/)
   }
 })
