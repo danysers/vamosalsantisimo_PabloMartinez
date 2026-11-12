@@ -2,7 +2,7 @@
   'use strict';
   const grid = document.querySelector('#marcas .brand-grid');
   if (!grid) return;
-  const imagePath = /^\/api\/sponsors\/media\/[A-Za-z0-9_-]{10,100}-[a-f0-9]{32}\.(?:png|jpg|webp)$/;
+  const imagePath = /^(?:\/api\/sponsors\/media\/[A-Za-z0-9_-]{10,100}-[a-f0-9]{32}\.(?:png|jpg|webp)|\/2026\/sponsors\/(?:legacy-jose-motos\.jpg|legacy-sponsors-2025\.png))$/;
   const nameKey = name => name.replace(/\.(png|jpe?g|webp)$/i, '').normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   function safeHref(value) {

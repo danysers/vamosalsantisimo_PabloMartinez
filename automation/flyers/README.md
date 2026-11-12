@@ -1,10 +1,12 @@
 # Flyers del evento con Hermes
 
-Origen: **Pablo Martinez 2026 → sponsors-2026**
-(`1-ab3D4gRzZ_DHzfvssBR-LnfLPOS6i68`). Destino:
+Origen: **feed de logos del panel** en
+`https://paneltaller2026.vamosalsantisimo.com/api/public/sponsors`.
+El panel también archiva cada logo en Drive (`sponsors-2026`). Destino de flyers:
 https://drive.google.com/drive/folders/1QMFs67vBo8rY87oARIVSmxZDd1F-j6fJ
 
-El timer `vas-flyers.timer` revisa cambios cada cinco minutos. Sólo un conjunto
+El timer `vas-flyers.timer` revisa el feed cada quince segundos, sin leer los
+logos desde Drive. Sólo un conjunto
 visual nuevo invoca Hermes + ChatGPT. Renombrar un logo o subir un PDF no consume
 una generación. El gestor tiene **una única herramienta de composición**, sin
 terminal, correo, pagos ni acceso arbitrario al servidor. Se reutiliza la sesión
@@ -22,7 +24,9 @@ después de guardar. Mila Club, su tamaño y posición, Pablo, textos y pie se
 conservan exactamente. Los logos mantienen proporción, con hasta siete por fila,
 dos filas por página y continuaciones cuando hay más de catorce secundarios.
 Los tres logos originales siempre se incluyen. Los logos nuevos son PNG/JPEG/WebP
-estáticos de los propietarios autorizados, hasta 4 MiB y 20 millones de píxeles.
+estáticos validados por el panel, hasta 4 MiB y 20 millones de píxeles. El worker
+comprueba firma, tamaño y checksum antes de entregar archivos locales a Hermes;
+Hermes nunca recibe credenciales de la base.
 
 Cada cambio genera `flyer-evento-historia-vN.png` y `flyer-evento-muro-vN.png`
 (sufijo `-pN` si hay continuaciones), conservando versiones anteriores. El primer

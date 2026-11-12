@@ -1,10 +1,10 @@
 [Unit]
-Description=Check sponsor changes for event flyers every five minutes
+Description=Check panel sponsor changes for event flyers every 15 seconds
 
 [Timer]
 OnBootSec=2min
-OnUnitInactiveSec=5min
-RandomizedDelaySec=15
+OnUnitInactiveSec=15sec
+RandomizedDelaySec=3
 Persistent=true
 Unit=vas-flyers.service
 

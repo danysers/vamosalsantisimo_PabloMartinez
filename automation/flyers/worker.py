@@ -14,7 +14,7 @@ from hermes_runtime import resolve_hermes_runtime
 
 ROOT = Path(__file__).resolve().parent
 STATE = Path(os.environ.get('FLYER_STATE_DIR', '/var/lib/vas-flyers'))
-SOURCE = '1-ab3D4gRzZ_DHzfvssBR-LnfLPOS6i68'
+PANEL_ORIGIN = 'https://paneltaller2026.vamosalsantisimo.com'
 DESTINATION = '1QMFs67vBo8rY87oARIVSmxZDd1F-j6fJ'
 OWNERS = {'danysers@gmail.com', 'vamosalsantisimof@gmail.com'}
 API = 'https://www.googleapis.com/drive/v3/files'
@@ -78,6 +78,22 @@ def valid_logo(file):
             0 < int(file.get('size', 0)) <= MAX_IMAGE)
 
 
+def panel_sponsors():
+    payload = json.loads(request(PANEL_ORIGIN + '/api/public/sponsors', limit=64 * 1024))
+    if payload.get('available') is not True or not isinstance(payload.get('sponsors'), list) or len(payload['sponsors']) > 80:
+        raise ValueError('Panel sponsor feed unavailable or invalid')
+    result = []
+    for file in payload['sponsors']:
+        if not valid_logo(file):
+            raise ValueError('Invalid panel sponsor metadata')
+        extension = EXTENSIONS[file['mimeType']]
+        expected = f"/api/public/sponsors/media/{file['id']}-{file['md5Checksum']}.{extension}"
+        if file.get('source') != expected:
+            raise ValueError('Panel sponsor source mismatch')
+        result.append(file)
+    return result
+
+
 def upload(name, data, mime, properties, access):
     boundary = 'vas-' + uuid.uuid4().hex
     metadata = json.dumps({'name': name, 'parents': [DESTINATION], 'mimeType': mime, 'appProperties': properties}).encode()
@@ -98,8 +114,7 @@ def run():
         if memory['MemAvailable'] / memory['MemTotal'] < 0.15:
             print('Flyers deferred: host memory high', flush=True)
             return
-        access = token()
-        source = sorted(filter(valid_logo, listing(SOURCE, access)), key=lambda f: (f.get('createdTime', ''), f['id']))
+        source = sorted(panel_sponsors(), key=lambda f: f['id'])
         if len(source) > 80:
             raise ValueError('Too many sponsors; refused to silently drop logos')
         pins = json.loads((ROOT / 'templates/protected-sha256.json').read_text())
@@ -113,6 +128,7 @@ def run():
         pending = state.get('pending', {})
         job_id = pending.get('id') if pending.get('revision') == revision else hashlib.sha256((revision + state.get('commit', 'initial')).encode()).hexdigest()
         atomic(state_path, {**state, 'pending': {'id': job_id, 'revision': revision}})
+        access = token()
         destination = listing(DESTINATION, access)
         committed = next((f for f in destination if f.get('appProperties', {}).get('vasJob') == job_id and f.get('appProperties', {}).get('vasType') == 'event-commit'), None)
         if committed:
@@ -140,7 +156,7 @@ def run():
             path = logo_cache / (file['id'] + '-' + file['md5Checksum'] + '.' + EXTENSIONS[file['mimeType']])
             valid_cached = path.exists() and path.stat().st_size == int(file['size']) and hashlib.md5(path.read_bytes()).hexdigest() == file['md5Checksum']
             if not valid_cached:
-                data = request(f"{API}/{file['id']}?alt=media", access, limit=MAX_IMAGE)
+                data = request(PANEL_ORIGIN + file['source'], limit=MAX_IMAGE)
                 if len(data) != int(file['size']) or hashlib.md5(data).hexdigest() != file['md5Checksum']:
                     raise ValueError('Sponsor download checksum mismatch')
                 path.write_bytes(data)

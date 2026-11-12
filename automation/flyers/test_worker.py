@@ -31,14 +31,16 @@ class WorkerTest(unittest.TestCase):
                 (job_path.parent / 'rendered.json').write_text(json.dumps(result))
                 return type('Result', (), {'returncode': 0, 'stdout': '', 'stderr': ''})()
             with patch.object(worker, 'STATE', Path(directory)), patch.object(worker, 'token', return_value='test'), \
-                 patch.object(worker, 'listing', side_effect=lambda folder, _token: source if folder == worker.SOURCE else destination), \
+                 patch.object(worker, 'panel_sponsors', side_effect=lambda: source), \
+                 patch.object(worker, 'listing', return_value=destination), \
                  patch.object(worker, 'request', return_value=logo), patch.object(worker, 'upload', side_effect=upload), \
                  patch.object(worker, 'resolve_hermes_runtime', return_value=('/test/hermes-python', {})), \
                  patch.object(worker.subprocess, 'run', side_effect=hermes):
                 worker.run(); worker.run()
                 self.assertEqual(calls, [3], 'unchanged sponsor list must not call Hermes again')
+                checksum = hashlib.md5(logo).hexdigest()
                 source.append({'id': 'sponsor_file_123', 'mimeType': 'image/png', 'size': len(logo),
-                               'md5Checksum': hashlib.md5(logo).hexdigest()})
+                               'md5Checksum': checksum, 'source': f'/api/public/sponsors/media/sponsor_file_123-{checksum}.png'})
                 fail_once[0] = True
                 with self.assertRaises(RuntimeError):
                     worker.run()
@@ -49,6 +51,16 @@ class WorkerTest(unittest.TestCase):
                 source.clear()
                 worker.run()
                 self.assertEqual(calls, [3, 4, 5], 'removing sponsor and restoring old list creates a new version')
+
+    def test_panel_feed_is_bounded_and_does_not_use_drive_for_source(self):
+        import worker
+        logo = {'id': 'sponsor_file_123', 'mimeType': 'image/png', 'size': 100,
+                'md5Checksum': 'a' * 32, 'source': '/api/public/sponsors/media/sponsor_file_123-' + 'a' * 32 + '.png'}
+        with patch.object(worker, 'request', return_value=json.dumps({'available': True, 'sponsors': [logo]}).encode()) as fetch:
+            self.assertEqual(worker.panel_sponsors(), [logo])
+            self.assertEqual(fetch.call_args.args[0], worker.PANEL_ORIGIN + '/api/public/sponsors')
+        with patch.object(worker, 'request', return_value=json.dumps({'available': True, 'sponsors': [{**logo, 'source': 'https://evil.example/logo'}]}).encode()):
+            with self.assertRaises(ValueError): worker.panel_sponsors()
 
 
 if __name__ == '__main__':
