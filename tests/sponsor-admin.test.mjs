@@ -22,10 +22,13 @@ test('sponsor fields require brand and titular while normalizing optional data',
 
 test('sponsor logo validator accepts bounded static raster formats only', async () => {
   const png = await image()
-  assert.deepEqual(await validateSponsorLogo('image/png', png), { mimeType: 'image/png', extension: 'png', sizeBytes: png.length })
+  const result = await validateSponsorLogo('image/png', png)
+  assert.equal(result.mimeType, 'image/webp')
+  assert.equal(result.sizeBytes, result.bytes.length)
+  assert.equal((await sharp(result.bytes).metadata()).format, 'webp')
   assert.match((await validateSponsorLogo('image/jpeg', png)).error, /no coincide/)
   assert.match((await validateSponsorLogo('image/svg+xml', png)).error, /PNG, JPG o WebP/)
-  assert.match((await validateSponsorLogo('image/png', Buffer.alloc(4 * 1024 * 1024 + 1))).error, /4 MiB/)
+  assert.match((await validateSponsorLogo('image/png', Buffer.alloc(12 * 1024 * 1024 + 1))).error, /12 MiB/)
 })
 
 test('Drive filename sanitization prevents path and extension injection', () => {

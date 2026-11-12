@@ -10,6 +10,16 @@ Durante la transición, los dos logos que la galería anterior mostraba solo des
 
 ## Configuración privada necesaria
 
+## Carga móvil y tratamiento de imágenes
+
+El formulario usa una columna, campos de 16px, botones de 48px y tarjetas en pantallas pequeñas. Se pueden elegir JPG, PNG y WebP guardados desde WhatsApp en Fotos/Archivos. HEIC, SVG, GIF y animaciones no se admiten; exportar como JPG cuando corresponda.
+
+El servidor limita los bytes reales del multipart antes de parsearlo (12 MiB de imagen más 64 KiB), admite transferencias sin Content-Length, cancela cargas lentas y rechaza campos repetidos. Autorización y origen se comprueban antes de leer el archivo. Hay un límite compartido de 12 intentos/minuto y máximo dos decodificaciones simultáneas por proceso. Next limita su buffer de proxy a 13 MiB.
+
+Se verifica formato binario, se decodifica completamente con límite de 40 megapíxeles y tiempo de procesamiento, se corrige orientación y se recodifica a WebP (máximo 2048px por lado y 4 MiB). Solo esos bytes limpios se guardan en PostgreSQL y Drive. EXIF/GPS, XMP, IPTC, ICC y anexos del original no se conservan. No se modifica retroactivamente lo ya cargado: volver a subir esos logos para limpiarlos. Estas defensas reducen el riesgo, no garantizan invulnerabilidad; mantener sharp/libvips y el entorno actualizados.
+
+## Credenciales de Drive
+
 La instancia `Panel privado Taller 2026` debe poder crear archivos en la carpeta autorizada. Configurar allí, en Dokploy y como variables privadas, las mismas credenciales OAuth de Drive que usa el proceso autorizado del proyecto:
 
 ```text

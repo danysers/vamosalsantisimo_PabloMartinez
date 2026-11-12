@@ -1,3 +1,5 @@
+import { readSponsorForm, SponsorUploadError } from '../../../../../../lib/sponsor-upload.mjs'
+import { allowPublicOperation, tooManyRequests } from '../../../../../../lib/request-rate-limit'
 import { createHash, randomUUID } from 'node:crypto'
 import { and, eq, sql } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
@@ -9,15 +11,6 @@ import { auditLog, events, workshopSponsors } from '../../../../../../lib/schema
 
 export const runtime = 'nodejs'
 
-const maxRequestBytes = 4 * 1024 * 1024 + 64 * 1024
-
-function validUploadLength(request: NextRequest) {
-  const raw = request.headers.get('content-length')
-  if (!raw || !/^\d+$/.test(raw)) return false
-  const length = Number(raw)
-  return Number.isSafeInteger(length) && length > 0 && length <= maxRequestBytes
-}
-
 async function readLogo(form: FormData) {
   const candidate = form.get('logo')
   if (candidate === null || (candidate instanceof File && candidate.size === 0 && !candidate.name)) return { empty: true as const }
@@ -25,21 +18,21 @@ async function readLogo(form: FormData) {
   const bytes = Buffer.from(await candidate.arrayBuffer())
   const checked = await validateSponsorLogo(candidate.type, bytes)
   if ('error' in checked) return { error: checked.error }
-  return { empty: false as const, name: candidate.name, bytes, ...checked }
+  return { empty: false as const, ...checked }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await authorizeOperator(request, ['sponsor'])
   if ('response' in access) return access.response
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('multipart/form-data')) return privateReply({ error: 'Solicitud inválida.' }, 400)
-  if (!validUploadLength(request)) return privateReply({ error: 'El archivo supera el límite permitido.' }, 413)
 
   const correlation = randomUUID()
   let driveUpdated = false
   try {
     const { id } = await params
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return privateReply({ error: 'Sponsor no encontrado.' }, 404)
-    const form = await request.formData()
+    if (!await allowPublicOperation('sponsor-upload')) return tooManyRequests()
+    const form = await readSponsorForm(request)
     const parsed = normalizeSponsorFields({ brandName: form.get('brandName'), ownerName: form.get('ownerName'),
       phone: form.get('phone'), email: form.get('email'), announcement: form.get('announcement') })
     if ('error' in parsed) return privateReply({ error: parsed.error }, 400)
@@ -83,6 +76,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     })
     return privateReply({ sponsor, logoUpdated: !logo.empty }, 200)
   } catch (error) {
+    if (error instanceof SponsorUploadError) return privateReply({ error: error.message }, error.status)
     console.error(`sponsor_update_failed correlation=${correlation} drive_updated=${driveUpdated ? 'yes' : 'no'}`)
     if (error instanceof SponsorDriveError) return privateReply({ error: 'No se pudo actualizar el logo en Drive. Verificá la conexión autorizada del panel.' }, 503)
     if ((error as { code?: string })?.code === '23505') return privateReply({ error: 'Ya existe un sponsor con ese nombre de marca.' }, 409)

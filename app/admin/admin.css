@@ -166,3 +166,24 @@
 @media(max-width:900px){.admin-table small.admin-mobile-payment{display:block;color:#294366;font-weight:600}}
 .admin-proof-link{display:grid;gap:10px;margin:14px 0;min-width:0}.admin-proof-link label{display:grid;gap:7px;font-size:12px;font-weight:600;color:#40516b}.admin-proof-link input{width:100%;min-width:0}.admin-proof-link .button{justify-self:start}
 .admin-prepare-accreditation{margin:20px 0;padding:16px;border:1px solid #e2e8f1;border-radius:10px;background:#f7f9fc}.admin-prepare-accreditation h4{margin:0 0 12px}.admin-prepare-accreditation textarea{width:100%}.admin-detail-save+.admin-detail-save{margin-top:24px}
+
+/* Sponsor forms remain touch-friendly without changing the other admin modules. */
+.admin-sponsor-layout,.admin-sponsor-form,.admin-sponsor-records{min-width:0}
+.admin-sponsor-selected{overflow-wrap:anywhere;font-size:13px;color:#294366}
+.admin-sponsor-form input[type=file]{max-width:100%;min-height:48px}
+.admin-sponsor-form input[type=file]::file-selector-button{min-height:44px;margin-right:10px;padding:8px 12px;border:1px solid #b5c8df;border-radius:8px;background:#e8f0ff;color:#2058bd}
+@media(max-width:640px){
+.admin-sponsor-form .admin-form-grid{grid-template-columns:minmax(0,1fr)}
+.admin-sponsor-form{padding:16px}
+.admin-sponsor-form :is(input,textarea){font-size:16px!important;min-width:0}
+.admin-sponsor-form label{font-size:14px}
+.admin-sponsor-actions{display:grid;grid-template-columns:minmax(0,1fr);padding-bottom:env(safe-area-inset-bottom)}
+.admin-sponsor-actions .button,.admin-sponsor-records .button{min-height:48px;width:100%;font-size:15px}
+.admin-sponsor-records .admin-table-wrap{overflow:visible}
+.admin-sponsor-records table,.admin-sponsor-records tbody,.admin-sponsor-records tr,.admin-sponsor-records td{display:block;width:100%;box-sizing:border-box}
+.admin-sponsor-records thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.admin-sponsor-records tr{padding:12px 0;border-bottom:2px solid #dce3ec}
+.admin-sponsor-records .admin-table td{min-width:0!important;max-width:none!important;padding:8px 0;border:0;overflow-wrap:anywhere}
+.admin-sponsor-records td::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;color:#617086;margin-bottom:4px}
+.admin-sponsor-records .admin-table td small{max-width:none}
+}

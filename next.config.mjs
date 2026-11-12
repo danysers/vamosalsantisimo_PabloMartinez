@@ -5,7 +5,7 @@ const nextConfig = {
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   output: 'standalone',
   poweredByHeader: false,
-  experimental: { globalNotFound: true, ...(process.env.NEXT_BUILD_CPUS ? { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } : {}) },
+  experimental: { globalNotFound: true, proxyClientMaxBodySize: 13 * 1024 * 1024, ...(process.env.NEXT_BUILD_CPUS ? { cpus: Math.max(1, Math.min(2, Number(process.env.NEXT_BUILD_CPUS) || 1)) } : {}) },
   // Keep Next.js lint/type checks active; do not ship a broken build.
   images: {
     localPatterns: [{ pathname: '/2026/**', search: '' }, { pathname: '/_next/static/media/**', search: '' }],

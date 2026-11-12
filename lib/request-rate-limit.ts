@@ -6,6 +6,7 @@ import { getDb } from './db'
 // PostgreSQL makes the decision atomic across processes and deployments.
 const policies = {
   'proof-upload': 30,
+  'sponsor-upload': 12,
   'payment-method': 60,
   'payment-status': 3000,
   'payment-return': 300,
