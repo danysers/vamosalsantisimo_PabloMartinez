@@ -1,38 +1,41 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { BadgeCheck, ClipboardList, CreditCard, LayoutDashboard, Settings2, UsersRound, TriangleAlert } from 'lucide-react'
+import { BadgeCheck, ClipboardList, CreditCard, Handshake, LayoutDashboard, Settings2, UsersRound, TriangleAlert } from 'lucide-react'
 import { SignOut } from './login-form'
 
-export type AdminSection = 'overview' | 'registrations' | 'payments' | 'workshop' | 'incidents'
+export type AdminSection = 'overview' | 'registrations' | 'payments' | 'workshop' | 'incidents' | 'sponsors'
 
 const roleLabels = {
   configuration: 'Configuración',
   registration_operator: 'Inscripciones y pagos',
   admission_operator: 'Control de ingreso',
+  sponsor: 'Sponsors',
   unlinked: 'Sin rol operativo',
 } as const
 
-export default function AdminWorkspace({ children, title, description, section, role, canManageWorkshop }: {
+export default function AdminWorkspace({ children, title, description, section, role, canManageWorkshop, canAccessSponsors = false }: {
   children: ReactNode
   title: string
   description: string
   section: AdminSection
   role: keyof typeof roleLabels
   canManageWorkshop: boolean
+  canAccessSponsors?: boolean
 }) {
   const items = [
-    { href: '/admin', label: 'Resumen', icon: LayoutDashboard, key: 'overview' },
-    ...(role !== 'unlinked' ? [
+    ...(role !== 'sponsor' ? [{ href: '/admin', label: 'Resumen', icon: LayoutDashboard, key: 'overview' }] : []),
+    ...(role !== 'unlinked' && role !== 'sponsor' ? [
       { href: '/admin/inscripciones', label: 'Inscripciones', icon: ClipboardList, key: 'registrations' },
       { href: '/admin/acreditacion', label: 'Pagos y acreditación', icon: CreditCard, key: 'payments' },
     ] : []),
     ...(canManageWorkshop ? [{ href: '/admin/taller', label: 'Precios y grupos', icon: Settings2, key: 'workshop' }] : []),
+    ...(role === 'sponsor' || canAccessSponsors ? [{ href: '/admin/sponsors', label: 'Sponsors', icon: Handshake, key: 'sponsors' }] : []),
     ...(['configuration', 'registration_operator'].includes(role) ? [{ href: '/admin/incidencias', label: 'Errores e incidencias', icon: TriangleAlert, key: 'incidents' }] : []),
   ] as const
 
   return <div className="admin-workspace">
     <header className="admin-topbar">
-      <Link className="admin-topbar-brand" href="/admin" aria-label="Ir al resumen del panel">
+      <Link className="admin-topbar-brand" href={role === 'sponsor' ? '/admin/sponsors' : '/admin'} aria-label="Ir al panel">
         <span className="admin-monogram" aria-hidden="true">VAS</span>
         <span><strong>Vamos al Santísimo</strong><small>Panel del taller · 2026</small></span>
       </Link>
@@ -49,7 +52,7 @@ export default function AdminWorkspace({ children, title, description, section, 
         <div className="admin-sidebar-note"><UsersRound size={19} aria-hidden="true" /><p>Los cambios de pagos, excepciones e ingresos quedan asociados al operador y registrados en la base.</p></div>
       </aside>
       <main className="admin-main" id="contenido">
-        <p className="admin-breadcrumb"><Link href="/admin">Panel</Link><span aria-hidden="true">/</span>{title}</p>
+        <p className="admin-breadcrumb"><Link href={role === 'sponsor' ? '/admin/sponsors' : '/admin'}>Panel</Link><span aria-hidden="true">/</span>{title}</p>
         <div className="admin-page-heading"><div><p className="admin-kicker">Taller de músicos · 19 de diciembre de 2026</p><h1>{title}</h1><p>{description}</p></div></div>
         {children}
       </main>

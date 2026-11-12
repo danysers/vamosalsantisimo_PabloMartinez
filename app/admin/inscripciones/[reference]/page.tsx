@@ -28,7 +28,8 @@ export default async function RegistrationPage({ params, searchParams }: {
     if (!session) redirect('/admin')
     const [operator] = await getDb().select({ role: adminUsers.role, disabled: adminUsers.disabled, authRole: authUser.role, banned: authUser.banned })
       .from(adminUsers).innerJoin(authUser, eq(adminUsers.authUserId, authUser.id)).where(eq(authUser.id, session.user.id)).limit(1)
-    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' || operator.role === 'admission_operator') notFound()
+    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' ||
+      (operator.role !== 'configuration' && operator.role !== 'registration_operator')) notFound()
     role = operator.role
   } catch (error) {
     if (error && typeof error === 'object' && 'digest' in error) throw error

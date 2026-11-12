@@ -1,19 +1,14 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { sponsorCacheDir, validSponsorManifest } from '../../../lib/sponsor-media.mjs'
-
+const panelOrigin = 'https://paneltaller2026.vamosalsantisimo.com'
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (process.env.APP_SURFACE === 'panel') return new Response('Not found', { status: 404 })
   try {
-    const manifest: unknown = JSON.parse(await readFile(join(sponsorCacheDir, 'manifest.json'), 'utf8'))
-    if (!validSponsorManifest(manifest)) throw new Error('Invalid sponsor manifest')
-    const files = (manifest as { files: { id: string; name: string; filename: string }[] }).files
-    const links = (manifest as { links?: { name: string; href: string | null }[] }).links || []
-    return Response.json({ available: true, links, sponsors: files.map(file => ({ id: file.id, name: file.name,
-      image: `/api/sponsors/media/${file.filename}` })) }, { headers: { 'Cache-Control': 'public, max-age=60' } })
-  } catch {
-    // The four established sponsors remain in static HTML if Drive is unavailable.
-    return Response.json({ available: false, sponsors: [] }, { headers: { 'Cache-Control': 'no-store' } })
-  }
+    const response = await fetch(`${panelOrigin}/api/public/sponsors`, { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
+    if (!response.ok) throw new Error('Sponsor panel unavailable')
+    const data = await response.json()
+    if (!data || data.available !== true || !Array.isArray(data.sponsors) || data.sponsors.length > 80) throw new Error('Invalid sponsor feed')
+    return Response.json(data, { headers: { 'Cache-Control': 'no-store' } })
+  } catch { return Response.json({ available: false, sponsors: [] }, { headers: { 'Cache-Control': 'no-store' } }) }
 }

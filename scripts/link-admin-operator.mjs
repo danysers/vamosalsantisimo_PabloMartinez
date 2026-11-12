@@ -5,7 +5,7 @@ const email = args[args.indexOf('--email') + 1]
 const role = args[args.indexOf('--role') + 1]
 const apply = args.includes('--apply')
 if (!process.env.DATABASE_URL || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-  !['configuration', 'registration_operator', 'admission_operator'].includes(role)) {
+  !['configuration', 'registration_operator', 'admission_operator', 'sponsor'].includes(role)) {
   console.error('Usage: node scripts/link-admin-operator.mjs --email ADMIN_EMAIL --role registration_operator --apply')
   process.exit(2)
 }

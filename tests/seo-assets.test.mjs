@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { stat, readFile } from 'node:fs/promises'
 
 const require = createRequire(import.meta.url)
 const sharp = createRequire(require.resolve('next/package.json'))('sharp')
-const source = path => new URL('../public/' + path, import.meta.url).pathname.replace(/^\/([A-Za-z]:\/)/, '$1')
+const source = path => fileURLToPath(new URL('../public/' + path, import.meta.url))
 
 test('workshop navigation, CSS and HTML preload reuse one identical full-quality portrait request', async () => {
   const app = await readFile(source('formacion/app.js'), 'utf8')

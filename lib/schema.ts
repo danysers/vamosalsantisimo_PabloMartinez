@@ -6,7 +6,7 @@ export const registrationStatus = pgEnum('registration_status', ['pending', 'wai
 export const reservationStatus = pgEnum('reservation_status', ['held', 'expired', 'released', 'used'])
 export const paymentStatus = pgEnum('payment_status', ['created', 'pending', 'approved', 'rejected', 'cancelled', 'refunded', 'charged_back', 'review', 'partially_refunded'])
 export const paymentSource = pgEnum('payment_source', ['mercado_pago', 'manual', 'bank_transfer', 'on_site'])
-export const adminRole = pgEnum('admin_role', ['configuration', 'registration_operator', 'admission_operator'])
+export const adminRole = pgEnum('admin_role', ['configuration', 'registration_operator', 'admission_operator', 'sponsor'])
 export const ecclesialState = pgEnum('ecclesial_state', ['laico', 'religioso', 'seminarista', 'diacono', 'postulante-novicia', 'presbitero', 'otro'])
 export const assistanceStatus = pgEnum('assistance_status', ['requested', 'approved', 'declined'])
 export const accreditationReason = pgEnum('accreditation_reason', ['paid', 'assistance_approved', 'waived'])
@@ -427,9 +427,44 @@ export const adminUsers = pgTable('admin_users', {
   authUserId: text('auth_user_id').references(() => authUser.id).unique(),
   email: text('email').notNull().unique(),
   role: adminRole('role').notNull(),
+  sponsorAccess: boolean('sponsor_access').notNull().default(false),
   disabled: boolean('disabled').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// Sponsor contact details stay in the private admin database. The logo itself
+// remains in the authorized Drive folder so the existing flyer worker can pick
+// up a new or replaced image and publish the next verified flyer version.
+export const workshopSponsors = pgTable('workshop_sponsors', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id').notNull().references(() => events.id),
+  brandName: text('brand_name').notNull(),
+  ownerName: text('owner_name').notNull(),
+  logoDriveFileId: text('logo_drive_file_id').notNull().unique(),
+  logoFilename: text('logo_filename').notNull(),
+  logoMimeType: text('logo_mime_type').notNull(),
+  logoSizeBytes: integer('logo_size_bytes').notNull(),
+  logoDataBase64: text('logo_data_base64').notNull(),
+  logoChecksum: text('logo_checksum').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  announcement: text('announcement'),
+  createdBy: uuid('created_by').notNull().references(() => adminUsers.id),
+  updatedBy: uuid('updated_by').notNull().references(() => adminUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('workshop_sponsors_event_brand_unique').on(table.eventId, sql`lower(trim(${table.brandName}))`),
+  index('workshop_sponsors_by_event_updated').on(table.eventId, table.updatedAt),
+  check('workshop_sponsors_brand_present', sql`length(trim(${table.brandName})) BETWEEN 1 AND 90`),
+  check('workshop_sponsors_owner_present', sql`length(trim(${table.ownerName})) BETWEEN 1 AND 120`),
+  check('workshop_sponsors_logo_filename_present', sql`length(trim(${table.logoFilename})) BETWEEN 1 AND 140`),
+  check('workshop_sponsors_logo_type', sql`${table.logoMimeType} IN ('image/png', 'image/jpeg', 'image/webp')`),
+  check('workshop_sponsors_logo_size', sql`${table.logoSizeBytes} BETWEEN 1 AND 4194304`),
+  check('workshop_sponsors_phone_length', sql`${table.phone} IS NULL OR length(${table.phone}) <= 50`),
+  check('workshop_sponsors_email_length', sql`${table.email} IS NULL OR length(${table.email}) <= 254`),
+  check('workshop_sponsors_announcement_length', sql`${table.announcement} IS NULL OR length(${table.announcement}) <= 2000`),
+])
 
 export const assistanceRequests = pgTable('assistance_requests', {
   registrationId: uuid('registration_id').primaryKey().references(() => registrations.id),

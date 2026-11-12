@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const administrativePath = /^\/(?:admin|api\/(?:admin|auth))(?:\/|$)/
 const panelAsset = /^\/(?:_next(?:\/|$)|robots\.txt$|favicon-mark\.png$|page-transition\.js$|operational-errors\.js$|404\/vamos-al-santisimo-20261030\.webp$)/
+const panelPublicSponsor = /^\/api\/public\/sponsors(?:\/|$)/
 const memoryGate = createMemoryGate()
 
 function hidden() {
@@ -46,7 +47,7 @@ export function proxy(request: NextRequest) {
   }
   if (process.env.APP_SURFACE === 'panel') {
     if (path === '/') return NextResponse.redirect(new URL('/admin', request.url))
-    return administrativePath.test(path) || panelAsset.test(path) ? nextPage(request) : hidden()
+    return administrativePath.test(path) || panelAsset.test(path) || panelPublicSponsor.test(path) ? nextPage(request) : hidden()
   }
   // An unset/unknown surface is public, never administrative.
   if (administrativePath.test(path)) return hidden()

@@ -5,7 +5,7 @@ import { user as authUser } from './auth-schema'
 import { getDb } from './db'
 import { adminUsers } from './schema'
 
-export type OperatorRole = 'configuration' | 'registration_operator' | 'admission_operator'
+export type OperatorRole = 'configuration' | 'registration_operator' | 'admission_operator' | 'sponsor'
 
 export function privateReply(body: object, status: number) {
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex, nofollow' } })
@@ -29,11 +29,12 @@ export async function authorizeOperator(request: NextRequest, roles: OperatorRol
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { response: privateReply({ error: 'Iniciá sesión para continuar.' }, 401) }
   const db = getDb()
-  const [operator] = await db.select({ id: adminUsers.id, role: adminUsers.role, disabled: adminUsers.disabled,
+  const [operator] = await db.select({ id: adminUsers.id, role: adminUsers.role, sponsorAccess: adminUsers.sponsorAccess, disabled: adminUsers.disabled,
     authRole: authUser.role, banned: authUser.banned }).from(adminUsers)
     .innerJoin(authUser, eq(adminUsers.authUserId, authUser.id))
     .where(eq(authUser.id, session.user.id)).limit(1)
-  if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' || !roles.includes(operator.role)) {
+  if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' ||
+      !(roles.includes(operator.role) || (roles.includes('sponsor') && operator.sponsorAccess))) {
     return { response: privateReply({ error: 'Acceso no autorizado.' }, 403) }
   }
   return { operatorId: operator.id, eventSlug, role: operator.role }

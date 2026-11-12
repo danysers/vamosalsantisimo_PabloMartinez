@@ -121,7 +121,7 @@ async function run() {
   while (!stopping) {
     try {
       const token = await accessToken()
-      await syncSponsors(token)
+      // Logos come from the panel database; only generated flyers still sync from Drive.
       try { await syncFlyers(token) }
       catch (error) { console.error(`Flyer cache retained: ${error instanceof Error ? error.message : 'sync error'}`) }
     }

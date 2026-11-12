@@ -69,6 +69,12 @@
         if (!item || !/^[A-Za-z0-9_-]{10,100}$/.test(item.id) ||
             typeof item.name !== 'string' || item.name.length < 1 || item.name.length > 90 ||
             typeof item.image !== 'string' || !imagePath.test(item.image)) continue;
+        const original = originals.find(entry => nameKey(entry.name) === nameKey(item.name));
+        if (original) {
+          const image = original.card.querySelector('img');
+          if (image) { image.src = item.image; image.alt = item.name; }
+          continue;
+        }
         visible.add(item.id);
         const previous = existing.get(item.id);
         if (previous) {
@@ -99,15 +105,15 @@
         grid.append(li);
         existing.set(item.id, li);
       }
-      // An owner can remove an uploaded logo from Drive without disturbing the four originals.
+      // Panel edits update the public gallery without disturbing the four originals.
       grid.querySelectorAll('[data-drive-id]').forEach(node => {
         if (!visible.has(node.dataset.driveId)) node.remove();
       });
-    } catch { /* Existing logos always remain visible while Drive is unavailable. */ }
+    } catch { /* Existing logos remain visible while the panel is unavailable. */ }
     finally { busy = false; }
   }
 
   refresh();
-  setInterval(() => { if (!document.hidden) refresh(); }, 5 * 60_000);
+  setInterval(() => { if (!document.hidden) refresh(); }, 15_000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();

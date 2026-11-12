@@ -21,7 +21,7 @@ async function loadRole(): Promise<'login' | 'denied' | 'unavailable' | 'configu
       authRole: authUser.role, banned: authUser.banned }).from(adminUsers)
       .innerJoin(authUser, eq(adminUsers.authUserId, authUser.id))
       .where(eq(authUser.id, session.user.id)).limit(1)
-    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin') return 'denied'
+    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' || operator.role === 'sponsor') return 'denied'
     return operator.role
   } catch {
     return 'unavailable'

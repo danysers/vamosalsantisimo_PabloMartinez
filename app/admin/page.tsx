@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 import { user as authUser } from '../../lib/auth-schema'
 import { adminUsers, assistanceRequests, events, registrationIntakes, registrations, workshops } from '../../lib/schema'
@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: 'Administración local', robots: { in
 
 type AdminState = { kind: 'login' } | { kind: 'denied' } | { kind: 'unavailable' } | {
   kind: 'dashboard'; events: number; registrations: number; confirmed: number; reviewEnabled: boolean;
-  role: 'configuration' | 'registration_operator' | 'admission_operator' | 'unlinked';
+  role: 'configuration' | 'registration_operator' | 'admission_operator' | 'sponsor' | 'unlinked'; canAccessSponsors: boolean;
   recent: Array<{ reference: string; name: string; status: string; createdAt: string; historical: boolean; paymentSource: string | null; paymentDifficulty: boolean }>;
   requests: PendingAssistance[]
 }
@@ -33,12 +33,14 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
       .from(authUser).where(eq(authUser.id, session.user.id)).limit(1)
     if (!operator || operator.role !== 'admin' || operator.banned) return { kind: 'denied' }
     const [eventCount] = await db.select({ total: count() }).from(events)
-    const [reviewer] = await db.select({ role: adminUsers.role, disabled: adminUsers.disabled })
+    const [reviewer] = await db.select({ role: adminUsers.role, sponsorAccess: adminUsers.sponsorAccess, disabled: adminUsers.disabled })
       .from(adminUsers).where(eq(adminUsers.authUserId, session.user.id)).limit(1)
     const role = reviewer && !reviewer.disabled ? reviewer.role : 'unlinked'
     const reviewEnabled = !!reviewer && !reviewer.disabled &&
       ['configuration', 'registration_operator'].includes(reviewer.role) && !!process.env.WORKSHOP_EVENT_SLUG
     const eventSlug = process.env.WORKSHOP_EVENT_SLUG
+    if (role === 'sponsor') return { kind: 'dashboard', events: 0, registrations: 0, confirmed: 0,
+      role, canAccessSponsors: true, reviewEnabled: false, recent: [], requests: [] }
     const [registrationCount] = eventSlug
       ? await db.select({ total: count() }).from(registrations)
         .innerJoin(workshops, eq(workshops.id, registrations.workshopId))
@@ -79,7 +81,7 @@ async function loadAdminState(correlationId: string): Promise<AdminState> {
       requests = rows.map(row => ({ ...row, requestedAt: row.requestedAt.toISOString() }))
     }
     return { kind: 'dashboard', events: eventCount.total, registrations: registrationCount.total,
-      confirmed: confirmedCount.total, role, reviewEnabled, requests,
+      confirmed: confirmedCount.total, role, canAccessSponsors: !!reviewer && !reviewer.disabled && reviewer.sponsorAccess, reviewEnabled, requests,
       recent: recent.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })) }
   } catch {
     console.error(JSON.stringify({ event: 'admin_page_error', kind: 'configuration_or_database', correlationId }))
@@ -100,9 +102,10 @@ export default async function AdminPage() {
   if (state.kind === 'unavailable') return <main className="admin-login-page"><section className="admin-login-card"><h1>Panel no disponible</h1><p>Revisá la configuración local; no se mostraron datos privados.</p></section></main>
   if (state.kind === 'login') return <main className="admin-login-page"><section className="admin-login-card"><span className="admin-monogram" aria-hidden="true">VAS</span><p className="admin-kicker">Vamos al Santísimo · Taller 2026</p><h1>Acceso privado</h1><p>Ingresá con tu cuenta autorizada para administrar el taller.</p><AdminLogin /></section></main>
   if (state.kind === 'denied') return <main className="admin-login-page"><section className="admin-login-card"><h1>Acceso no autorizado</h1><p>Tu cuenta no tiene permiso para administrar el taller.</p><SignOut /></section></main>
+  if (state.kind === 'dashboard' && state.role === 'sponsor') redirect('/admin/sponsors')
   return (
     <AdminWorkspace title="Resumen" description="Seguimiento del taller y acceso a las tareas de la organización."
-      section="overview" role={state.role} canManageWorkshop={state.reviewEnabled}>
+      section="overview" role={state.role} canManageWorkshop={state.reviewEnabled} canAccessSponsors={state.canAccessSponsors}>
       <dl className="admin-counts">
         <div><dt>Inscripciones</dt><dd>{state.registrations}</dd><small>Solo inscripciones activas</small></div>
         <div><dt>Confirmadas</dt><dd>{state.confirmed}</dd><small>Con acreditación aprobada</small></div>

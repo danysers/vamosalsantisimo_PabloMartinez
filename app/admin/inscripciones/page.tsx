@@ -55,7 +55,7 @@ export default async function RegistrationsPage({ searchParams }: {
       authRole: authUser.role, banned: authUser.banned }).from(adminUsers)
       .innerJoin(authUser, eq(adminUsers.authUserId, authUser.id))
       .where(eq(authUser.id, session.user.id)).limit(1)
-    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin') notFound()
+    if (!operator || operator.disabled || operator.banned || operator.authRole !== 'admin' || operator.role === 'sponsor') notFound()
     role = operator.role
   } catch (error) {
     if (error && typeof error === 'object' && 'digest' in error) throw error
