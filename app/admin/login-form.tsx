@@ -4,13 +4,9 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 export function SignOut() {
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  function signOut() {
-    setError('')
-    setBusy(true)
-  }
-  return <form className="admin-sign-out" method="post" action="/api/auth/authentik-logout" onSubmit={signOut}><button className="button button-outline" type="submit" disabled={busy}>{busy ? 'Cerrando…' : 'Cerrar sesión'}</button><p role="alert" aria-live="assertive">{error}</p></form>
+  // Let the browser submit and navigate normally. Disabling the submit button
+  // during onSubmit can cancel the form submission before the logout request.
+  return <form className="admin-sign-out" method="post" action="/api/auth/authentik-logout"><button className="button button-outline" type="submit">Cerrar sesión</button></form>
 }
 
 export default function AdminLogin({ authentikEnabled = false, authentikOnly = false, initialError }: { authentikEnabled?: boolean; authentikOnly?: boolean; initialError?: string }) {
@@ -22,6 +18,11 @@ export default function AdminLogin({ authentikEnabled = false, authentikOnly = f
     if (busy) return
     setBusy(true)
     setError('')
+    if (authentikOnly) {
+      // The server entry point also clears the short-lived signed-out marker.
+      window.location.assign(new URL('/api/auth/authentik-start', window.location.href).href)
+      return
+    }
     try {
       const response = await fetch('/api/auth/sign-in/social', { method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },

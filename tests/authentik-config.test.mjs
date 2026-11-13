@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { authentikAuthorizationURL, authentikConfig, authentikLogoutURL } from '../lib/authentik-config.ts'
+import { readFileSync } from 'node:fs'
+import { authentikAuthorizationURL, authentikConfig, authentikLogoutURL, signedOutCookieName } from '../lib/authentik-config.ts'
 
 const env = { AUTHENTIK_ENABLED: '1', AUTHENTIK_CLIENT_ID: 'test-client',
   AUTHENTIK_CLIENT_SECRET: 'test-only-not-a-real-secret',
@@ -43,4 +44,17 @@ test('provider logout accepts only this panel client end-session URL', () => {
     'https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/#fragment']) {
     assert.equal(authentikLogoutURL(url), null)
   }
+})
+
+test('logout submits natively and prevents immediate automatic reauthentication', () => {
+  const form = readFileSync(new URL('../app/admin/login-form.tsx', import.meta.url), 'utf8')
+  const route = readFileSync(new URL('../app/api/auth/[...all]/route.ts', import.meta.url), 'utf8')
+  const page = readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8')
+  assert.equal(signedOutCookieName, 'panel-signed-out')
+  assert.match(form, /method="post" action="\/api\/auth\/authentik-logout"/)
+  assert.doesNotMatch(form, /onSubmit=\{signOut\}|Cerrando…/)
+  assert.match(route, /body: JSON\.stringify\(\{ callbackURL: '\/admin' \}\)/)
+  assert.match(route, /redirectResponse\.cookies\.set\(signedOutCookieName, '1'/)
+  assert.match(route, /redirectResponse\.cookies\.set\(signedOutCookieName, ''/)
+  assert.match(page, /!authError && !signedOut/)
 })

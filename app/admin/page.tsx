@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 import { user as authUser } from '../../lib/auth-schema'
@@ -12,6 +12,7 @@ import AssistanceReview, { type PendingAssistance } from './assistance-review'
 import AdminWorkspace from './admin-workspace'
 import { paymentMethodLabel } from '../../lib/payment-method-label'
 import './admin.css'
+import { signedOutCookieName } from '../../lib/authentik-config'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Administración local', robots: { index: false, follow: false } }
@@ -94,6 +95,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   await headers() // Keep the page request-bound; no static or shared user data.
   const query = await searchParams
   const authError = Array.isArray(query.authError) ? query.authError[0] : query.authError
+  const signedOut = (await cookies()).get(signedOutCookieName)?.value === '1'
   const correlationId = randomUUID()
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length < 32 || !process.env.BETTER_AUTH_URL) {
     console.info(JSON.stringify({ event: 'admin_page_access', state: 'unconfigured', correlationId }))
@@ -103,11 +105,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   console.info(JSON.stringify({ event: 'admin_page_access', state: state.kind, correlationId }))
   if (state.kind === 'unavailable') return <main className="admin-login-page"><section className="admin-login-card"><h1>Panel no disponible</h1><p>Revisá la configuración local; no se mostraron datos privados.</p></section></main>
   if (state.kind === 'login') {
-    if (process.env.AUTHENTIK_ONLY === '1' && process.env.AUTHENTIK_ENABLED === '1' && !authError) redirect('/api/auth/authentik-start')
+    if (process.env.AUTHENTIK_ONLY === '1' && process.env.AUTHENTIK_ENABLED === '1' && !authError && !signedOut) redirect('/api/auth/authentik-start')
     const message = authError === 'logout'
       ? 'No pudimos cerrar tu sesión de Authentik. Intentá nuevamente.'
       : authError ? 'No pudimos iniciar Authentik automáticamente. Intentá nuevamente.' : undefined
-    return <main className="admin-login-page"><section className="admin-login-card"><span className="admin-monogram" aria-hidden="true">VAS</span><p className="admin-kicker">Vamos al Santísimo · Taller 2026</p><h1>Acceso privado</h1><p>Ingresá con tu cuenta autorizada para administrar el taller.</p><AdminLogin authentikEnabled={process.env.AUTHENTIK_ENABLED === '1'} authentikOnly={process.env.AUTHENTIK_ONLY === '1'} initialError={message} /></section></main>
+    return <main className="admin-login-page"><section className="admin-login-card"><span className="admin-monogram" aria-hidden="true">VAS</span><p className="admin-kicker">Vamos al Santísimo · Taller 2026</p><h1>{signedOut ? 'Sesión cerrada' : 'Acceso privado'}</h1><p>{signedOut ? 'Para volver a entrar, iniciá sesión con Authentik.' : 'Ingresá con tu cuenta autorizada para administrar el taller.'}</p><AdminLogin authentikEnabled={process.env.AUTHENTIK_ENABLED === '1'} authentikOnly={process.env.AUTHENTIK_ONLY === '1'} initialError={message} /></section></main>
   }
   if (state.kind === 'denied') return <main className="admin-login-page"><section className="admin-login-card"><h1>Acceso no autorizado</h1><p>Tu cuenta no tiene permiso para administrar el taller.</p><SignOut /></section></main>
   if (state.kind === 'dashboard' && state.role === 'sponsor') redirect('/admin/sponsors')

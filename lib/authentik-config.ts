@@ -1,4 +1,6 @@
 /** Server-only configuration: never expose the client secret in a client component. */
+export const signedOutCookieName = 'panel-signed-out'
+
 export function authentikAuthorizationURL(value: unknown): URL | null {
   if (typeof value !== 'string') return null
   try {

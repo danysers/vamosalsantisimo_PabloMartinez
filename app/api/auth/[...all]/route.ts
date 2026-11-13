@@ -1,5 +1,5 @@
 import { readSmallJson } from '../../../../lib/read-small-json'
-import { authentikAuthorizationURL, authentikLogoutURL } from '../../../../lib/authentik-config'
+import { authentikAuthorizationURL, authentikLogoutURL, signedOutCookieName } from '../../../../lib/authentik-config'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -69,6 +69,10 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       if (!destination) return logoutErrorRedirect(signOutResponse)
       const redirectResponse = NextResponse.redirect(destination, 303)
       for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
+      // Authentik is allowed to return only to /admin. Keep a brief first-party
+      // marker so that route shows a signed-out page instead of auto-login.
+      redirectResponse.cookies.set(signedOutCookieName, '1', { httpOnly: true, secure: true,
+        sameSite: 'lax', path: '/admin', maxAge: 300 })
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
       return redirectResponse
@@ -96,6 +100,8 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       if (!destination) return authErrorRedirect()
       const redirectResponse = NextResponse.redirect(destination, 302)
       for (const cookie of signInResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
+      redirectResponse.cookies.set(signedOutCookieName, '', { httpOnly: true, secure: true,
+        sameSite: 'lax', path: '/admin', maxAge: 0 })
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
       return redirectResponse
