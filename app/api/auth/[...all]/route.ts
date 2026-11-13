@@ -68,11 +68,13 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       const destination = authentikLogoutURL(payload.url)
       if (!destination) return logoutErrorRedirect(signOutResponse)
       const redirectResponse = NextResponse.redirect(destination, 303)
-      for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       // Authentik is allowed to return only to /admin. Keep a brief first-party
       // marker so that route shows a signed-out page instead of auto-login.
       redirectResponse.cookies.set(signedOutCookieName, '1', { httpOnly: true, secure: true,
         sameSite: 'lax', path: '/admin', maxAge: 300 })
+      // NextResponse.cookies.set replaces existing Set-Cookie headers. Forward
+      // Better Auth's session-clearing cookies only after setting our marker.
+      for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
       return redirectResponse
@@ -99,9 +101,11 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       const destination = authentikAuthorizationURL(payload.url)
       if (!destination) return authErrorRedirect()
       const redirectResponse = NextResponse.redirect(destination, 302)
-      for (const cookie of signInResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.cookies.set(signedOutCookieName, '', { httpOnly: true, secure: true,
         sameSite: 'lax', path: '/admin', maxAge: 0 })
+      // Preserve the OAuth state/PKCE cookies from Better Auth or callback
+      // validation fails with state_mismatch.
+      for (const cookie of signInResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
       return redirectResponse
