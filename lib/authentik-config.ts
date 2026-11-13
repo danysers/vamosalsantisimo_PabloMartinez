@@ -9,6 +9,17 @@ export function authentikAuthorizationURL(value: unknown): URL | null {
   } catch { return null }
 }
 
+export function authentikLogoutURL(value: unknown): URL | null {
+  if (typeof value !== 'string') return null
+  try {
+    const destination = new URL(value)
+    if (destination.origin !== 'https://aute.codss.com.ar' ||
+        destination.pathname !== '/application/o/vamosalsantisimo-panel/end-session/' ||
+        destination.username || destination.password || destination.hash) return null
+    return destination
+  } catch { return null }
+}
+
 export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   if (env.AUTHENTIK_ENABLED !== '1') return null
   const discoveryUrl = env.AUTHENTIK_DISCOVERY_URL

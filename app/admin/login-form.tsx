@@ -2,27 +2,15 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { createAuthClient } from 'better-auth/react'
-
-const authClient = createAuthClient()
 
 export function SignOut() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  async function signOut() {
-    if (busy) return
-    setBusy(true)
+  function signOut() {
     setError('')
-    try {
-      const result = await authClient.signOut({ callbackURL: '/admin' })
-      if (result.error) throw new Error('Sign-out failed')
-    } catch {
-      setError('No se confirmó el cierre de sesión de Authentik. Reintentá y verificá que aparezca su pantalla de acceso.')
-    } finally {
-      setBusy(false)
-    }
+    setBusy(true)
   }
-  return <div className="admin-sign-out"><button className="button button-outline" type="button" disabled={busy} onClick={signOut}>{busy ? 'Cerrando…' : 'Cerrar sesión'}</button><p role="alert" aria-live="assertive">{error}</p></div>
+  return <form className="admin-sign-out" method="post" action="/api/auth/authentik-logout" onSubmit={signOut}><button className="button button-outline" type="submit" disabled={busy}>{busy ? 'Cerrando…' : 'Cerrar sesión'}</button><p role="alert" aria-live="assertive">{error}</p></form>
 }
 
 export default function AdminLogin({ authentikEnabled = false, authentikOnly = false, initialError }: { authentikEnabled?: boolean; authentikOnly?: boolean; initialError?: string }) {

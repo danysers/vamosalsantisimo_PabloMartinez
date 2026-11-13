@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { authentikAuthorizationURL, authentikConfig } from '../lib/authentik-config.ts'
+import { authentikAuthorizationURL, authentikConfig, authentikLogoutURL } from '../lib/authentik-config.ts'
 
 const env = { AUTHENTIK_ENABLED: '1', AUTHENTIK_CLIENT_ID: 'test-client',
   AUTHENTIK_CLIENT_SECRET: 'test-only-not-a-real-secret',
@@ -29,5 +29,16 @@ test('automatic login accepts only Authentik authorization URLs', () => {
     'https://evil.invalid/application/o/authorize/', 'https://aute.codss.com.ar/if/user/',
     'https://user@aute.codss.com.ar/application/o/authorize/', 'https://aute.codss.com.ar/application/o/authorize/#fragment']) {
     assert.equal(authentikAuthorizationURL(url), null)
+  }
+})
+test('provider logout accepts only this panel client end-session URL', () => {
+  assert.equal(authentikLogoutURL('https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/?client_id=panel')?.origin,
+    'https://aute.codss.com.ar')
+  for (const url of [undefined, 'not a URL', 'http://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/',
+    'https://evil.invalid/application/o/vamosalsantisimo-panel/end-session/',
+    'https://aute.codss.com.ar/application/o/other/end-session/', 'https://aute.codss.com.ar/if/user/',
+    'https://user@aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/',
+    'https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/#fragment']) {
+    assert.equal(authentikLogoutURL(url), null)
   }
 })

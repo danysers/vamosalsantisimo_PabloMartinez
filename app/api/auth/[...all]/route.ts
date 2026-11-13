@@ -1,5 +1,5 @@
 import { readSmallJson } from '../../../../lib/read-small-json'
-import { authentikAuthorizationURL } from '../../../../lib/authentik-config'
+import { authentikAuthorizationURL, authentikLogoutURL } from '../../../../lib/authentik-config'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -34,7 +34,7 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
   const authPath = request.nextUrl.pathname.slice('/api/auth'.length)
   // Better Auth's admin plugin is schema compatibility only, never an exposed management API.
   if (authPath.startsWith('/admin/') || (process.env.AUTHENTIK_ONLY === '1' &&
-      !['/authentik-start', '/sign-in/social', '/callback/authentik', '/sign-out', '/get-session', '/error'].includes(authPath))) {
+      !['/authentik-start', '/authentik-logout', '/sign-in/social', '/callback/authentik', '/sign-out', '/get-session', '/error'].includes(authPath))) {
     return NextResponse.json({ error: 'No disponible.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   }
   if (!panelAuthReady()) {
@@ -44,6 +44,35 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     })
   }
   try {
+    if (method === 'POST' && authPath === '/authentik-logout') {
+      const baseURL = new URL(process.env.BETTER_AUTH_URL!)
+      if (request.headers.get('origin') !== baseURL.origin) {
+        return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+      }
+      const logoutErrorRedirect = (response?: Response) => {
+        const redirectResponse = NextResponse.redirect(new URL('/admin?authError=logout', baseURL), 303)
+        for (const cookie of response?.headers.getSetCookie() ?? []) redirectResponse.headers.append('Set-Cookie', cookie)
+        redirectResponse.headers.set('Cache-Control', 'no-store')
+        return redirectResponse
+      }
+      const { auth } = await import('../../../../lib/auth')
+      const signOutRequest = new Request(new URL('/api/auth/sign-out', baseURL), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: baseURL.origin,
+          ...(request.headers.get('cookie') ? { Cookie: request.headers.get('cookie')! } : {}) },
+        body: JSON.stringify({ callbackURL: '/admin' }),
+      })
+      const signOutResponse = await auth.handler(signOutRequest)
+      if (!signOutResponse.ok) return logoutErrorRedirect(signOutResponse)
+      const payload = await signOutResponse.json() as { url?: unknown }
+      const destination = authentikLogoutURL(payload.url)
+      if (!destination) return logoutErrorRedirect(signOutResponse)
+      const redirectResponse = NextResponse.redirect(destination, 303)
+      for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
+      redirectResponse.headers.set('Cache-Control', 'no-store')
+      redirectResponse.headers.set('X-Correlation-ID', correlationId)
+      return redirectResponse
+    }
     if (method === 'GET' && authPath === '/authentik-start') {
       if (process.env.AUTHENTIK_ONLY !== '1' || process.env.AUTHENTIK_ENABLED !== '1') {
         return new NextResponse('No disponible.', { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
@@ -91,6 +120,11 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     auditAction(request, 503, correlationId)
     if (method === 'GET' && authPath === '/authentik-start') {
       const response = NextResponse.redirect(new URL('/admin?authError=1', process.env.BETTER_AUTH_URL!), 303)
+      response.headers.set('Cache-Control', 'no-store')
+      return response
+    }
+    if (method === 'POST' && authPath === '/authentik-logout') {
+      const response = NextResponse.redirect(new URL('/admin?authError=logout', process.env.BETTER_AUTH_URL!), 303)
       response.headers.set('Cache-Control', 'no-store')
       return response
     }

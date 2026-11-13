@@ -19,7 +19,7 @@ Better Auth 1.7.7 usa `/api/auth/callback/authentik` y POST `/api/auth/sign-in/s
 
 Con `AUTHENTIK_ONLY=1`, una visita no autenticada a `/admin` redirige en el servidor directamente a Authentik, sin renderizar la pantalla intermedia de acceso. El endpoint de inicio solo acepta el destino HTTPS exacto de autorización de `aute.codss.com.ar` y conserva las cookies de estado/PKCE generadas por Better Auth. Si el inicio falla, `/admin?authError=1` muestra el botón de reintento.
 
-El botón de cierre usa el cliente oficial de Better Auth y el `end_session_endpoint` de OIDC: cierra la sesión local y la sesión SSO de Authentik. Authentik retorna a `/admin`, que inicia otra vez el flujo y muestra su pantalla de acceso; eso permite cambiar de usuario. Este cierre también finaliza la sesión SSO compartida por otras aplicaciones de Authentik en ese navegador.
+El proveedor OIDC de Authentik debe usar el flujo de invalidación `default-invalidation-flow` (Logout), no `default-provider-invalidation-flow` (Logged out of application): el segundo conserva la sesión SSO de Authentik. El botón de cierre envía un POST de navegación al endpoint local `/api/auth/authentik-logout`; el servidor invoca el sign-out de Better Auth, borra la sesión local y redirige al `end_session_endpoint` OIDC validado para la aplicación. Authentik retorna a `/admin`, que inicia otra vez el flujo y muestra su pantalla de acceso; eso permite cambiar de usuario. Este cierre también finaliza la sesión SSO compartida por otras aplicaciones de Authentik en ese navegador.
 
 ## Controles de operación y regresión
 
