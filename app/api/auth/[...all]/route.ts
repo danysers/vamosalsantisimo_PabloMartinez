@@ -1,4 +1,5 @@
 import { readSmallJson } from '../../../../lib/read-small-json'
+import { authentikAuthorizationURL } from '../../../../lib/authentik-config'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -33,7 +34,7 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
   const authPath = request.nextUrl.pathname.slice('/api/auth'.length)
   // Better Auth's admin plugin is schema compatibility only, never an exposed management API.
   if (authPath.startsWith('/admin/') || (process.env.AUTHENTIK_ONLY === '1' &&
-      !['/sign-in/social', '/callback/authentik', '/sign-out', '/get-session', '/error'].includes(authPath))) {
+      !['/authentik-start', '/sign-in/social', '/callback/authentik', '/sign-out', '/get-session', '/error'].includes(authPath))) {
     return NextResponse.json({ error: 'No disponible.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   }
   if (!panelAuthReady()) {
@@ -43,6 +44,33 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     })
   }
   try {
+    if (method === 'GET' && authPath === '/authentik-start') {
+      if (process.env.AUTHENTIK_ONLY !== '1' || process.env.AUTHENTIK_ENABLED !== '1') {
+        return new NextResponse('No disponible.', { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
+      }
+      const baseURL = new URL(process.env.BETTER_AUTH_URL!)
+      const authErrorRedirect = () => {
+        const response = NextResponse.redirect(new URL('/admin?authError=1', baseURL), 303)
+        response.headers.set('Cache-Control', 'no-store')
+        return response
+      }
+      const { auth } = await import('../../../../lib/auth')
+      const signInRequest = new Request(new URL('/api/auth/sign-in/social', baseURL), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: baseURL.origin },
+        body: JSON.stringify({ provider: 'authentik', callbackURL: '/admin', errorCallbackURL: '/admin?authError=1' }),
+      })
+      const signInResponse = await auth.handler(signInRequest)
+      if (!signInResponse.ok) return authErrorRedirect()
+      const payload = await signInResponse.json() as { url?: unknown }
+      const destination = authentikAuthorizationURL(payload.url)
+      if (!destination) return authErrorRedirect()
+      const redirectResponse = NextResponse.redirect(destination, 302)
+      for (const cookie of signInResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
+      redirectResponse.headers.set('Cache-Control', 'no-store')
+      redirectResponse.headers.set('X-Correlation-ID', correlationId)
+      return redirectResponse
+    }
     if (method === 'POST') {
       if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 415 })
       let body: unknown
@@ -61,6 +89,11 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
   } catch {
     console.error(JSON.stringify({ event: 'admin_auth_error', kind: 'handler_unavailable', correlationId }))
     auditAction(request, 503, correlationId)
+    if (method === 'GET' && authPath === '/authentik-start') {
+      const response = NextResponse.redirect(new URL('/admin?authError=1', process.env.BETTER_AUTH_URL!), 303)
+      response.headers.set('Cache-Control', 'no-store')
+      return response
+    }
     return NextResponse.json({ error: 'Servicio temporalmente no disponible.' }, {
       status: 503, headers: { 'Cache-Control': 'no-store', 'X-Correlation-ID': correlationId },
     })

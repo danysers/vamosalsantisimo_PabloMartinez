@@ -2,9 +2,11 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { createAuthClient } from 'better-auth/react'
+
+const authClient = createAuthClient()
 
 export function SignOut() {
-  const router = useRouter()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   async function signOut() {
@@ -12,15 +14,10 @@ export function SignOut() {
     setBusy(true)
     setError('')
     try {
-      const response = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: '{}' })
-      if (!response.ok) {
-        setError('No se confirmó el cierre de sesión. Podría seguir activa: reintentá o eliminá los datos de este sitio antes de dejar el equipo.')
-        return
-      }
-      router.replace('/admin')
-      router.refresh()
+      const result = await authClient.signOut({ callbackURL: '/admin' })
+      if (result.error) throw new Error('Sign-out failed')
     } catch {
-      setError('No se confirmó el cierre de sesión. Podría seguir activa: reintentá o eliminá los datos de este sitio antes de dejar el equipo.')
+      setError('No se confirmó el cierre de sesión de Authentik. Reintentá y verificá que aparezca su pantalla de acceso.')
     } finally {
       setBusy(false)
     }
@@ -28,9 +25,9 @@ export function SignOut() {
   return <div className="admin-sign-out"><button className="button button-outline" type="button" disabled={busy} onClick={signOut}>{busy ? 'Cerrando…' : 'Cerrar sesión'}</button><p role="alert" aria-live="assertive">{error}</p></div>
 }
 
-export default function AdminLogin({ authentikEnabled = false, authentikOnly = false }: { authentikEnabled?: boolean; authentikOnly?: boolean }) {
+export default function AdminLogin({ authentikEnabled = false, authentikOnly = false, initialError }: { authentikEnabled?: boolean; authentikOnly?: boolean; initialError?: string }) {
   const router = useRouter()
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError ?? '')
   const [busy, setBusy] = useState(false)
 
   async function signInAuthentik() {

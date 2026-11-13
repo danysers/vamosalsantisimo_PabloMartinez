@@ -1,4 +1,14 @@
 /** Server-only configuration: never expose the client secret in a client component. */
+export function authentikAuthorizationURL(value: unknown): URL | null {
+  if (typeof value !== 'string') return null
+  try {
+    const destination = new URL(value)
+    if (destination.origin !== 'https://aute.codss.com.ar' || destination.pathname !== '/application/o/authorize/' ||
+        destination.username || destination.password || destination.hash) return null
+    return destination
+  } catch { return null }
+}
+
 export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   if (env.AUTHENTIK_ENABLED !== '1') return null
   const discoveryUrl = env.AUTHENTIK_DISCOVERY_URL
@@ -13,5 +23,5 @@ export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   }
   return { providerId: 'authentik', name: 'Authentik', discoveryUrl, clientId, clientSecret,
     scopes: ['openid', 'profile', 'email'], pkce: true, requireIdTokenVerification: true,
-    disableSignUp: true, overrideUserInfo: false, disableProviderLogout: true }
+    disableSignUp: true, overrideUserInfo: false, disableProviderLogout: false }
 }
