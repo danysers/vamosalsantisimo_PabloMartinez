@@ -30,6 +30,12 @@ function panelAuthReady(): boolean {
 async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Response> {
   const correlationId = randomUUID()
   if (process.env.APP_SURFACE !== 'panel') return new NextResponse('No disponible.', { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
+  const authPath = request.nextUrl.pathname.slice('/api/auth'.length)
+  // Better Auth's admin plugin is schema compatibility only, never an exposed management API.
+  if (authPath.startsWith('/admin/') || (process.env.AUTHENTIK_ONLY === '1' &&
+      !['/sign-in/social', '/callback/authentik', '/sign-out', '/get-session', '/error'].includes(authPath))) {
+    return NextResponse.json({ error: 'No disponible.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
+  }
   if (!panelAuthReady()) {
     auditAction(request, 503, correlationId)
     return NextResponse.json({ error: 'Administración local no configurada.' }, {

@@ -100,7 +100,7 @@ export default async function AdminPage() {
   const state = await loadAdminState(correlationId)
   console.info(JSON.stringify({ event: 'admin_page_access', state: state.kind, correlationId }))
   if (state.kind === 'unavailable') return <main className="admin-login-page"><section className="admin-login-card"><h1>Panel no disponible</h1><p>Revisá la configuración local; no se mostraron datos privados.</p></section></main>
-  if (state.kind === 'login') return <main className="admin-login-page"><section className="admin-login-card"><span className="admin-monogram" aria-hidden="true">VAS</span><p className="admin-kicker">Vamos al Santísimo · Taller 2026</p><h1>Acceso privado</h1><p>Ingresá con tu cuenta autorizada para administrar el taller.</p><AdminLogin /></section></main>
+  if (state.kind === 'login') return <main className="admin-login-page"><section className="admin-login-card"><span className="admin-monogram" aria-hidden="true">VAS</span><p className="admin-kicker">Vamos al Santísimo · Taller 2026</p><h1>Acceso privado</h1><p>Ingresá con tu cuenta autorizada para administrar el taller.</p><AdminLogin authentikEnabled={process.env.AUTHENTIK_ENABLED === '1'} authentikOnly={process.env.AUTHENTIK_ONLY === '1'} /></section></main>
   if (state.kind === 'denied') return <main className="admin-login-page"><section className="admin-login-card"><h1>Acceso no autorizado</h1><p>Tu cuenta no tiene permiso para administrar el taller.</p><SignOut /></section></main>
   if (state.kind === 'dashboard' && state.role === 'sponsor') redirect('/admin/sponsors')
   return (
