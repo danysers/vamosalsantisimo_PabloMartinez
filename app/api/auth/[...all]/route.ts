@@ -1,5 +1,5 @@
 import { readSmallJson } from '../../../../lib/read-small-json'
-import { authentikAuthorizationURL, authentikLogoutURL, signedOutCookieName } from '../../../../lib/authentik-config'
+import { authentikAuthorizationURL, authentikEndSessionURL } from '../../../../lib/authentik-config'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -60,20 +60,17 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: baseURL.origin,
           ...(request.headers.get('cookie') ? { Cookie: request.headers.get('cookie')! } : {}) },
-        body: JSON.stringify({ callbackURL: '/admin' }),
+        body: JSON.stringify({ disableRedirect: true }),
       })
       const signOutResponse = await auth.handler(signOutRequest)
       if (!signOutResponse.ok) return logoutErrorRedirect(signOutResponse)
-      const payload = await signOutResponse.json() as { url?: unknown }
-      const destination = authentikLogoutURL(payload.url)
-      if (!destination) return logoutErrorRedirect(signOutResponse)
+      const payload = await signOutResponse.json() as { success?: unknown; url?: unknown }
+      if (payload.success !== true || !process.env.AUTHENTIK_CLIENT_ID) return logoutErrorRedirect(signOutResponse)
+      // Authentik 2026.8 requires an id_token_hint when post_logout_redirect_uri
+      // is provided. Without that redirect, client_id alone completes the
+      // invalidation flow even when Better Auth has no stored ID token.
+      const destination = authentikEndSessionURL(payload.url, process.env.AUTHENTIK_CLIENT_ID)
       const redirectResponse = NextResponse.redirect(destination, 303)
-      // Authentik is allowed to return only to /admin. Keep a brief first-party
-      // marker so that route shows a signed-out page instead of auto-login.
-      redirectResponse.cookies.set(signedOutCookieName, '1', { httpOnly: true, secure: true,
-        sameSite: 'lax', path: '/admin', maxAge: 300 })
-      // NextResponse.cookies.set replaces existing Set-Cookie headers. Forward
-      // Better Auth's session-clearing cookies only after setting our marker.
       for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
@@ -101,10 +98,6 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       const destination = authentikAuthorizationURL(payload.url)
       if (!destination) return authErrorRedirect()
       const redirectResponse = NextResponse.redirect(destination, 302)
-      redirectResponse.cookies.set(signedOutCookieName, '', { httpOnly: true, secure: true,
-        sameSite: 'lax', path: '/admin', maxAge: 0 })
-      // Preserve the OAuth state/PKCE cookies from Better Auth or callback
-      // validation fails with state_mismatch.
       for (const cookie of signInResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)

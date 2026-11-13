@@ -1,6 +1,4 @@
 /** Server-only configuration: never expose the client secret in a client component. */
-export const signedOutCookieName = 'panel-signed-out'
-
 export function authentikAuthorizationURL(value: unknown): URL | null {
   if (typeof value !== 'string') return null
   try {
@@ -22,6 +20,15 @@ export function authentikLogoutURL(value: unknown): URL | null {
   } catch { return null }
 }
 
+/** Build a trusted RP-initiated logout URL without automatic reauthorization. */
+export function authentikEndSessionURL(providerURL: unknown, clientId: string): URL {
+  const destination = new URL('https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/')
+  destination.searchParams.set('client_id', clientId)
+  const idToken = authentikLogoutURL(providerURL)?.searchParams.get('id_token_hint')
+  if (idToken) destination.searchParams.set('id_token_hint', idToken)
+  return destination
+}
+
 export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   if (env.AUTHENTIK_ENABLED !== '1') return null
   const discoveryUrl = env.AUTHENTIK_DISCOVERY_URL
@@ -36,8 +43,5 @@ export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   }
   return { providerId: 'authentik', name: 'Authentik', discoveryUrl, clientId, clientSecret,
     scopes: ['openid', 'profile', 'email'], pkce: true, requireIdTokenVerification: true,
-    // Use an explicitly registered post-logout URI so Authentik completes its
-    // invalidation flow and returns to the panel's guarded route.
-    postLogoutRedirectURI: env.BETTER_AUTH_URL ? new URL('/admin', env.BETTER_AUTH_URL).toString() : undefined,
     disableSignUp: true, overrideUserInfo: false, disableProviderLogout: false }
 }
