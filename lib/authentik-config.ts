@@ -34,5 +34,8 @@ export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {
   }
   return { providerId: 'authentik', name: 'Authentik', discoveryUrl, clientId, clientSecret,
     scopes: ['openid', 'profile', 'email'], pkce: true, requireIdTokenVerification: true,
+    // Use an explicitly registered post-logout URI so Authentik completes its
+    // invalidation flow and returns to the panel's guarded route.
+    postLogoutRedirectURI: env.BETTER_AUTH_URL ? new URL('/admin', env.BETTER_AUTH_URL).toString() : undefined,
     disableSignUp: true, overrideUserInfo: false, disableProviderLogout: false }
 }

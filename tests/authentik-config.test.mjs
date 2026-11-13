@@ -4,6 +4,7 @@ import { authentikAuthorizationURL, authentikConfig, authentikLogoutURL } from '
 
 const env = { AUTHENTIK_ENABLED: '1', AUTHENTIK_CLIENT_ID: 'test-client',
   AUTHENTIK_CLIENT_SECRET: 'test-only-not-a-real-secret',
+  BETTER_AUTH_URL: 'https://paneltaller2026.vamosalsantisimo.com',
   AUTHENTIK_DISCOVERY_URL: 'https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/.well-known/openid-configuration' }
 test('Authentik is opt-in and fails closed for incomplete configuration', () => {
   assert.equal(authentikConfig({}), null)
@@ -16,6 +17,7 @@ test('Authentik enforces exact trusted HTTPS discovery and verified PKCE identit
   assert.equal(config.disableSignUp, true)
   assert.equal(config.overrideUserInfo, false)
   assert.equal(config.disableProviderLogout, false)
+  assert.equal(config.postLogoutRedirectURI, 'https://paneltaller2026.vamosalsantisimo.com/admin')
   for (const url of ['http://aute.codss.com.ar/', 'https://evil.invalid/',
     env.AUTHENTIK_DISCOVERY_URL + '?redirect=evil',
     env.AUTHENTIK_DISCOVERY_URL.replace('https://', 'https://user:pass@'),
