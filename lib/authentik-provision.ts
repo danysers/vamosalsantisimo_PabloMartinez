@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { getDb } from './db'
 import { resolveAuthentikIdentity } from './authentik-identity'
+import { selectExistingAdministrator } from './authentik-admin-link'
 
 // Called only by genericOAuth AFTER signature, issuer, audience and nonce verification.
 // A pinned immutable sub, never a username/email claim, chooses the operational role.
@@ -16,11 +17,10 @@ export async function provisionAuthentikIdentity(profile: Record<string, unknown
     let userId = linked.rows[0]?.id as string | undefined
     if (linked.rows[0]?.banned) throw new Error('Identity disabled')
     if (!userId && identity.role === 'configuration') {
-      const existing = await tx.execute(sql`SELECT u.id,u.banned,a.id AS operator_id,a.disabled,a.role FROM "user" u
-        JOIN admin_users a ON a.auth_user_id=u.id WHERE u.username=${identity.username} FOR UPDATE OF u,a`)
-      const row = existing.rows[0]
-      if (existing.rows.length !== 1 || row.banned || row.disabled || row.role !== 'configuration') throw new Error('Existing administrator must be verified')
-      userId = row.id as string
+      const existing = await tx.execute(sql`SELECT u.id,u.username,u.role AS auth_role,u.banned,a.disabled,a.role FROM "user" u
+        JOIN admin_users a ON a.auth_user_id=u.id FOR UPDATE OF u,a`)
+      userId = selectExistingAdministrator(existing.rows as Parameters<typeof selectExistingAdministrator>[0],
+        identity.username, process.env.AUTHENTIK_LINK_SINGLE_ADMIN === '1')
       const other = await tx.execute(sql`SELECT id FROM account WHERE user_id=${userId} AND provider_id='authentik'`)
       if (other.rows.length) throw new Error('Administrator already bound')
     }
