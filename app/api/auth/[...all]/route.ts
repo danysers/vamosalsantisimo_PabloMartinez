@@ -47,6 +47,7 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
     if (method === 'POST' && authPath === '/authentik-logout') {
       const baseURL = new URL(process.env.BETTER_AUTH_URL!)
       if (request.headers.get('origin') !== baseURL.origin) {
+        console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'origin_rejected', correlationId }))
         return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
       }
       const logoutErrorRedirect = (response?: Response) => {
@@ -63,17 +64,24 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
         body: JSON.stringify({ disableRedirect: true }),
       })
       const signOutResponse = await auth.handler(signOutRequest)
-      if (!signOutResponse.ok) return logoutErrorRedirect(signOutResponse)
-      const payload = await signOutResponse.json() as { success?: unknown; url?: unknown }
-      if (payload.success !== true || !process.env.AUTHENTIK_CLIENT_ID) return logoutErrorRedirect(signOutResponse)
-      // Authentik 2026.8 requires an id_token_hint when post_logout_redirect_uri
-      // is provided. Without that redirect, client_id alone completes the
-      // invalidation flow even when Better Auth has no stored ID token.
-      const destination = authentikEndSessionURL(payload.url, process.env.AUTHENTIK_CLIENT_ID)
+      if (!signOutResponse.ok) {
+        console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'local_signout_failed', status: signOutResponse.status, correlationId }))
+        return logoutErrorRedirect(signOutResponse)
+      }
+      const payload = await signOutResponse.json() as { success?: unknown }
+      if (payload.success !== true || !process.env.AUTHENTIK_CLIENT_ID) {
+        console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'provider_redirect_unavailable', correlationId }))
+        return logoutErrorRedirect(signOutResponse)
+      }
+      // Authentik's client-only invalidation URL has been verified to terminate
+      // the SSO session. Do not pass Better Auth's optional provider URL or an
+      // ID token hint: a stale hint can make the provider reject the flow.
+      const destination = authentikEndSessionURL(process.env.AUTHENTIK_CLIENT_ID)
       const redirectResponse = NextResponse.redirect(destination, 303)
       for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')
       redirectResponse.headers.set('X-Correlation-ID', correlationId)
+      console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'redirect_to_invalidation', correlationId }))
       return redirectResponse
     }
     if (method === 'GET' && authPath === '/authentik-start') {

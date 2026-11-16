@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof SponsorUploadError) return privateReply({ error: error.message }, error.status)
     const cleaned = uploadedFileId && token ? await trashSponsorLogo({ fileId: uploadedFileId, token }) : true
-    console.error(`sponsor_create_failed correlation=${correlation} drive_cleanup=${cleaned ? 'ok' : 'pending'}`)
+    console.error(JSON.stringify({ event: 'sponsor_create_failed', correlation,
+      driveStage: error instanceof SponsorDriveError ? error.stage : null,
+      driveStatus: error instanceof SponsorDriveError ? error.status : null,
+      driveCleanup: cleaned ? 'ok' : 'pending' }))
     if (error instanceof SponsorDriveError) return privateReply({ error: 'No se pudo guardar el logo en Drive. Verificá la conexión autorizada del panel.' }, 503)
     if ((error as { code?: string })?.code === '23505') return privateReply({ error: 'Ya existe un sponsor con ese nombre de marca.' }, 409)
     return privateReply({ error: 'No se pudo guardar el sponsor. Revisá los datos e intentá nuevamente.' }, 503)

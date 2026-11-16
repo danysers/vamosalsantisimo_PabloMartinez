@@ -20,12 +20,10 @@ export function authentikLogoutURL(value: unknown): URL | null {
   } catch { return null }
 }
 
-/** Build a trusted RP-initiated logout URL without automatic reauthorization. */
-export function authentikEndSessionURL(providerURL: unknown, clientId: string): URL {
+/** Build the same client-only end-session URL verified against this Authentik instance. */
+export function authentikEndSessionURL(clientId: string): URL {
   const destination = new URL('https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/')
   destination.searchParams.set('client_id', clientId)
-  const idToken = authentikLogoutURL(providerURL)?.searchParams.get('id_token_hint')
-  if (idToken) destination.searchParams.set('id_token_hint', idToken)
   return destination
 }
 

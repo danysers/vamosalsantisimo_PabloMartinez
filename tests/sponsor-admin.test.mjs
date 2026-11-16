@@ -43,7 +43,11 @@ test('Drive token exchange uses configured OAuth secrets and returns only access
   assert.equal(token, 'access')
   assert.equal(request.url, 'https://oauth2.googleapis.com/token')
   assert.equal(new URLSearchParams(request.options.body).get('refresh_token'), 'refresh')
-  await assert.rejects(() => driveAccessToken({ env: {}, fetchImpl: async () => Response.json({ access_token: 'unused' }) }), SponsorDriveError)
+  await assert.rejects(() => driveAccessToken({ env: {}, fetchImpl: async () => Response.json({ access_token: 'unused' }) }),
+    error => error instanceof SponsorDriveError && error.stage === 'config_drive_oauth_client_id')
+  await assert.rejects(() => driveAccessToken({ env: { DRIVE_OAUTH_CLIENT_ID: 'client', DRIVE_OAUTH_CLIENT_SECRET: 'secret', DRIVE_OAUTH_REFRESH_TOKEN: 'refresh' },
+    fetchImpl: async () => Response.json({ error: 'invalid_grant' }, { status: 400 }) }),
+    error => error instanceof SponsorDriveError && error.stage === 'oauth_refresh' && error.status === 400 && !error.message.includes('invalid_grant'))
 })
 
 test('Drive logo upload validates the folder and checks uploaded owner and checksum', async () => {
@@ -73,6 +77,7 @@ test('Drive upload refuses a folder not owned by an authorized account', async (
     uploadCalled = true
     return Response.json({})
   }
-  await assert.rejects(() => uploadSponsorLogo({ name: 'Marca.png', mimeType: 'image/png', bytes: png, token: 'access', fetchImpl }), SponsorDriveError)
+  await assert.rejects(() => uploadSponsorLogo({ name: 'Marca.png', mimeType: 'image/png', bytes: png, token: 'access', fetchImpl }),
+    error => error instanceof SponsorDriveError && error.stage === 'folder_validation')
   assert.equal(uploadCalled, false)
 })

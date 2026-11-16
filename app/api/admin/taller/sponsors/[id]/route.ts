@@ -77,7 +77,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return privateReply({ sponsor, logoUpdated: !logo.empty }, 200)
   } catch (error) {
     if (error instanceof SponsorUploadError) return privateReply({ error: error.message }, error.status)
-    console.error(`sponsor_update_failed correlation=${correlation} drive_updated=${driveUpdated ? 'yes' : 'no'}`)
+    console.error(JSON.stringify({ event: 'sponsor_update_failed', correlation,
+      driveStage: error instanceof SponsorDriveError ? error.stage : null,
+      driveStatus: error instanceof SponsorDriveError ? error.status : null,
+      driveUpdated }))
     if (error instanceof SponsorDriveError) return privateReply({ error: 'No se pudo actualizar el logo en Drive. Verificá la conexión autorizada del panel.' }, 503)
     if ((error as { code?: string })?.code === '23505') return privateReply({ error: 'Ya existe un sponsor con ese nombre de marca.' }, 409)
     return privateReply({ error: 'No se pudo actualizar el sponsor. Revisá los datos e intentá nuevamente.' }, 503)

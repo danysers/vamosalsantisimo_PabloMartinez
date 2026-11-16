@@ -52,17 +52,14 @@ test('logout submits natively and prevents immediate automatic reauthentication'
   assert.match(form, /method="post" action="\/api\/auth\/authentik-logout"/)
   assert.doesNotMatch(form, /onSubmit=\{signOut\}|Cerrando…/)
   assert.match(route, /body: JSON\.stringify\(\{ disableRedirect: true \}\)/)
-  assert.match(route, /authentikEndSessionURL\(payload\.url, process\.env\.AUTHENTIK_CLIENT_ID\)/)
+  assert.match(route, /authentikEndSessionURL\(process\.env\.AUTHENTIK_CLIENT_ID\)/)
 })
 
-test('end-session keeps only a trusted ID token hint and never auto-redirects', () => {
-  const valid = authentikEndSessionURL('https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/?id_token_hint=test-token&post_logout_redirect_uri=https%3A%2F%2Fevil.invalid%2F', 'test-client')
+test('end-session uses only the panel client and never auto-redirects', () => {
+  const valid = authentikEndSessionURL('test-client')
   assert.equal(valid.origin, 'https://aute.codss.com.ar')
   assert.equal(valid.pathname, '/application/o/vamosalsantisimo-panel/end-session/')
   assert.equal(valid.searchParams.get('client_id'), 'test-client')
-  assert.equal(valid.searchParams.get('id_token_hint'), 'test-token')
+  assert.equal(valid.searchParams.has('id_token_hint'), false)
   assert.equal(valid.searchParams.has('post_logout_redirect_uri'), false)
-  const fallback = authentikEndSessionURL('https://evil.invalid/?id_token_hint=untrusted', 'test-client')
-  assert.equal(fallback.searchParams.get('id_token_hint'), null)
-  assert.equal(fallback.searchParams.get('client_id'), 'test-client')
 })
