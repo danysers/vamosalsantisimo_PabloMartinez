@@ -46,6 +46,23 @@ test('multipart works without Content-Length, refuses duplicates and measures ac
   await assert.rejects(() => readSponsorForm(request()), error => error.status === 400)
 })
 
+test('complete sponsor form accepts its required website and logo but rejects unexpected fields', async () => {
+  const form = new FormData()
+  form.set('brandName', 'Marca de prueba')
+  form.set('ownerName', 'Titular de prueba')
+  form.set('websiteUrl', 'https://example.com/marca')
+  form.set('phone', '')
+  form.set('email', '')
+  form.set('announcement', '')
+  form.set('logo', new Blob([Buffer.from([137, 80, 78, 71])], { type: 'image/png' }), 'logo.png')
+  const request = () => new Request('https://example.test', { method: 'POST', body: form })
+  const parsed = await readSponsorForm(request())
+  assert.equal(parsed.get('websiteUrl'), 'https://example.com/marca')
+  assert.equal(parsed.get('logo').name, 'logo.png')
+  form.set('unrecognized', 'reject me')
+  await assert.rejects(() => readSponsorForm(request()), /Formulario inválido o campos duplicados/)
+})
+
 test('slow upload is cancelled within deadline', async () => {
   let cancelled = false
   const request = new Request('https://example.test', { method: 'POST', duplex: 'half',
