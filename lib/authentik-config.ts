@@ -20,11 +20,9 @@ export function authentikLogoutURL(value: unknown): URL | null {
   } catch { return null }
 }
 
-/** Build the same client-only end-session URL verified against this Authentik instance. */
-export function authentikEndSessionURL(clientId: string): URL {
-  const destination = new URL('https://aute.codss.com.ar/application/o/vamosalsantisimo-panel/end-session/')
-  destination.searchParams.set('client_id', clientId)
-  return destination
+/** This instance's invalidation flow ends the SSO session, not just the OAuth app session. */
+export function authentikFullLogoutURL(): URL {
+  return new URL('https://aute.codss.com.ar/if/flow/default-invalidation-flow/')
 }
 
 export function authentikConfig(env: NodeJS.ProcessEnv = process.env) {

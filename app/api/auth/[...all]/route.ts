@@ -1,5 +1,5 @@
 import { readSmallJson } from '../../../../lib/read-small-json'
-import { authentikAuthorizationURL, authentikEndSessionURL } from '../../../../lib/authentik-config'
+import { authentikAuthorizationURL, authentikFullLogoutURL } from '../../../../lib/authentik-config'
 import { randomUUID } from 'node:crypto'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { NextRequest, NextResponse } from 'next/server'
@@ -69,14 +69,13 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
         return logoutErrorRedirect(signOutResponse)
       }
       const payload = await signOutResponse.json() as { success?: unknown }
-      if (payload.success !== true || !process.env.AUTHENTIK_CLIENT_ID) {
+      if (payload.success !== true) {
         console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'provider_redirect_unavailable', correlationId }))
         return logoutErrorRedirect(signOutResponse)
       }
-      // Authentik's client-only invalidation URL has been verified to terminate
-      // the SSO session. Do not pass Better Auth's optional provider URL or an
-      // ID token hint: a stale hint can make the provider reject the flow.
-      const destination = authentikEndSessionURL(process.env.AUTHENTIK_CLIENT_ID)
+      // The OAuth end-session endpoint closed only this app, leaving the SSO
+      // session active. This pinned flow was verified to prompt for credentials.
+      const destination = authentikFullLogoutURL()
       const redirectResponse = NextResponse.redirect(destination, 303)
       for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
       redirectResponse.headers.set('Cache-Control', 'no-store')

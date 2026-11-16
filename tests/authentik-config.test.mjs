@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { authentikAuthorizationURL, authentikConfig, authentikEndSessionURL, authentikLogoutURL } from '../lib/authentik-config.ts'
+import { authentikAuthorizationURL, authentikConfig, authentikFullLogoutURL, authentikLogoutURL } from '../lib/authentik-config.ts'
 
 const env = { AUTHENTIK_ENABLED: '1', AUTHENTIK_CLIENT_ID: 'test-client',
   AUTHENTIK_CLIENT_SECRET: 'test-only-not-a-real-secret',
@@ -52,14 +52,14 @@ test('logout submits natively and prevents immediate automatic reauthentication'
   assert.match(form, /method="post" action="\/api\/auth\/authentik-logout"/)
   assert.doesNotMatch(form, /onSubmit=\{signOut\}|Cerrando…/)
   assert.match(route, /body: JSON\.stringify\(\{ disableRedirect: true \}\)/)
-  assert.match(route, /authentikEndSessionURL\(process\.env\.AUTHENTIK_CLIENT_ID\)/)
+  assert.match(route, /authentikFullLogoutURL\(\)/)
 })
 
-test('end-session uses only the panel client and never auto-redirects', () => {
-  const valid = authentikEndSessionURL('test-client')
+test('full logout uses the verified Authentik SSO invalidation flow', () => {
+  const valid = authentikFullLogoutURL()
   assert.equal(valid.origin, 'https://aute.codss.com.ar')
-  assert.equal(valid.pathname, '/application/o/vamosalsantisimo-panel/end-session/')
-  assert.equal(valid.searchParams.get('client_id'), 'test-client')
+  assert.equal(valid.pathname, '/if/flow/default-invalidation-flow/')
+  assert.equal(valid.search, '')
   assert.equal(valid.searchParams.has('id_token_hint'), false)
   assert.equal(valid.searchParams.has('post_logout_redirect_uri'), false)
 })
