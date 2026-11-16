@@ -23,7 +23,7 @@ export default async function SponsorsPage() {
   const [event] = await db.select({ id: events.id }).from(events).where(eq(events.slug, access.eventSlug)).limit(1)
   if (!event) notFound()
   const sponsors = await db.select({ id: workshopSponsors.id, brandName: workshopSponsors.brandName,
-    ownerName: workshopSponsors.ownerName, logoDriveFileId: workshopSponsors.logoDriveFileId,
+    ownerName: workshopSponsors.ownerName, websiteUrl: workshopSponsors.websiteUrl, logoDriveFileId: workshopSponsors.logoDriveFileId,
     logoFilename: workshopSponsors.logoFilename, phone: workshopSponsors.phone, email: workshopSponsors.email,
     announcement: workshopSponsors.announcement, updatedAt: workshopSponsors.updatedAt })
     .from(workshopSponsors).where(eq(workshopSponsors.eventId, event.id))

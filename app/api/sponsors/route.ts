@@ -1,3 +1,5 @@
+import { safeSponsorHref } from '../../../lib/sponsor-links.mjs'
+
 const panelOrigin = 'https://paneltaller2026.vamosalsantisimo.com'
 const legacy = [
   { id: '1DhXZC15-OFRCK3FeWS0RmaDlSo2Qw43a', name: 'José Motos', image: '/2026/sponsors/legacy-jose-motos.jpg' },
@@ -14,8 +16,10 @@ export async function GET() {
     if (!response.ok) throw new Error('Sponsor panel unavailable')
     const data = await response.json()
     if (!data || data.available !== true || !Array.isArray(data.sponsors) || data.sponsors.length > 80) throw new Error('Invalid sponsor feed')
-    const names = new Set(data.sponsors.map((sponsor: { name: string }) => key(sponsor.name)))
-    return Response.json({ ...data, sponsors: [...data.sponsors, ...legacy.filter(item => !names.has(key(item.name)))] },
+    const sponsors = data.sponsors.map((sponsor: { name: string; href?: unknown }) => ({ ...sponsor,
+      href: safeSponsorHref(sponsor.href) }))
+    const names = new Set(sponsors.map((sponsor: { name: string }) => key(sponsor.name)))
+    return Response.json({ ...data, sponsors: [...sponsors, ...legacy.filter(item => !names.has(key(item.name)))] },
       { headers: { 'Cache-Control': 'no-store' } })
   } catch { return Response.json({ available: true, links: [], sponsors: legacy }, { headers: { 'Cache-Control': 'no-store' } }) }
 }

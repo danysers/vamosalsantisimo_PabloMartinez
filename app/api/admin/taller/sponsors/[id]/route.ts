@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return privateReply({ error: 'Sponsor no encontrado.' }, 404)
     if (!await allowPublicOperation('sponsor-upload')) return tooManyRequests()
     const form = await readSponsorForm(request)
-    const parsed = normalizeSponsorFields({ brandName: form.get('brandName'), ownerName: form.get('ownerName'),
+    const parsed = normalizeSponsorFields({ brandName: form.get('brandName'), ownerName: form.get('ownerName'), websiteUrl: form.get('websiteUrl'),
       phone: form.get('phone'), email: form.get('email'), announcement: form.get('announcement') })
     if ('error' in parsed) return privateReply({ error: parsed.error }, 400)
     const logo = await readLogo(form)
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .returning({ id: workshopSponsors.id, brandName: workshopSponsors.brandName })
       if (!updated) throw new Error('Sponsor disappeared during update')
       await tx.insert(auditLog).values({ actorId: access.operatorId, action: 'sponsor.updated', subjectId: updated.id,
-        changes: { fields: ['brandName', 'ownerName', 'phone', 'email', 'announcement', ...(logo.empty ? [] : ['logo'])] } })
+        changes: { fields: ['brandName', 'ownerName', 'websiteUrl', 'phone', 'email', 'announcement', ...(logo.empty ? [] : ['logo'])] } })
       return updated
     })
     return privateReply({ sponsor, logoUpdated: !logo.empty }, 200)

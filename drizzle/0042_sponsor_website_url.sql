@@ -1,0 +1,2 @@
+ALTER TABLE "workshop_sponsors" ADD COLUMN "website_url" text;--> statement-breakpoint
+ALTER TABLE "workshop_sponsors" ADD CONSTRAINT "workshop_sponsors_website_url_length" CHECK ("workshop_sponsors"."website_url" IS NULL OR length("workshop_sponsors"."website_url") BETWEEN 1 AND 2048);

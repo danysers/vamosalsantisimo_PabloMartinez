@@ -7,6 +7,7 @@ export type SponsorRecord = {
   id: string
   brandName: string
   ownerName: string
+  websiteUrl: string | null
   logoDriveFileId: string
   logoFilename: string
   phone: string | null
@@ -30,6 +31,17 @@ function SponsorForm({ sponsor, onCancel, onSaved }: {
     event.preventDefault()
     if (busy) return
     const form = event.currentTarget
+    if (!form.checkValidity()) {
+      const first = form.querySelector<HTMLInputElement>('input:invalid, textarea:invalid')
+      const messages: Record<string, string> = {
+        brandName: 'Completá el nombre de marca.', ownerName: 'Completá el nombre del dueño o titular.',
+        websiteUrl: 'Ingresá una red social o página con URL HTTPS completa (por ejemplo, https://instagram.com/marca).',
+        email: 'Revisá el formato del correo.', logo: 'Elegí el logo del sponsor.',
+      }
+      setError(messages[first?.name || ''] || 'Revisá los campos obligatorios.')
+      form.reportValidity()
+      return
+    }
     setBusy(true)
     setError('')
     setStatus('')
@@ -52,11 +64,12 @@ function SponsorForm({ sponsor, onCancel, onSaved }: {
     }
   }
 
-  return <form className="admin-card admin-sponsor-form" onSubmit={submit}>
+  return <form className="admin-card admin-sponsor-form" onSubmit={submit} noValidate>
     <div className="admin-card-heading"><div><p className="admin-card-eyebrow">{sponsor ? 'Editar registro' : 'Nuevo registro'}</p><h2>{sponsor ? sponsor.brandName : 'Agregar sponsor'}</h2></div></div>
     <div className="admin-form-grid">
       <label>Nombre de marca *<input name="brandName" required maxLength={90} defaultValue={sponsor?.brandName} autoComplete="organization" /></label>
       <label>Nombre del dueño / titular *<input name="ownerName" required maxLength={120} defaultValue={sponsor?.ownerName} autoComplete="name" /></label>
+      <label>Red social o página *<input name="websiteUrl" type="url" required maxLength={2048} pattern="https://.*" defaultValue={sponsor?.websiteUrl || ''} placeholder="https://instagram.com/tu-marca" inputMode="url" autoCapitalize="none" autoComplete="url" spellCheck={false} /></label>
       <label>Teléfono<input name="phone" type="tel" maxLength={50} defaultValue={sponsor?.phone || ''} autoComplete="tel" inputMode="tel" /></label>
       <label>Correo<input name="email" type="email" maxLength={254} defaultValue={sponsor?.email || ''} autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} /></label>
     </div>
@@ -77,7 +90,7 @@ function SponsorForm({ sponsor, onCancel, onSaved }: {
     {status && <p className="admin-sponsor-feedback" role="status">{status}</p>}
     <div className="admin-sponsor-actions"><button className="button button-gold" type="submit" disabled={busy}>{busy ? 'Limpiando y guardando…' : sponsor ? 'Guardar cambios' : 'Guardar sponsor'}</button>
       {sponsor && onCancel && <button className="button button-outline" type="button" disabled={busy} onClick={onCancel}>Cancelar</button>}</div>
-    <p className="admin-sponsor-private-note">El titular, teléfono, correo y texto se guardan en la base privada del panel. Solo la imagen limpia se guarda en Drive y se publica; se eliminan metadatos y ubicación GPS.</p>
+    <p className="admin-sponsor-private-note">La red social o página se publica como enlace del logo. El titular, teléfono, correo y texto se guardan en la base privada del panel. Solo la imagen limpia se guarda en Drive; se eliminan metadatos y ubicación GPS.</p>
   </form>
 }
 
@@ -89,9 +102,10 @@ export default function SponsorsPanel({ sponsors }: { sponsors: SponsorRecord[] 
     <section className="admin-card admin-sponsor-records">
       <div className="admin-card-heading"><div><p className="admin-card-eyebrow">Taller 2026</p><h2>Sponsors cargados</h2></div><span>{sponsors.length} {sponsors.length === 1 ? 'registro' : 'registros'}</span></div>
       {sponsors.length ? <div className="admin-table-wrap" role="region" aria-label="Sponsors cargados" tabIndex={0}><table className="admin-table">
-        <thead><tr><th>Marca / titular</th><th>Contacto</th><th>Para decir ese día</th><th>Logo</th><th>Acción</th></tr></thead>
+        <thead><tr><th>Marca / titular</th><th>Red social o página</th><th>Contacto</th><th>Para decir ese día</th><th>Logo</th><th>Acción</th></tr></thead>
         <tbody>{sponsors.map(item => <tr key={item.id}>
           <td data-label="Marca / titular"><strong>{item.brandName}</strong><small>{item.ownerName}</small></td>
+          <td data-label="Red social o página">{item.websiteUrl ? <a href={item.websiteUrl} target="_blank" rel="noopener noreferrer">Visitar página</a> : '—'}</td>
           <td data-label="Contacto">{item.phone || item.email ? <>{item.phone || '—'}{item.email && <small>{item.email}</small>}</> : '—'}</td>
           <td data-label="Para decir ese día" className="admin-sponsor-announcement">{item.announcement || '—'}</td>
           <td data-label="Logo"><a href={`https://drive.google.com/file/d/${encodeURIComponent(item.logoDriveFileId)}/view`} target="_blank" rel="noopener noreferrer">Ver en Drive</a><small>{item.logoFilename}</small></td>

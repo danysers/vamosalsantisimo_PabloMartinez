@@ -11,13 +11,17 @@ const sharp = createRequire(require.resolve('next/package.json'))('sharp')
 const trustedOwner = { emailAddress: 'danysers@gmail.com' }
 const image = () => sharp({ create: { width: 2, height: 2, channels: 4, background: '#245fc5' } }).png().toBuffer()
 
-test('sponsor fields require brand and titular while normalizing optional data', () => {
-  assert.deepEqual(normalizeSponsorFields({ brandName: '  Alma Verde ', ownerName: ' Titular Uno ', phone: '', email: ' CONTACTO@EXAMPLE.COM ', announcement: ' Gracias  ' }), {
-    value: { brandName: 'Alma Verde', ownerName: 'Titular Uno', phone: null, email: 'contacto@example.com', announcement: 'Gracias' },
+test('sponsor fields require brand, titular and safe public HTTPS URL while normalizing optional data', () => {
+  assert.deepEqual(normalizeSponsorFields({ brandName: '  Alma Verde ', ownerName: ' Titular Uno ', websiteUrl: ' https://instagram.com/almaverde ', phone: '', email: ' CONTACTO@EXAMPLE.COM ', announcement: ' Gracias  ' }), {
+    value: { brandName: 'Alma Verde', ownerName: 'Titular Uno', websiteUrl: 'https://instagram.com/almaverde', phone: null, email: 'contacto@example.com', announcement: 'Gracias' },
   })
   assert.match(normalizeSponsorFields({ brandName: '', ownerName: 'Titular' }).error, /marca es obligatorio/)
   assert.match(normalizeSponsorFields({ brandName: 'Marca', ownerName: '' }).error, /titular es obligatorio/)
-  assert.match(normalizeSponsorFields({ brandName: 'Marca', ownerName: 'Titular', email: 'no-es-correo' }).error, /correo válido/)
+  assert.match(normalizeSponsorFields({ brandName: 'Marca', ownerName: 'Titular' }).error, /red social o página es obligatoria/)
+  for (const websiteUrl of ['javascript:alert(1)', 'http://example.com', 'https://user:pass@example.com', 'https://127.0.0.1', 'https://localhost', 'https://example.com/\nother']) {
+    assert.match(normalizeSponsorFields({ brandName: 'Marca', ownerName: 'Titular', websiteUrl }).error, /URL pública HTTPS válida/)
+  }
+  assert.match(normalizeSponsorFields({ brandName: 'Marca', ownerName: 'Titular', websiteUrl: 'https://example.com', email: 'no-es-correo' }).error, /correo válido/)
 })
 
 test('sponsor logo validator accepts bounded static raster formats only', async () => {

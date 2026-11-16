@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     if (!await allowPublicOperation('sponsor-upload')) return tooManyRequests()
     const form = await readSponsorForm(request)
-    const parsed = normalizeSponsorFields({ brandName: form.get('brandName'), ownerName: form.get('ownerName'),
+    const parsed = normalizeSponsorFields({ brandName: form.get('brandName'), ownerName: form.get('ownerName'), websiteUrl: form.get('websiteUrl'),
       phone: form.get('phone'), email: form.get('email'), announcement: form.get('announcement') })
     if ('error' in parsed) return privateReply({ error: parsed.error }, 400)
     const logo = await readLogo(form)
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         createdBy: access.operatorId, updatedBy: access.operatorId })
         .returning({ id: workshopSponsors.id, brandName: workshopSponsors.brandName })
       await tx.insert(auditLog).values({ actorId: access.operatorId, action: 'sponsor.created', subjectId: created.id,
-        changes: { fields: ['brandName', 'ownerName', 'phone', 'email', 'announcement', 'logo'] } })
+        changes: { fields: ['brandName', 'ownerName', 'websiteUrl', 'phone', 'email', 'announcement', 'logo'] } })
       return created
     })
     return privateReply({ sponsor }, 201)

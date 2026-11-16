@@ -40,6 +40,10 @@ test('Drive gallery adds a logo, updates a replaced Drive image and removes it w
   assert.equal(image.alt, 'Marca de prueba')
   assert.equal(logo.querySelector('a'), undefined, 'logos without a URL are cards, not uncrawlable anchors')
 
+  result = { available: true, sponsors: [{ ...sponsor('a'), href: 'https://instagram.com/marca/' }] }
+  await refresh(); await settle()
+  assert.equal(logo.querySelector('a').href, 'https://instagram.com/marca/', 'a sponsor website from the panel links its logo')
+
   result = { available: true, sponsors: [sponsor('b', 'Marca actualizada')], links: [
     { name: 'MÁRCA-actualizada.png', href: 'https://www.instagram.com/marca/' },
     { name: 'Mila Club', href: 'https://www.facebook.com/milaclub/' },
@@ -53,8 +57,12 @@ test('Drive gallery adds a logo, updates a replaced Drive image and removes it w
   assert.equal(card.href, 'https://www.instagram.com/marca/')
   assert.equal(card.rel, 'noopener noreferrer')
   assert.equal(card.target, '_blank')
-  assert.match(card['aria-label'], /Visitar las redes de Marca actualizada/)
+  assert.match(card['aria-label'], /Visitar la página de Marca actualizada/)
   assert.equal(base.href, 'https://www.facebook.com/milaclub/')
+
+  result = { available: true, sponsors: [{ ...sponsor('b', 'Marca actualizada'), href: 'javascript:alert(1)' }] }
+  await refresh(); await settle()
+  assert.equal(logo.querySelector('a'), undefined, 'an unsafe panel URL never becomes a public link')
 
   result.links = [{ name: 'Marca actualizada', href: 'javascript:alert(1)' }, { name: 'Mila Club', href: null }]
   await refresh(); await settle()

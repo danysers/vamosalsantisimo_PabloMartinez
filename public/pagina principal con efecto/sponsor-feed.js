@@ -31,8 +31,8 @@
       card.href = href;
       card.target = '_blank';
       card.rel = 'noopener noreferrer';
-      card.title = `Visitar las redes de ${name}`;
-      card.setAttribute('aria-label', `Visitar las redes de ${name}, abre en otra pestaña`);
+      card.title = `Visitar la página de ${name}`;
+      card.setAttribute('aria-label', `Visitar la página de ${name}, abre en otra pestaña`);
     } else {
       card.removeAttribute('href');
       card.removeAttribute('target');
@@ -71,6 +71,8 @@
             typeof item.image !== 'string' || !imagePath.test(item.image)) continue;
         const original = originals.find(entry => nameKey(entry.name) === nameKey(item.name));
         if (original) {
+          const sponsorHref = safeHref(item.href);
+          if (sponsorHref) original.card = setLink(original.card, item.name, sponsorHref);
           const image = original.card.querySelector('img');
           if (image) { image.src = item.image; image.alt = item.name; }
           continue;
@@ -78,7 +80,7 @@
         visible.add(item.id);
         const previous = existing.get(item.id);
         if (previous) {
-          setLink(previous.querySelector('.brand-card'), item.name, links.get(nameKey(item.name)) || null);
+          setLink(previous.querySelector('.brand-card'), item.name, safeHref(item.href) || links.get(nameKey(item.name)) || null);
           const image = previous.querySelector('img');
           if (image) {
             if (image.getAttribute('src') !== item.image) image.src = item.image;
@@ -89,7 +91,7 @@
         const li = document.createElement('li');
         li.className = 'brand-shell';
         li.dataset.driveId = item.id;
-        const href = links.get(nameKey(item.name)) || null;
+        const href = safeHref(item.href) || links.get(nameKey(item.name)) || null;
         const card = document.createElement(href ? 'a' : 'div');
         card.className = 'brand-card';
         setLink(card, item.name, href);
