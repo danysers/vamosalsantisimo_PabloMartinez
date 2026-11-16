@@ -46,11 +46,18 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
   try {
     if (method === 'POST' && authPath === '/authentik-logout') {
       const baseURL = new URL(process.env.BETTER_AUTH_URL!)
+      const wantsJSON = request.headers.get('accept')?.includes('application/json') === true
       if (request.headers.get('origin') !== baseURL.origin) {
         console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'origin_rejected', correlationId }))
         return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
       }
       const logoutErrorRedirect = (response?: Response) => {
+        if (wantsJSON) {
+          const failed = NextResponse.json({ error: 'No se pudo cerrar la sesión.' }, { status: 503 })
+          for (const cookie of response?.headers.getSetCookie() ?? []) failed.headers.append('Set-Cookie', cookie)
+          failed.headers.set('Cache-Control', 'no-store')
+          return failed
+        }
         const redirectResponse = NextResponse.redirect(new URL('/admin?authError=logout', baseURL), 303)
         for (const cookie of response?.headers.getSetCookie() ?? []) redirectResponse.headers.append('Set-Cookie', cookie)
         redirectResponse.headers.set('Cache-Control', 'no-store')
@@ -76,12 +83,14 @@ async function handle(request: NextRequest, method: 'GET' | 'POST'): Promise<Res
       // The OAuth end-session endpoint closed only this app, leaving the SSO
       // session active. This pinned flow was verified to prompt for credentials.
       const destination = authentikFullLogoutURL()
-      const redirectResponse = NextResponse.redirect(destination, 303)
-      for (const cookie of signOutResponse.headers.getSetCookie()) redirectResponse.headers.append('Set-Cookie', cookie)
-      redirectResponse.headers.set('Cache-Control', 'no-store')
-      redirectResponse.headers.set('X-Correlation-ID', correlationId)
-      console.info(JSON.stringify({ event: 'authentik_logout', outcome: 'redirect_to_invalidation', correlationId }))
-      return redirectResponse
+      const response = wantsJSON
+        ? NextResponse.json({ url: destination.href })
+        : NextResponse.redirect(destination, 303)
+      for (const cookie of signOutResponse.headers.getSetCookie()) response.headers.append('Set-Cookie', cookie)
+      response.headers.set('Cache-Control', 'no-store')
+      response.headers.set('X-Correlation-ID', correlationId)
+      console.info(JSON.stringify({ event: 'authentik_logout', outcome: wantsJSON ? 'handoff_to_invalidation' : 'redirect_to_invalidation', correlationId }))
+      return response
     }
     if (method === 'GET' && authPath === '/authentik-start') {
       if (process.env.AUTHENTIK_ONLY !== '1' || process.env.AUTHENTIK_ENABLED !== '1') {

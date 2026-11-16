@@ -46,13 +46,18 @@ test('provider logout accepts only this panel client end-session URL', () => {
   }
 })
 
-test('logout submits natively and prevents immediate automatic reauthentication', () => {
+test('logout clears local session before a fresh top-level Authentik invalidation GET', () => {
   const form = readFileSync(new URL('../app/admin/login-form.tsx', import.meta.url), 'utf8')
   const route = readFileSync(new URL('../app/api/auth/[...all]/route.ts', import.meta.url), 'utf8')
-  assert.match(form, /method="post" action="\/api\/auth\/authentik-logout"/)
-  assert.doesNotMatch(form, /onSubmit=\{signOut\}|Cerrando…/)
+  assert.match(form, /onSubmit=\{signOut\}/)
+  assert.match(form, /fetch\('\/api\/auth\/authentik-logout'/)
+  assert.match(form, /headers: \{ Accept: 'application\/json' \}/)
+  assert.match(form, /window\.location\.replace\(destination\.href\)/)
+  assert.match(form, /destination\.pathname !== '\/if\/flow\/default-invalidation-flow\/'/)
   assert.match(route, /body: JSON\.stringify\(\{ disableRedirect: true \}\)/)
   assert.match(route, /authentikFullLogoutURL\(\)/)
+  assert.match(route, /NextResponse\.json\(\{ url: destination\.href \}\)/)
+  assert.match(route, /response\.headers\.append\('Set-Cookie', cookie\)/)
 })
 
 test('full logout uses the verified Authentik SSO invalidation flow', () => {

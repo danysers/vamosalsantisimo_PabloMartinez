@@ -4,9 +4,40 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 export function SignOut() {
-  // Let the browser submit and navigate normally. Disabling the submit button
-  // during onSubmit can cancel the form submission before the logout request.
-  return <form className="admin-sign-out" method="post" action="/api/auth/authentik-logout"><button className="button button-outline" type="submit">Cerrar sesión</button></form>
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function signOut(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/auth/authentik-logout', {
+        method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('Local sign-out failed')
+      const result = await response.json() as { url?: unknown }
+      if (typeof result.url !== 'string') throw new Error('Missing logout destination')
+      const destination = new URL(result.url)
+      if (destination.origin !== 'https://aute.codss.com.ar' ||
+          destination.pathname !== '/if/flow/default-invalidation-flow/' ||
+          destination.search || destination.hash || destination.username || destination.password) {
+        throw new Error('Invalid logout destination')
+      }
+      // A fresh top-level GET sends the Authentik session cookie; a cross-site
+      // redirect chained to the POST was returning silently to the panel.
+      window.location.replace(destination.href)
+    } catch {
+      setError('No se pudo cerrar la sesión. Reintentá o avisá al administrador.')
+      setBusy(false)
+    }
+  }
+
+  return <form className="admin-sign-out" method="post" action="/api/auth/authentik-logout" onSubmit={signOut}>
+    <button className="button button-outline" type="submit" disabled={busy}>{busy ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
+    {error && <span role="alert">{error}</span>}
+  </form>
 }
 
 export default function AdminLogin({ authentikEnabled = false, authentikOnly = false, initialError }: { authentikEnabled?: boolean; authentikOnly?: boolean; initialError?: string }) {
