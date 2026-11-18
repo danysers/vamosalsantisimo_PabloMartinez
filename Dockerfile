@@ -11,7 +11,8 @@ RUN --mount=type=cache,id=vas-pnpm-store,target=/pnpm/store \
 FROM dependencies AS build
 COPY . .
 ENV NEXT_BUILD_CPUS=1 NODE_OPTIONS=--max-old-space-size=3072 RAYON_NUM_THREADS=1
-RUN pnpm build
+# Run the package script with the dependencies from the frozen install above.
+RUN npm run build
 
 FROM dependencies AS production-dependencies
 RUN --mount=type=cache,id=vas-pnpm-store,target=/pnpm/store \
