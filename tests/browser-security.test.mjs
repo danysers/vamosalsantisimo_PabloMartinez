@@ -2,6 +2,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { inlineScripts } from '../lib/static-html.mjs'
+
+test('inline script extraction honors HTML parsing and preserves the CSP hash input', () => {
+  const markup = '<script data-note="a > b" nonce="test-nonce">one()\r\ntwo()</script >' +
+    '<!-- <script>comment</script> -->' +
+    '<script SRC=/external.js></script><template><script>inert</script></template>'
+  assert.deepEqual([...inlineScripts(markup)], [{ body: 'one()\ntwo()', nonce: 'test-nonce' }])
+})
 
 test('browser security covers static landing, workshop and isolated panel', async () => {
   for (const [surface, port] of [['public', 31631], ['panel', 31632]]) {
@@ -31,11 +39,9 @@ test('browser security covers static landing, workshop and isolated panel', asyn
         assert.match(csp, /script-src-attr 'none'/)
         assert.ok(!csp.includes("script-src 'self' 'unsafe-inline'"))
         const html = await response.text()
-        for (const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-          if (/\bsrc\s*=/.test(script[1]) || !script[2].trim()) continue
-          if (staticPaths.includes(new URL(response.url).pathname)) assert.ok(csp.includes(createHash('sha256').update(script[2].replace(/\r\n?/g, '\n')).digest('base64')), path)
+        for (const { body, nonce } of inlineScripts(html)) {
+          if (staticPaths.includes(new URL(response.url).pathname)) assert.ok(csp.includes(createHash('sha256').update(body).digest('base64')), path)
           else {
-            const nonce = /nonce="([^"]+)"/.exec(script[1])?.[1]
             assert.ok(nonce && nonce !== 'attacker-controlled' && csp.includes(`'nonce-${nonce}'`), `${path}: inline script must have a fresh CSP nonce`)
           }
         }

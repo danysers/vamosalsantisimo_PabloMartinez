@@ -46,11 +46,13 @@ jobs:
       - name: Check the exact runtime image before publishing
         run: node scripts/smoke-image.mjs ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
       - name: Scan runtime packages and native binaries
-        run: >-
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
-          aquasec/trivy:0.74.0 image --image-src docker --scanners vuln
-          --severity HIGH,CRITICAL --exit-code 1
-          ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.74.0 image --image-src docker --scanners vuln --format json \
+            ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }} > trivy-runtime.json
+          jq -er '.Results | type == "array" and length > 0' trivy-runtime.json
+          jq -r '.Results[].Vulnerabilities[]? | [.Severity, .VulnerabilityID, .PkgName, .InstalledVersion, (.FixedVersion // "")] | @tsv' trivy-runtime.json
+          jq -e 'all(.Results[].Vulnerabilities[]?; .Severity != "HIGH" and .Severity != "CRITICAL")' trivy-runtime.json
       - name: Publish verified image
         if: github.ref == 'refs/heads/main'
         run: |
