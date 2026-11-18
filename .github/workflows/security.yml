@@ -25,7 +25,10 @@ jobs:
           node-version: '22.23.4'
       - run: npm install --global pnpm@11.27.1
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit
+      - run: pnpm audit --prod
+      # picomatch GHSA-fc5q-39xc-vjpf is currently unpatched and enters only
+      # through development tooling. Keep all other dev advisories blocking CI.
+      - run: pnpm audit --dev --ignore GHSA-fc5q-39xc-vjpf
       - run: pnpm typecheck && pnpm lint
       - uses: actions/setup-python@v5
         with:
