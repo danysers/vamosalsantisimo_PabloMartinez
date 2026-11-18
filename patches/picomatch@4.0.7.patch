@@ -1,0 +1,13 @@
+diff --git a/lib/parse.js b/lib/parse.js
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -360,7 +360,8 @@ const parse = (input, options) => {
+ 
+   input = REPLACEMENTS[input] || input;
+ 
+-  const opts = { ...options };
++  // Development tooling only needs basic globs. Disable extglobs for GHSA-fc5q-39xc-vjpf.
++  const opts = { ...options, noext: true };
+   const max = typeof opts.maxLength === 'number' ? Math.min(MAX_LENGTH, opts.maxLength) : MAX_LENGTH;
+ 
+   let len = input.length;

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.16-alpine@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e
     restart: unless-stopped
     # Local Next.js runs on the host; reuse Docker's bridge instead of consuming
     # another subnet on workstations with exhausted default address pools.

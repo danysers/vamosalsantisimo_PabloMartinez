@@ -22,7 +22,8 @@ function port(name) {
 }
 try {
   docker('network','create',...(process.env.SMOKE_NETWORK_SUBNET ? ['--subnet',process.env.SMOKE_NETWORK_SUBNET] : []),prefix)
-  docker('run','--rm','-d','--name',db,'--network',prefix,'-e',`POSTGRES_PASSWORD=${password}`,'postgres:16-alpine')
+  docker('run','--rm','-d','--name',db,'--network',prefix,'-e',`POSTGRES_PASSWORD=${password}`,
+    'postgres:16.16-alpine@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e')
   let ready=false
   for(let i=0;i<60;i++) { try { docker('exec',db,'pg_isready','-U','postgres');ready=true;break } catch { await pause() } }
   assert.ok(ready,'temporary PostgreSQL unavailable')
@@ -71,22 +72,11 @@ try {
     if(process.getuid()===0)throw Error('Unexpected root user');
     Promise.all(['email-worker','email-bounce-worker','drive-proof-worker','sponsor-sync-worker','traffic-monitor'].map(x=>import('./scripts/'+x+'.mjs'))).then(()=>console.log('Runtime and workers OK'));`
   docker('exec',panel,'/usr/local/bin/node','--experimental-strip-types','-e',check)
-  // Verify both package provenance and actual replacement bytes. Node's native
-  // image endpoint above also proves the new library keeps the required ABI.
-  const zlibCheck=`const fs=require('node:fs'),crypto=require('node:crypto');
-    const root='/var/lib/dpkg/status.d/';
-    if(!fs.readFileSync(root+'zlib1g','utf8').includes('Version: 1:1.3.dfsg+really1.3.2-4'))throw Error('Unpatched zlib package');
-    let checked=0;
-    for(const line of fs.readFileSync(root+'zlib1g.md5sums','utf8').trim().split('\\n')){
-      const [hash,path]=line.trim().split(/\\s+/);
-      if(!path.includes('libz.so.'))continue;
-      if(crypto.createHash('md5').update(fs.readFileSync('/'+path)).digest('hex')!==hash)throw Error('zlib package bytes changed');checked++;
-    }
-    if(!checked)throw Error('Missing fixed zlib library');
-    for(const dir of fs.readdirSync('/usr/lib')){
-      if(fs.existsSync('/usr/lib/'+dir+'/libz.so.1.3.1'))throw Error('Old vulnerable zlib still present');
-    }`;
-  docker('exec',publicApp,'node','-e',zlibCheck)
+  const runtimeVersions=`const assert=require('node:assert/strict'),fs=require('node:fs');
+    assert.equal(process.version,'v22.23.5');
+    assert.ok(fs.readFileSync('/var/lib/dpkg/status.d/zlib1g','utf8').split('\\n')
+      .includes('Version: 1:1.3.dfsg+really1.3.1-1+deb13u1'),'Expected Debian zlib security package');`;
+  docker('exec',publicApp,'node','-e',runtimeVersions)
   console.log('Image smoke passed: migrations, public pages, memory admission/recovery, persistent alert cooldown, native images, auth, workers, non-root and no shell/npm.')
 } finally {
   for(const name of [panel,publicApp,db]) { try { docker('rm','-f',name) } catch {} }

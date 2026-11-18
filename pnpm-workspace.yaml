@@ -4,6 +4,11 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 
+# Keep both copies hardened until the upstream ReDoS fix is released.
+patchedDependencies:
+  picomatch@2.3.2: patches/picomatch@2.3.2.patch
+  picomatch@4.0.7: patches/picomatch@4.0.7.patch
+
 # Remove the vulnerable optional CLI transitive version (GHSA-67mh-4wv8-2f99).
 overrides:
   'esbuild@<0.25.0': '0.25.12'

@@ -17,7 +17,7 @@ Las fechas provienen de la meta del 16/12/2026, tres días antes del taller del 
 - Compose: `Alertas Mercado Pago — Taller 2026` (`TeJ37dDM8I2H6SMhSyJRo`).
 - App: `vas-alertas-mp-2026-vaxm0o`; servicio: `alerts`.
 - Contenedor inicial: `vas-alertas-mp-2026-vaxm0o-alerts-1`.
-- Imagen oficial `node:22-alpine`, Nodemailer fijado en 10.2.1. Sin puertos ni dominios públicos. Reinicio automático `unless-stopped`, límite de 192 MiB y 0,25 CPU.
+- Imagen oficial `node:22.23.5-alpine` fijada por digest, Nodemailer fijado en 10.2.1. Sin puertos ni dominios públicos. Reinicio automático `unless-stopped`, límite de 192 MiB y 0,25 CPU.
 - Credenciales exclusivamente en el entorno seguro del servicio: `SMTP_HOST`, `SMTP_PORT=465`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `ALERT_TO`. Nunca guardarlas en este directorio o el compose generado.
 - Los volúmenes persistentes `alerts_runtime` y `alerts_state` conservan dependencias y estado entre reinicios. No usar `freshVolumes` ni eliminar esos volúmenes al volver a desplegar.
 
