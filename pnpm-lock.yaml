@@ -8,6 +8,10 @@ overrides:
   esbuild@<0.25.0: 0.25.12
   minimatch@>=7.0.0 <11.0.1: 11.0.1
 
+patchedDependencies:
+  picomatch@2.3.2: 6931a4e2917fc8c551463d7ecc212812134566299becbf2974359cec95af7436
+  picomatch@4.0.7: 07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873
+
 importers:
 
   .:
@@ -7204,9 +7208,9 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
-  fdir@6.5.0(picomatch@4.0.7):
+  fdir@6.5.0(picomatch@4.0.7(patch_hash=07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873)):
     optionalDependencies:
-      picomatch: 4.0.7
+      picomatch: 4.0.7(patch_hash=07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873)
 
   file-entry-cache@11.1.5:
     dependencies:
@@ -7714,7 +7718,7 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-      picomatch: 2.3.2
+      picomatch: 2.3.2(patch_hash=6931a4e2917fc8c551463d7ecc212812134566299becbf2974359cec95af7436)
 
   minimatch@11.0.1:
     dependencies:
@@ -7932,9 +7936,9 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-  picomatch@2.3.2: {}
+  picomatch@2.3.2(patch_hash=6931a4e2917fc8c551463d7ecc212812134566299becbf2974359cec95af7436): {}
 
-  picomatch@4.0.7: {}
+  picomatch@4.0.7(patch_hash=07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873): {}
 
   pino-abstract-transport@3.0.0:
     dependencies:
@@ -8427,8 +8431,8 @@ snapshots:
 
   tinyglobby@0.2.17:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.7)
-      picomatch: 4.0.7
+      fdir: 6.5.0(picomatch@4.0.7(patch_hash=07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873))
+      picomatch: 4.0.7(patch_hash=07a9e9b82c4956ab3e8227b58df8c75e0c38e8a7c38e2a14af4bea80481f5873)
 
   tlds@1.261.0: {}
 

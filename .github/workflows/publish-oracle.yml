@@ -42,14 +42,13 @@ jobs:
           cache-to: type=gha,mode=max
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.23.4'
+          node-version: '22.23.5'
       - name: Check the exact runtime image before publishing
         run: node scripts/smoke-image.mjs ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
       - name: Scan runtime packages and native binaries
         run: >-
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/security:/security:ro"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
           aquasec/trivy:0.74.0 image --image-src docker --scanners vuln
-          --vex /security/zlib-fixed.openvex.json --show-suppressed
           --severity HIGH,CRITICAL --exit-code 1
           ghcr.io/danysers/vamosalsantisimo-pablomartinez:${{ github.sha }}
       - name: Publish verified image
