@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const directory = dirname(fileURLToPath(import.meta.url))
-const files = ['schedule.mjs', 'worker.mjs', 'config.json']
+const files = ['schedule.mjs', 'worker.mjs', 'config.json', 'security-patches.mjs', 'security-watch.json']
 const commands = [
   'set -eu',
   'cd /opt/alerts',
